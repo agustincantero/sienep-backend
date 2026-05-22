@@ -1,21 +1,54 @@
 package com.fides.sienep.model;
 
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "usuarios", schema = "proyecto")
+@Inheritance(strategy = InheritanceType.JOINED)
+@Getter
+@Setter
+@NoArgsConstructor
 public abstract class Usuario {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_usuario")
     protected int idUsuario;
+
+    @Column(nullable = false, length = 50)
     protected String nombre;
+
+    @Column(nullable = false, length = 50)
     protected String apellido;
+
+    @Column(nullable = false, length = 15)
     protected String documento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pais_documento", nullable = false)
     protected PaisDocumento paisDocumento;
+
+    @Column(nullable = false, length = 255)
     protected String contrasenia;
+
+    @Column(nullable = false, length = 50, unique = true)
     protected String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     protected EstadoLogico estado;
+
+    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     protected LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false, insertable = false)
     protected LocalDateTime updatedAt;
 
     public Usuario(String nombre, String apellido, String documento, PaisDocumento paisDocumento, String contrasenia, String email) {
-
         this.nombre = nombre;
         this.apellido = apellido;
         this.documento = documento;
@@ -26,7 +59,6 @@ public abstract class Usuario {
     }
 
     public Usuario(int idUsuario, String nombre, String apellido, String documento, PaisDocumento paisDocumento, String contrasenia, String email, EstadoLogico estado, LocalDateTime createdAt, LocalDateTime updatedAt) {
-
         this.idUsuario = idUsuario;
         this.nombre = nombre;
         this.apellido = apellido;
@@ -37,93 +69,5 @@ public abstract class Usuario {
         this.estado = estado;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-    }
-
-    public Usuario() {
-    }
-
-    public int getIdUsuario() {
-        return idUsuario;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public String getApellido() {
-        return apellido;
-    }
-
-    public String getDocumento() {
-        return documento;
-    }
-
-    public PaisDocumento getPaisDocumento() {
-        return paisDocumento;
-    }
-
-    public String getContrasenia() {
-        return contrasenia;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public EstadoLogico getEstado() {
-        return estado;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public void setApellido(String apellido) {
-        this.apellido = apellido;
-    }
-
-    public void setDocumento(String documento) {
-        this.documento = documento;
-    }
-
-    public void setPaisDocumento(PaisDocumento paisDocumento) {
-        this.paisDocumento = paisDocumento;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setContrasenia(String contrasenia) {
-        this.contrasenia = contrasenia;
-    }
-
-    protected void setIdUsuario(Integer idUsuario) {
-        this.idUsuario = idUsuario;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public void setEstado(EstadoLogico estado) {
-        this.estado = estado;
-    }
-
-
-    public void setIdUsuario(int anInt) {
-        this.idUsuario = anInt;
     }
 }
