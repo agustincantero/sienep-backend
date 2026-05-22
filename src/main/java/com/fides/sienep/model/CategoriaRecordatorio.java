@@ -1,22 +1,46 @@
 package com.fides.sienep.model;
 
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "cat_recordatorios", schema = "proyecto")
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString
 public class CategoriaRecordatorio {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_categoria")
     private int idCategoria;
-    private String nomCategoria;
-    private String descripcion;
-    private EstadoLogico estado;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
-    public CategoriaRecordatorio() {
-    }
+    @Column(name = "nom_cate_recordatorios", nullable = false, length = 50, unique = true)
+    private String nomCategoria;
+
+    @Column(columnDefinition = "TEXT")
+    private String descripcion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoLogico estado;
+
+    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false, insertable = false)
+    private LocalDateTime updatedAt;
 
     public CategoriaRecordatorio(int idCategoria, String nomCategoria, String descripcion, EstadoLogico estado, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.idCategoria = idCategoria;
         this.nomCategoria = nomCategoria;
+        this.descripcion = descripcion;
         this.estado = estado;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -26,59 +50,4 @@ public class CategoriaRecordatorio {
         this.nomCategoria = nomCategoria;
         this.estado = EstadoLogico.ACTIVO;
     }
-
-    public int getIdCategoria() {
-        return idCategoria;
-    }
-
-    public void setIdCategoria(int idCategoria) {
-        this.idCategoria = idCategoria;
-    }
-
-    public String getNomCategoria() {
-        return nomCategoria;
-    }
-
-    public void setNomCategoria(String nomCategoria) {
-        this.nomCategoria = nomCategoria;
-    }
-
-    public EstadoLogico getEstado() {
-        return estado;
-    }
-
-    public void setEstado(EstadoLogico estado) {
-        this.estado = estado;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    @Override
-    public String toString() {
-        return "Categoria{" + "idCategoria=" + idCategoria + ", nomCategoria='" + nomCategoria + '\'' + ", estado=" + estado + ", createdAt=" + createdAt + ", updatedAt=" + updatedAt + '}';
-    }
 }
-
-
