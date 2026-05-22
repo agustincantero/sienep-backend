@@ -1,13 +1,45 @@
 package com.fides.sienep.model;
 
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
+@Table(name = "roles", schema = "proyecto")
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(exclude = "permisos")
 public class Rol {
-    private String nombre;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_rol")
     private int idRol;
-    private List<Permiso> permisos;
+
+    @Column(name = "nom_rol", nullable = false, length = 50, unique = true)
+    private String nombre;
+
+    @Column(name = "rol_descripcion", length = 100)
+    private String descripcion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private EstadoLogico estado;
+
+    @ManyToMany
+    @JoinTable(
+            name = "rol_permisos",
+            schema = "proyecto",
+            joinColumns = @JoinColumn(name = "id_rol"),
+            inverseJoinColumns = @JoinColumn(name = "id_permiso"))
+    private List<Permiso> permisos = new ArrayList<>();
+
 
     public Rol(String nombre, int idRol, List<Permiso> permisos, EstadoLogico estado) {
         this.nombre = nombre;
@@ -22,10 +54,6 @@ public class Rol {
         this.permisos = new ArrayList<>();
     }
 
-    public Rol() {
-    }
-
-
     public boolean tienePermiso(String nombrePermiso) {
         if (permisos == null) return false;
         for (Permiso p : permisos) {
@@ -37,37 +65,5 @@ public class Rol {
     public void agregarPermiso(Permiso permiso) {
         if (permisos == null) permisos = new ArrayList<>();
         permisos.add(permiso);
-    }
-
-    public List<Permiso> getPermisos() {
-        return permisos;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public int getIdRol() {
-        return idRol;
-    }
-
-    public void setIdRol(int idRol) {
-        this.idRol = idRol;
-    }
-
-    public EstadoLogico getEstado() {
-        return estado;
-    }
-
-    public void setEstado(EstadoLogico estado) {
-        this.estado = estado;
-    }
-
-    public void setPermisos(List<Permiso> permisos) {
-        this.permisos = permisos;
     }
 }
