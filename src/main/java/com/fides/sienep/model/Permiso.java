@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "permisos", schema = "proyecto")
 @Getter
@@ -27,12 +25,6 @@ public class Permiso {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoLogico estado;
-
-    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false, insertable = false)
-    private LocalDateTime updatedAt;
 
     public Permiso(String nombre, int idPermiso, String descripcion) {
         this.nombre = nombre;
