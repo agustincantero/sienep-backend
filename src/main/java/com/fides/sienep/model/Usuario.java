@@ -35,7 +35,7 @@ public abstract class Usuario {
     @Column(nullable = false, length = 255)
     protected String contrasenia;
 
-    @Column(nullable = false, length = 50, unique = true)
+    @Column(nullable = false, length = 50, unique = true, columnDefinition = "dom_email")
     protected String email;
 
     @Enumerated(EnumType.STRING)
