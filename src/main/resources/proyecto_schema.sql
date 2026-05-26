@@ -710,3 +710,245 @@ CREATE TABLE proyecto.auditoria (
                                         REFERENCES proyecto.usuarios(id_usuario)
                                         ON UPDATE CASCADE ON DELETE CASCADE
 );
+
+
+SET search_path TO proyecto;
+
+-- =============================================
+-- ROLES
+-- =============================================
+INSERT INTO proyecto.roles (nom_rol) VALUES
+    ('ADMINISTRADOR'),
+    ('PSICOPEDAGOGO'),
+    ('TUTOR'),
+    ('DOCENTE'),
+    ('LEGALES')
+ON CONFLICT (nom_rol) DO NOTHING;
+
+-- =============================================
+-- CATEGORIAS DE INSTANCIA
+-- =============================================
+INSERT INTO proyecto.cat_instancias (nom_cate_instancias) VALUES
+    ('Reunión'),
+    ('Llamada'),
+    ('Coordinación'),
+    ('Informe')
+ON CONFLICT (nom_cate_instancias) DO NOTHING;
+
+-- =============================================
+-- CATEGORIAS DE RECORDATORIO
+-- =============================================
+INSERT INTO proyecto.cat_recordatorios (nom_cate_recordatorios, descripcion) VALUES
+    ('Administrativo',  'Tareas administrativas del sistema'),
+    ('Académico',       'Recordatorios relacionados a actividades académicas'),
+    ('Seguimiento',     'Acciones de seguimiento a estudiantes'),
+    ('Urgente',         'Recordatorios que requieren atención inmediata')
+ON CONFLICT (nom_cate_recordatorios) DO NOTHING;
+
+-- =============================================
+-- PERMISOS
+-- =============================================
+INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
+    -- Funcionarios
+    ('VER_FUNCIONARIOS',        'Permite ver la lista de funcionarios del sistema'),
+    ('CREAR_FUNCIONARIO',       'Permite registrar un nuevo funcionario'),
+    ('EDITAR_FUNCIONARIO',      'Permite editar los datos de un funcionario'),
+    ('ELIMINAR_FUNCIONARIO',    'Permite dar de baja a un funcionario'),
+    ('REACTIVAR_FUNCIONARIO',   'Permite reactivar un funcionario dado de baja'),
+    -- Roles
+    ('VER_ROLES',               'Permite ver la lista de roles del sistema'),
+    ('CREAR_ROL',               'Permite crear nuevos roles'),
+    ('EDITAR_ROL',              'Permite editar la información de un rol'),
+    ('ELIMINAR_ROL',            'Permite eliminar un rol existente'),
+    ('ASIGNAR_PERMISOS',        'Permite asignar o revocar permisos a roles'),
+    -- Estudiantes
+    ('VER_ESTUDIANTE',              'Permite visualizar los datos de los estudiantes'),
+    ('VER_ESTUDIANTE_RESUMIDO',     'Permite visualizar datos resumidos de estudiantes'),
+    ('CREAR_ESTUDIANTE',            'Permite registrar nuevos estudiantes'),
+    ('EDITAR_ESTUDIANTE',           'Permite modificar datos de un estudiante existente'),
+    ('ELIMINAR_ESTUDIANTE',         'Permite dar de baja a un estudiante'),
+    ('BUSCAR_ESTUDIANTE',           'Permite buscar estudiantes por criterios específicos'),
+    ('REACTIVAR_ESTUDIANTE',        'Permite reactivar estudiantes dados de baja'),
+    -- Adjuntos
+    ('VER_ADJUNTOS',            'Permite ver los archivos adjuntos de un estudiante o instancia'),
+    ('ADJUNTAR_INFORME',        'Permite adjuntar un informe u otro archivo al sistema'),
+    -- Instancias
+    ('VER_INSTANCIAS',          'Permite visualizar las instancias registradas'),
+    ('CREAR_INSTANCIA',         'Permite crear nuevas instancias'),
+    ('EDITAR_INSTANCIA',        'Permite modificar una instancia existente'),
+    ('BAJA_INSTANCIA',          'Permite dar de baja una instancia'),
+    ('CATEGORIZAR_INSTANCIA',   'Permite asignar categorías a las instancias'),
+    ('VER_BLOQUE_CONFIDENCIAL', 'Permite ver el bloque confidencial de una instancia'),
+    -- Recordatorios
+    ('VER_RECORDATORIOS',       'Permite ver los recordatorios existentes'),
+    ('CREAR_RECORDATORIO',      'Permite crear nuevos recordatorios'),
+    ('EDITAR_RECORDATORIO',     'Permite editar recordatorios existentes'),
+    ('BAJA_RECORDATORIO',       'Permite eliminar o desactivar recordatorios'),
+    ('CONFIG_RECURRENCIA',      'Permite configurar la recurrencia de los recordatorios'),
+    ('ETIQUETAR_TIPO',          'Permite asignar etiquetas o tipos a recordatorios'),
+    -- Integraciones
+    ('GCAL_SYNC_INSTANCIAS',    'Permite sincronizar instancias con Google Calendar'),
+    ('GCAL_SYNC_RECORDATORIOS', 'Permite sincronizar recordatorios con Google Calendar'),
+    ('NOTIFICAR_RECORDATORIOS', 'Permite enviar notificaciones de recordatorios'),
+    -- Incidencias
+    ('REGISTRAR_INCIDENCIA',    'Permite registrar nuevas incidencias'),
+    ('VER_INCIDENCIAS',         'Permite visualizar las incidencias registradas'),
+    ('HISTORIAL_INCIDENCIAS',   'Permite consultar el historial de incidencias'),
+    ('EDITAR_INCIDENCIAS',      'Permite editar incidencias existentes'),
+    ('ELIMINAR_INCIDENCIAS',    'Permite eliminar incidencias existentes'),
+    -- Reportes
+    ('VER_REPORTES',            'Permite acceder al módulo de reportes'),
+    ('EXPORTAR_REPORTES',       'Permite exportar los reportes generados'),
+    -- Categorías y perfil
+    ('CRUD_CATEGORIA_INSTANCIA',    'Permite gestionar las categorías de instancias'),
+    ('CRUD_CATEGORIA_RECORDATORIO', 'Permite gestionar las categorías de recordatorios'),
+    ('EDITAR_MIS_DATOS',            'Permite editar los datos personales del usuario logueado'),
+    -- Comentarios de estudiante
+    ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),
+    ('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',      'Permite ver comentarios confidenciales de estudiantes'),
+    ('CREAR_COMENTARIO_NORMAL_ESTUDIANTE',          'Permite crear comentarios normales sobre un estudiante'),
+    ('CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',    'Permite crear comentarios confidenciales sobre un estudiante'),
+    ('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE',         'Permite editar comentarios normales de un estudiante'),
+    ('EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',   'Permite editar comentarios confidenciales de un estudiante'),
+    ('ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',       'Permite eliminar comentarios normales de un estudiante'),
+    ('ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'Permite eliminar comentarios confidenciales de un estudiante'),
+    -- Comentarios de instancia
+    ('VER_COMENTARIO_NORMAL_INSTANCIA',             'Permite ver comentarios normales de instancia'),
+    ('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA',       'Permite ver comentarios confidenciales de instancia'),
+    ('CREAR_COMENTARIO_NORMAL_INSTANCIA',           'Permite crear comentarios normales de instancia'),
+    ('CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',     'Permite crear comentarios confidenciales de instancia'),
+    ('EDITAR_COMENTARIO_NORMAL_INSTANCIA',          'Permite editar comentarios normales de instancia'),
+    ('EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',    'Permite editar comentarios confidenciales de instancia'),
+    ('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA',        'Permite eliminar comentarios normales de instancia'),
+    ('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',  'Permite eliminar comentarios confidenciales de instancia')
+ON CONFLICT (nom_permiso) DO NOTHING;
+
+-- =============================================
+-- PERMISOS POR ROL
+-- =============================================
+
+-- ADMINISTRADOR: todos los permisos
+INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM proyecto.roles r, proyecto.permisos p
+WHERE r.nom_rol = 'ADMINISTRADOR'
+ON CONFLICT DO NOTHING;
+
+-- PSICOPEDAGOGO
+INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM proyecto.roles r
+JOIN proyecto.permisos p ON p.nom_permiso IN (
+    'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
+    'CREAR_ESTUDIANTE', 'EDITAR_ESTUDIANTE', 'REACTIVAR_ESTUDIANTE',
+    'VER_ADJUNTOS', 'ADJUNTAR_INFORME',
+    'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
+    'CATEGORIZAR_INSTANCIA', 'VER_BLOQUE_CONFIDENCIAL',
+    'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
+    'BAJA_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
+    'REGISTRAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
+    'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
+    'EDITAR_COMENTARIO_NORMAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',
+    'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
+    'EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
+    'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA',
+    'EDITAR_COMENTARIO_NORMAL_INSTANCIA', 'ELIMINAR_COMENTARIO_NORMAL_INSTANCIA',
+    'VER_COMENTARIO_CONFIDENCIAL_INSTANCIA', 'CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',
+    'EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA', 'ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA'
+)
+WHERE r.nom_rol = 'PSICOPEDAGOGO'
+ON CONFLICT DO NOTHING;
+
+-- TUTOR
+INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM proyecto.roles r
+JOIN proyecto.permisos p ON p.nom_permiso IN (
+    'VER_ESTUDIANTE_RESUMIDO', 'BUSCAR_ESTUDIANTE',
+    'VER_ADJUNTOS',
+    'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
+    'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
+    'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
+    'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA'
+)
+WHERE r.nom_rol = 'TUTOR'
+ON CONFLICT DO NOTHING;
+
+-- DOCENTE
+INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM proyecto.roles r
+JOIN proyecto.permisos p ON p.nom_permiso IN (
+    'VER_ESTUDIANTE_RESUMIDO',
+    'VER_INSTANCIAS',
+    'VER_RECORDATORIOS', 'CREAR_RECORDATORIO',
+    'VER_COMENTARIO_NORMAL_ESTUDIANTE',
+    'VER_COMENTARIO_NORMAL_INSTANCIA'
+)
+WHERE r.nom_rol = 'DOCENTE'
+ON CONFLICT DO NOTHING;
+
+-- LEGALES
+INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM proyecto.roles r
+JOIN proyecto.permisos p ON p.nom_permiso IN (
+    'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
+    'VER_ADJUNTOS',
+    'VER_INSTANCIAS', 'VER_BLOQUE_CONFIDENCIAL',
+    'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
+    'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
+    'VER_COMENTARIO_CONFIDENCIAL_INSTANCIA',
+    'VER_COMENTARIO_NORMAL_ESTUDIANTE',
+    'VER_COMENTARIO_NORMAL_INSTANCIA'
+)
+WHERE r.nom_rol = 'LEGALES'
+ON CONFLICT DO NOTHING;
+
+-- =============================================
+-- USUARIOS BASE
+-- (primero en usuarios, luego en funcionarios)
+-- =============================================
+INSERT INTO proyecto.usuarios (nombre, apellido, documento, pais_documento, email, contrasenia, estado)
+VALUES
+    ('Admin',   'Sistema', '00000000', 'URY', 'admin@sienep.com',   'Admin123!',   'ACTIVO'),
+    ('Tutor',   'Base',    '11111111', 'URY', 'tutor@sienep.com',   'Tutor123!',   'ACTIVO'),
+    ('Psicop',  'Base',    '22222222', 'URY', 'psico@sienep.com',   'Psico123!',   'ACTIVO'),
+    ('Legales', 'Base',    '33333333', 'URY', 'legales@sienep.com', 'Legales123!', 'ACTIVO'),
+    ('Docente', 'Base',    '44444444', 'URY', 'docente@sienep.com', 'Docente123!', 'ACTIVO')
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
+SELECT u.id_usuario, r.id_rol
+FROM proyecto.usuarios u
+JOIN proyecto.roles r ON r.nom_rol = 'ADMINISTRADOR'
+WHERE u.email = 'admin@sienep.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
+SELECT u.id_usuario, r.id_rol
+FROM proyecto.usuarios u
+JOIN proyecto.roles r ON r.nom_rol = 'TUTOR'
+WHERE u.email = 'tutor@sienep.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
+SELECT u.id_usuario, r.id_rol
+FROM proyecto.usuarios u
+JOIN proyecto.roles r ON r.nom_rol = 'PSICOPEDAGOGO'
+WHERE u.email = 'psico@sienep.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
+SELECT u.id_usuario, r.id_rol
+FROM proyecto.usuarios u
+JOIN proyecto.roles r ON r.nom_rol = 'LEGALES'
+WHERE u.email = 'legales@sienep.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
+SELECT u.id_usuario, r.id_rol
+FROM proyecto.usuarios u
+JOIN proyecto.roles r ON r.nom_rol = 'DOCENTE'
+WHERE u.email = 'docente@sienep.com'
+ON CONFLICT DO NOTHING;
