@@ -1,5 +1,11 @@
 package com.fides.sienep.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -7,24 +13,156 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Entidad Estudiante. Mapea la tabla proyecto.estudiantes.
+ * Herencia JOINED desde proyecto.usuarios.
+ *
+ * PREREQUISITO en Usuario.java:
+ *   @Entity
+ *   @Table(name = "usuarios", schema = "proyecto")
+ *   @Inheritance(strategy = InheritanceType.JOINED)
+ *
+ *   @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+ *   @Column(name = "id_usuario")
+ *   private Integer idUsuario;
+ *
+ * FILOSOFIA DE DATOS:
+ *   Baja logica siempre. cascade = {PERSIST, MERGE} unicamente.
+ *   Nunca CascadeType.REMOVE ni orphanRemoval.
+ *   Coherente con ON DELETE RESTRICT del schema.
+ *
+ * GRUPOS — @ManyToMany:
+ *   La tabla estu_grupos tiene campos extra (estado, created_at, updated_at)
+ *   gestionados por triggers de BD. Para el scope actual @ManyToMany es
+ *   suficiente. Si en el futuro se necesita gestionar 'estado' desde Java,
+ *   se introduce la entidad EstuGrupo.
+ */
+@Entity
+@Table(name = "estudiantes", schema = "proyecto")
+@PrimaryKeyJoinColumn(name = "id_usuario")
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(
+        callSuper = false,
+        exclude = {"telefonos", "grupos", "comentarios", "comentariosConfidenciales", "informesAdjuntos"}
+)
+@EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
+@Schema(description = "Estudiante registrado en el sistema SIENEP")
 public class Estudiante extends Usuario {
+
+    @Column(name = "ciudad", length = 50)
+    @Schema(description = "Ciudad de residencia", example = "Montevideo")
     private String ciudad;
+
+    @Column(name = "departamento", length = 20)
+    @Schema(description = "Departamento de residencia", example = "Montevideo")
     private String departamento;
+
+    @Column(name = "calle", length = 160)
+    @Schema(description = "Calle de residencia", example = "Av. 18 de Julio")
     private String calle;
+
+    @Column(name = "nro_puerta")
+    @Schema(description = "Numero de puerta", example = "1234")
     private Integer nroPuerta;
+
+    @Column(name = "inf_esta_salud", columnDefinition = "TEXT")
+    @Schema(description = "Informacion de estado de salud - acceso restringido")
     private String informacionSalud;
+
+    @Column(name = "sis_salud", length = 80)
+    @Schema(description = "Sistema de salud", example = "ASSE")
     private String sistemaSalud;
+
+    @Column(name = "fec_nacimiento", nullable = false)
+    @Schema(description = "Fecha de nacimiento", example = "2000-05-15")
     private LocalDate fechaNacimiento;
+
+    @Column(name = "motivo", columnDefinition = "TEXT")
+    @Schema(description = "Motivo de derivacion al servicio psicopedagogico")
     private String motivoDerivacion;
+
+    @Column(name = "foto", length = 255)
+    @Schema(description = "URL o ruta de la foto del estudiante")
     private String foto;
 
-    private List<Telefono> telefonos;
-    private List<Grupo> grupos;
-    private List<ComentarioNormalEstudiante> comentarios;
-    private List<ComentarioConfidencialEstudiante> comentariosConfidenciales;
-    private List<InformeAdjunto> informesAdjuntos;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
+    private LocalDateTime estudianteCreatedAt;
 
-    public Estudiante(String nombre, String apellido, String documento, PaisDocumento paisDocumento, String contrasenia, String email, String ciudad, String departamento, String calle, Integer nroPuerta, String informacionSalud, String sistemaSalud, LocalDate fechaNacimiento, String motivoDerivacion, String foto, List<Telefono> telefonos, List<Grupo> grupos) {
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
+    private LocalDateTime estudianteUpdatedAt;
+
+    // =========================================================
+    // RELACIONES
+    // =========================================================
+
+    @OneToMany(
+            mappedBy = "estudiante",
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
+            fetch = FetchType.LAZY
+    )
+    @Schema(description = "Telefonos del estudiante")
+    private List<Telefono> telefonos = new ArrayList<>();
+
+    /**
+     * Grupos del estudiante via tabla intermedia estu_grupos.
+     *
+     * Los campos extra de estu_grupos (estado, created_at, updated_at)
+     * son gestionados por triggers de BD. @ManyToMany los ignora — es
+     * el alcance correcto para el modulo actual.
+     */
+    @ManyToMany(
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
+            fetch = FetchType.LAZY
+    )
+    @JoinTable(
+            name = "estu_grupos",
+            schema = "proyecto",
+            joinColumns = @JoinColumn(name = "id_usuario"),
+            inverseJoinColumns = @JoinColumn(name = "id_grupo")
+    )
+    @Schema(description = "Grupos academicos del estudiante")
+    private List<Grupo> grupos = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "estudiante",
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
+            fetch = FetchType.LAZY
+    )
+    @Schema(description = "Comentarios de seguimiento del estudiante")
+    private List<ComentarioNormalEstudiante> comentarios = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "estudiante",
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
+            fetch = FetchType.LAZY
+    )
+    @Schema(description = "Observaciones confidenciales - acceso restringido a Direccion",
+            hidden = true)
+    private List<ComentarioConfidencialEstudiante> comentariosConfidenciales = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "estudiante",
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
+            fetch = FetchType.LAZY
+    )
+    @Schema(description = "Informes y documentos adjuntos del estudiante")
+    private List<InformeAdjunto> informesAdjuntos = new ArrayList<>();
+
+    // =========================================================
+    // CONSTRUCTORES
+    // =========================================================
+
+    public Estudiante(String nombre, String apellido, String documento, PaisDocumento paisDocumento,
+                      String contrasenia, String email, String ciudad, String departamento,
+                      String calle, Integer nroPuerta, String informacionSalud, String sistemaSalud,
+                      LocalDate fechaNacimiento, String motivoDerivacion, String foto,
+                      List<Telefono> telefonos, List<Grupo> grupos) {
         super(nombre, apellido, documento, paisDocumento, contrasenia, email);
         this.estado = EstadoLogico.PENDIENTE_DE_ACTIVACION;
         this.ciudad = ciudad;
@@ -38,12 +176,11 @@ public class Estudiante extends Usuario {
 
         int edad = Period.between(this.fechaNacimiento, LocalDate.now()).getYears();
         if (edad < 18) {
-            throw new IllegalArgumentException("El estudiante debe ser mayor de edad (mínimo 18 años).");
+            throw new IllegalArgumentException("El estudiante debe ser mayor de edad (minimo 18 anos).");
         }
 
         this.motivoDerivacion = motivoDerivacion;
         this.foto = foto;
-
         this.telefonos = telefonos != null ? telefonos : new ArrayList<>();
         this.grupos = grupos != null ? grupos : new ArrayList<>();
         this.comentarios = new ArrayList<>();
@@ -51,150 +188,8 @@ public class Estudiante extends Usuario {
         this.informesAdjuntos = new ArrayList<>();
     }
 
-    public Estudiante(int idUsuario, String nombre, String apellido, String documento, PaisDocumento paisDocumento, String contrasenia, String email, EstadoLogico estado, LocalDateTime createdAt, LocalDateTime updatedAt, String ciudad, String departamento, String calle, Integer nroPuerta, String informacionSalud, String sistemaSalud, LocalDate fechaNacimiento, String motivoDerivacion, String foto, List<Telefono> telefonos, List<Grupo> grupos, List<ComentarioNormalEstudiante> comentarios, List<ComentarioConfidencialEstudiante> comentariosConfidenciales, List<InformeAdjunto> informesAdjuntos) {
-        super(idUsuario, nombre, apellido, documento, paisDocumento, contrasenia, email, estado, createdAt, updatedAt);
-        this.ciudad = ciudad;
-        this.departamento = departamento;
-        this.calle = calle;
-        this.nroPuerta = nroPuerta;
-        this.informacionSalud = informacionSalud;
-        this.sistemaSalud = sistemaSalud;
-        this.fechaNacimiento = Objects.requireNonNull(fechaNacimiento, "fechaNacimiento NO puede ser null");
-        this.motivoDerivacion = motivoDerivacion;
-        this.foto = foto;
-        this.telefonos = telefonos;
-        this.grupos = grupos;
-        this.comentarios = comentarios;
-        this.comentariosConfidenciales = comentariosConfidenciales;
-        this.informesAdjuntos = informesAdjuntos;
-
-        this.telefonos = telefonos != null ? telefonos : new ArrayList<>();
-        this.grupos = grupos != null ? grupos : new ArrayList<>();
-        this.comentarios = comentarios != null ? comentarios : new ArrayList<>();
-        this.comentariosConfidenciales = comentariosConfidenciales != null ? comentariosConfidenciales : new ArrayList<>();
-        this.informesAdjuntos = informesAdjuntos != null ? informesAdjuntos : new ArrayList<>();
-
-    }
-
-    public Estudiante() {
-        super();
-    }
-
-    public String getCiudad() {
-        return ciudad;
-    }
-
-    public String getDepartamento() {
-        return departamento;
-    }
-
-    public String getCalle() {
-        return calle;
-    }
-
-    public Integer getNroPuerta() {
-        return nroPuerta;
-    }
-
-    public String getInformacionSalud() {
-        return informacionSalud;
-    }
-
-    public String getSistemaSalud() {
-        return sistemaSalud;
-    }
-
-    public LocalDate getFechaNacimiento() {
-        return fechaNacimiento;
-    }
-
-    public String getMotivoDerivacion() {
-        return motivoDerivacion;
-    }
-
-    public String getFoto() {
-        return foto;
-    }
-
-    public List<Telefono> getTelefonos() {
-        return telefonos;
-    }
-
-    public List<Grupo> getGrupos() {
-        return grupos;
-    }
-
-    public List<ComentarioNormalEstudiante> getComentarios() {
-        return comentarios;
-    }
-
-    public List<ComentarioConfidencialEstudiante> getComentariosConfidenciales() {
-        return comentariosConfidenciales;
-    }
-
-    public List<InformeAdjunto> getInformesAdjuntos() {
-        return informesAdjuntos;
-    }
-
-    public void setCiudad(String ciudad) {
-        this.ciudad = ciudad;
-    }
-
-    public void setDepartamento(String departamento) {
-        this.departamento = departamento;
-    }
-
-    public void setCalle(String calle) {
-        this.calle = calle;
-    }
-
-    public void setNroPuerta(Integer nroPuerta) {
-        this.nroPuerta = nroPuerta;
-    }
-
-    public void setInformacionSalud(String informacionSalud) {
-        this.informacionSalud = informacionSalud;
-    }
-
-    public void setSistemaSalud(String sistemaSalud) {
-        this.sistemaSalud = sistemaSalud;
-    }
-
-    public void setFechaNacimiento(LocalDate fechaNacimiento) {
-        this.fechaNacimiento = fechaNacimiento;
-    }
-
-    public void setMotivoDerivacion(String motivoDerivacion) {
-        this.motivoDerivacion = motivoDerivacion;
-    }
-
-    public void setFoto(String foto) {
-        this.foto = foto;
-    }
-
-    public void setTelefonos(List<Telefono> telefonos) {
-        this.telefonos = telefonos;
-    }
-
-    public void setGrupos(List<Grupo> grupos) {
-        this.grupos = grupos;
-    }
-
-    public void setComentarios(List<ComentarioNormalEstudiante> comentarios) {
-        this.comentarios = comentarios;
-    }
-
-    public void setComentariosConfidenciales(List<ComentarioConfidencialEstudiante> comentariosConfidenciales) {
-        this.comentariosConfidenciales = comentariosConfidenciales;
-    }
-
-    public void setInformesAdjuntos(List<InformeAdjunto> informesAdjuntos) {
-        this.informesAdjuntos = informesAdjuntos;
-    }
-
-
-    @Override
-    public String toString() {
-        return "Estudiante{" + "idUsuario=" + idUsuario + ", nombre='" + nombre + '\'' + ", apellido='" + apellido + '\'' + ", documento='" + documento + '\'' + ", paisDocumento=" + paisDocumento + ", email='" + email + '\'' + ", estado=" + estado + ", fechaNacimiento=" + fechaNacimiento + ", ciudad='" + ciudad + '\'' + ", telefonos=" + telefonos + ", grupos=" + grupos + '}';
+    @EqualsAndHashCode.Include
+    public Integer getIdForEquality() {
+        return this.getIdUsuario();
     }
 }
