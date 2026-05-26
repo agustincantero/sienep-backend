@@ -16,7 +16,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = "permisos")
+@ToString(exclude = "rolPermisos")
 public class Rol {
 
     @Id
@@ -35,38 +35,33 @@ public class Rol {
     @Column(nullable = false)
     private EstadoLogico estado;
 
-    @ManyToMany
-    @JoinTable(
-            name = "rol_permisos",
-            schema = "proyecto",
-            joinColumns = @JoinColumn(name = "id_rol"),
-            inverseJoinColumns = @JoinColumn(name = "id_permiso"))
-    private List<Permiso> permisos = new ArrayList<>();
+    @OneToMany(mappedBy = "rol", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RolPermiso> rolPermisos = new ArrayList<>();
 
-
-    public Rol(String nombre, int idRol, List<Permiso> permisos, EstadoLogico estado) {
+    public Rol(String nombre, int idRol, EstadoLogico estado) {
         this.nombre = nombre;
         this.idRol = idRol;
-        this.permisos = permisos != null ? permisos : new ArrayList<>();
         this.estado = estado;
+        this.rolPermisos = new ArrayList<>();
     }
 
     public Rol(String nombre) {
         this.nombre = nombre;
         this.estado = EstadoLogico.ACTIVO;
-        this.permisos = new ArrayList<>();
+        this.rolPermisos = new ArrayList<>();
     }
 
     public boolean tienePermiso(String nombrePermiso) {
-        if (permisos == null) return false;
-        for (Permiso p : permisos) {
-            if (p.getNombre().equals(nombrePermiso)) return true;
+        if (rolPermisos == null) return false;
+        for (RolPermiso rp : rolPermisos) {
+            if (rp.getEstado() == EstadoLogico.ACTIVO && rp.getPermiso().getNombre().equals(nombrePermiso)) return true;
         }
         return false;
     }
 
     public void agregarPermiso(Permiso permiso) {
-        if (permisos == null) permisos = new ArrayList<>();
-        permisos.add(permiso);
+        if (rolPermisos == null) rolPermisos = new ArrayList<>();
+        RolPermiso rolPermiso = new RolPermiso(this, permiso, EstadoLogico.ACTIVO);
+        rolPermisos.add(rolPermiso);
     }
 }
