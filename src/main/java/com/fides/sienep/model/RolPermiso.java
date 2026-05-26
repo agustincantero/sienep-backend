@@ -1,12 +1,15 @@
 package com.fides.sienep.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,6 +18,20 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class RolPermiso {
+
+    @Embeddable
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @EqualsAndHashCode
+    public static class RolPermisoId implements Serializable {
+        @Column(name = "id_rol")
+        private int idRol;
+
+        @Column(name = "id_permiso")
+        private int idPermiso;
+    }
 
     @EmbeddedId
     private RolPermisoId id = new RolPermisoId();
