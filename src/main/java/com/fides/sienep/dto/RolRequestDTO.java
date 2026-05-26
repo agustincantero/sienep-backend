@@ -9,8 +9,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class RolDTO {
-    private int idRol;
+public class RolRequestDTO {
 
     @NotBlank(message = "El nombre del rol no puede estar vacío")
     @Size(max = 50, message = "El nombre no puede superar los 50 caracteres")

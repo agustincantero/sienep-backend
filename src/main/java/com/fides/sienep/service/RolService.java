@@ -1,6 +1,8 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.RolDTO;
+import com.fides.sienep.dto.PermisoResumenDTO;
+import com.fides.sienep.dto.RolRequestDTO;
+import com.fides.sienep.dto.RolResponseDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Permiso;
 import com.fides.sienep.model.Rol;
@@ -28,82 +30,86 @@ public class RolService {
     }
 
     // --- Mapeos Manuales ---
-    public RolDTO toDTO(Rol rol) {
-        RolDTO dto = new RolDTO();
+    public RolResponseDTO toResponseDTO(Rol rol) {
+        RolResponseDTO dto = new RolResponseDTO();
         dto.setIdRol(rol.getIdRol());
         dto.setNombre(rol.getNombre());
         dto.setDescripcion(rol.getDescripcion());
         dto.setEstado(rol.getEstado());
 
-        // Mapear solo los IDs de los permisos activos
+        // Mapear solo los permisos activos a DTOs de resumen
         if (rol.getRolPermisos() != null) {
-            List<Integer> permisosIds = rol.getRolPermisos().stream()
+            List<PermisoResumenDTO> permisosResumen = rol.getRolPermisos().stream()
                     .filter(rp -> rp.getEstado() == EstadoLogico.ACTIVO)
-                    .map(rp -> rp.getPermiso().getIdPermiso())
+                    .map(rp -> {
+                        PermisoResumenDTO permisoDTO = new PermisoResumenDTO();
+                        permisoDTO.setIdPermiso(rp.getPermiso().getIdPermiso());
+                        permisoDTO.setNombre(rp.getPermiso().getNombre());
+                        return permisoDTO;
+                    })
                     .collect(Collectors.toList());
-            dto.setPermisosIds(permisosIds);
+            dto.setPermisos(permisosResumen);
         } else {
-            dto.setPermisosIds(new ArrayList<>());
+            dto.setPermisos(new ArrayList<>());
         }
         return dto;
     }
 
     // --- Métodos CRUD ---
     @Transactional(readOnly = true)
-    public List<RolDTO> obtenerTodos() {
+    public List<RolResponseDTO> obtenerTodos() {
         return rolRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public RolDTO obtenerPorId(int id) {
+    public RolResponseDTO obtenerPorId(int id) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
-        return toDTO(rol);
+        return toResponseDTO(rol);
     }
 
     @Transactional
-    public RolDTO crearRol(RolDTO rolDTO) {
-        if (rolRepository.existsByNombre(rolDTO.getNombre())) {
+    public RolResponseDTO crearRol(RolRequestDTO requestDTO) {
+        if (rolRepository.existsByNombre(requestDTO.getNombre())) {
             throw new RuntimeException("El nombre del rol ya existe");
         }
 
         Rol rol = new Rol();
-        rol.setNombre(rolDTO.getNombre());
-        rol.setDescripcion(rolDTO.getDescripcion());
-        rol.setEstado(rolDTO.getEstado() != null ? rolDTO.getEstado() : EstadoLogico.ACTIVO);
+        rol.setNombre(requestDTO.getNombre());
+        rol.setDescripcion(requestDTO.getDescripcion());
+        rol.setEstado(requestDTO.getEstado() != null ? requestDTO.getEstado() : EstadoLogico.ACTIVO);
 
         // Asignar permisos si vienen en el DTO
-        if (rolDTO.getPermisosIds() != null && !rolDTO.getPermisosIds().isEmpty()) {
-            for (Integer permisoId : rolDTO.getPermisosIds()) {
-                // Usamos EntityManager.getReference para no hacer un SELECT innecesario
+        if (requestDTO.getPermisosIds() != null && !requestDTO.getPermisosIds().isEmpty()) {
+            for (Integer permisoId : requestDTO.getPermisosIds()) {
                 Permiso permisoRef = entityManager.getReference(Permiso.class, permisoId);
                 rol.agregarPermiso(permisoRef);
             }
         }
 
         Rol rolGuardado = rolRepository.save(rol);
-        return toDTO(rolGuardado);
+        return toResponseDTO(rolGuardado);
     }
 
     @Transactional
-    public RolDTO actualizarRol(int id, RolDTO rolDTO) {
+    public RolResponseDTO actualizarRol(int id, RolRequestDTO requestDTO) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
         // Validar nombre único si lo están cambiando
-        if (!rol.getNombre().equals(rolDTO.getNombre()) && rolRepository.existsByNombre(rolDTO.getNombre())) {
+        if (!rol.getNombre().equals(requestDTO.getNombre()) && rolRepository.existsByNombre(requestDTO.getNombre())) {
             throw new RuntimeException("El nombre del rol ya existe");
         }
 
-        rol.setNombre(rolDTO.getNombre());
-        rol.setDescripcion(rolDTO.getDescripcion());
-        rol.setEstado(rolDTO.getEstado());
+        rol.setNombre(requestDTO.getNombre());
+        rol.setDescripcion(requestDTO.getDescripcion());
+        rol.setEstado(requestDTO.getEstado());
 
         // Lógica para actualizar permisos (Manejo de altas y bajas lógicas)
-        if (rolDTO.getPermisosIds() != null) {
-            List<Integer> nuevosPermisosIds = rolDTO.getPermisosIds();
+        if (requestDTO.getPermisosIds() != null) {
+            List<Integer> nuevosPermisosIds = requestDTO.getPermisosIds();
 
             // 1. Dar de baja (INACTIVO) a los permisos que ya no están en la lista
             for (RolPermiso rp : rol.getRolPermisos()) {
@@ -134,7 +140,7 @@ public class RolService {
         }
 
         Rol rolActualizado = rolRepository.save(rol);
-        return toDTO(rolActualizado);
+        return toResponseDTO(rolActualizado);
     }
 
     @Transactional
