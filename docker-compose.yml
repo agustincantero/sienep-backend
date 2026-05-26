@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+
+  sienep-db:
+    image: postgres:16
+    container_name: sienep-db
+    environment:
+      POSTGRES_DB: sienep
+      POSTGRES_USER: sienep
+      POSTGRES_PASSWORD: sienep
+    ports:
+      - "5432:5432"
+    volumes:
+      # Volumen persistente los datos sobreviven si el contenedor se reinicia
+      - sienep_data:/var/lib/postgresql/data
+      # Mapeamos el script SQL para que se ejecute automáticamente
+      - ./src/main/resources/proyecto_schema.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sienep -d sienep"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  sienep_data:
+    driver: local
+
+# INSTRUCCIONES DE USO
+#
+# Levantar la BD (primera vez o después de un reinicio):
+#   docker compose up -d
+#
+# Verificar que está corriendo:
+#   docker compose ps
+#
+# Ver los logs si algo falla:
+#   docker compose logs sienep-db
+#
+# Detener sin borrar datos:
+#   docker compose stop
+#
+# Detener Y borrar los datos (reset completo):
+#   docker compose down -v
+#
+# Conectarse a la BD desde la terminal (opcional):
+#   docker exec -it sienep-db psql -U sienep -d sienep
+#
+# CREDENCIALES (coinciden con application.properties)
+# Host:     localhost
+# Puerto:   5432
+# BD:       sienep
+# Usuario:  sienep
+# Password: sienep
+#
+# URL JDBC: jdbc:postgresql://localhost:5432/sienep
