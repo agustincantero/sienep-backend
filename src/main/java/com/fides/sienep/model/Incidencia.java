@@ -1,45 +1,24 @@
 package com.fides.sienep.model;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "incidencias", schema = "proyecto")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Incidencia extends Instancia {
 
+    @Column(name = "lugar", length = 50, nullable = false)
     private String lugar;
-    private List<Involucrado> involucrados;
 
-    public Incidencia() {
-        super();
-        this.involucrados = new ArrayList<>();
-    }
-
-    public Incidencia(String idNegInstancia, String titulo, LocalDateTime fechaHora, int idEstudiante, int idFuncionario, EstadoLogico estado, String canal, String lugar) {
-        super(idNegInstancia, titulo, fechaHora, idEstudiante, idFuncionario, estado, canal);
+    public Incidencia(String titulo, LocalDateTime fechaHora, Estudiante estudiante, Funcionario funcionario, String canal, String lugar) {
+        super(titulo, fechaHora, estudiante, funcionario, canal);
         this.lugar = lugar;
-        this.involucrados = new ArrayList<>();
-    }
-
-    public String getLugar() {
-        return lugar;
-    }
-
-    public void setLugar(String lugar) {
-        this.lugar = lugar;
-    }
-
-    public List<Involucrado> getInvolucrados() {
-        return involucrados;
-    }
-
-    public void setInvolucrados(List<Involucrado> involucrados) {
-        this.involucrados = involucrados;
-    }
-
-
-    @Override
-    public String toString() {
-        return "Incidencia{" + super.toString() + ", lugar='" + lugar + '\'' + ", involucrados=" + involucrados + '}';
     }
 }
-
