@@ -39,15 +39,15 @@ public class RolService {
 
         // Mapear solo los permisos activos a DTOs de resumen
         if (rol.getRolPermisos() != null) {
-            List<PermisoResumenDTO> permisosResumen = rol.getRolPermisos().stream()
-                    .filter(rp -> rp.getEstado() == EstadoLogico.ACTIVO)
-                    .map(rp -> {
-                        PermisoResumenDTO permisoDTO = new PermisoResumenDTO();
-                        permisoDTO.setIdPermiso(rp.getPermiso().getIdPermiso());
-                        permisoDTO.setNombre(rp.getPermiso().getNombre());
-                        return permisoDTO;
-                    })
-                    .collect(Collectors.toList());
+            List<PermisoResumenDTO> permisosResumen = new ArrayList<>();
+            for (RolPermiso rp : rol.getRolPermisos()) {
+                if (rp.getEstado() == EstadoLogico.ACTIVO) {
+                    PermisoResumenDTO permisoDTO = new PermisoResumenDTO();
+                    permisoDTO.setIdPermiso(rp.getPermiso().getIdPermiso());
+                    permisoDTO.setNombre(rp.getPermiso().getNombre());
+                    permisosResumen.add(permisoDTO);
+                }
+            }
             dto.setPermisos(permisosResumen);
         } else {
             dto.setPermisos(new ArrayList<>());
@@ -58,9 +58,12 @@ public class RolService {
     // --- Métodos CRUD ---
     @Transactional(readOnly = true)
     public List<RolResponseDTO> obtenerTodos() {
-        return rolRepository.findAll().stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+        List<Rol> roles = rolRepository.findAll();
+        List<RolResponseDTO> rolesDTO = new ArrayList<>();
+        for (Rol rol : roles) {
+            rolesDTO.add(toResponseDTO(rol));
+        }
+        return rolesDTO;
     }
 
     @Transactional(readOnly = true)
