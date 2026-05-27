@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
@@ -18,25 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Service de Estudiante — capa de lógica de negocio.
- *
- * Responsabilidades:
- *  - Validaciones de negocio (unicidad, mayoría de edad, ownership).
- *  - Hasheo de contraseña con BCrypt.
- *  - Control de acceso declarativo con @PreAuthorize.
- *  - Mapeo entre entidad y DTOs.
- *  - Orquestación de repositorios.
- *
- * @RequiredArgsConstructor genera el constructor con todos los campos final.
- * Spring inyecta las dependencias por constructor — práctica recomendada
- * sobre @Autowired porque hace las dependencias explícitas e inmutables.
- *
- * @Transactional: garantiza que cada operación de escritura sea atómica.
- * Si algo falla en el medio, la BD hace rollback automático.
- */
 @Service
 @RequiredArgsConstructor
 public class EstudianteService {
@@ -99,46 +84,43 @@ public class EstudianteService {
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
     public Page<EstudianteResumenDTO> listarActivos(Pageable pageable) {
-        return estudianteRepository.findByEstado(EstadoLogico.ACTIVO, pageable)
-                .map(this::toResumenDTO);
+        return estudianteRepository.findByEstado(EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
     }
 
     @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public Page<EstudianteResumenDTO> buscar(String texto, Pageable pageable) {
-        boolean puedeVerInactivos = tienePermiso("VER_ESTUDIANTE");
-        if (puedeVerInactivos) {
+        if (tienePermiso("VER_ESTUDIANTE")) {
             return estudianteRepository.buscarPorNombre(texto, pageable).map(this::toResumenDTO);
         }
-        return estudianteRepository.buscarPorNombreYEstado(texto, EstadoLogico.ACTIVO, pageable)
-                .map(this::toResumenDTO);
+        return estudianteRepository.buscarPorNombreYEstado(texto, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
     }
 
     @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public Page<EstudianteResumenDTO> filtrarPorGrupo(Integer idGrupo, Pageable pageable) {
-        EstadoLogico estado = tienePermiso("VER_ESTUDIANTE") ? null : EstadoLogico.ACTIVO;
-        return estudianteRepository.findByGrupoAndEstado(idGrupo,
-                        estado != null ? estado : EstadoLogico.ACTIVO, pageable)
-                .map(this::toResumenDTO);
+        if (tienePermiso("VER_ESTUDIANTE")) {
+            return estudianteRepository.findByGrupo(idGrupo, pageable).map(this::toResumenDTO);
+        }
+        return estudianteRepository.findByGrupoAndEstado(idGrupo, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
     }
 
     @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public Page<EstudianteResumenDTO> filtrarPorCarrera(Integer idCarrera, Pageable pageable) {
-        EstadoLogico estado = tienePermiso("VER_ESTUDIANTE") ? null : EstadoLogico.ACTIVO;
-        return estudianteRepository.findByCarreraAndEstado(idCarrera,
-                        estado != null ? estado : EstadoLogico.ACTIVO, pageable)
-                .map(this::toResumenDTO);
+        if (tienePermiso("VER_ESTUDIANTE")) {
+            return estudianteRepository.findByCarrera(idCarrera, pageable).map(this::toResumenDTO);
+        }
+        return estudianteRepository.findByCarreraAndEstado(idCarrera, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
     }
 
     @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public Page<EstudianteResumenDTO> filtrarPorItr(Integer idItr, Pageable pageable) {
-        EstadoLogico estado = tienePermiso("VER_ESTUDIANTE") ? null : EstadoLogico.ACTIVO;
-        return estudianteRepository.findByItrAndEstado(idItr,
-                        estado != null ? estado : EstadoLogico.ACTIVO, pageable)
-                .map(this::toResumenDTO);
+        if (tienePermiso("VER_ESTUDIANTE")) {
+            return estudianteRepository.findByItr(idItr, pageable).map(this::toResumenDTO);
+        }
+        return estudianteRepository.findByItrAndEstado(idItr, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
     }
 
     // =========================================================
@@ -153,15 +135,10 @@ public class EstudianteService {
         return toResponseDTO(estudianteRepository.save(estudiante));
     }
 
-    /**
-     * El usuario autenticado edita sus propios datos.
-     * Verifica que el ID del path coincida con el del usuario en sesión.
-     */
     @PreAuthorize("hasAuthority('EDITAR_MIS_DATOS')")
     @Transactional
     public EstudianteResponseDTO editarMisDatos(Integer id, EstudianteRequestDTO dto) {
-        Integer idAutenticado = getIdUsuarioAutenticado();
-        if (!idAutenticado.equals(id)) {
+        if (!getIdUsuarioAutenticado().equals(id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo podés editar tus propios datos.");
         }
         Estudiante estudiante = buscarOFallar(id);
@@ -173,21 +150,13 @@ public class EstudianteService {
     // CAMBIAR CONTRASEÑA — dispara activación
     // =========================================================
 
-    /**
-     * Sin @PreAuthorize: cualquier usuario autenticado puede cambiar su propia contraseña.
-     * La verificación de ownership se hace dentro del método.
-     * Si el estudiante estaba PENDIENTE_DE_ACTIVACION, el cambio de contraseña
-     * lo activa — es el mecanismo de activación del sistema.
-     */
     @Transactional
-    public void cambiarContrasenia(Integer id, String nuevaContrasenia) {
-        Integer idAutenticado = getIdUsuarioAutenticado();
-        if (!idAutenticado.equals(id)) {
+    public void cambiarContrasenia(Integer id, CambiarContraseniaDTO dto) {
+        if (!getIdUsuarioAutenticado().equals(id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No podés cambiar la contraseña de otro usuario.");
         }
         Estudiante estudiante = buscarOFallar(id);
-        estudiante.setContrasenia(passwordEncoder.encode(nuevaContrasenia));
-
+        estudiante.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(estudiante.getEstado())) {
             estudiante.setEstado(EstadoLogico.ACTIVO);
         }
@@ -220,8 +189,7 @@ public class EstudianteService {
 
     private Estudiante buscarOFallar(Integer id) {
         return estudianteRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Estudiante no encontrado con id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + id));
     }
 
     private void aplicarCambios(Estudiante estudiante, EstudianteRequestDTO dto) {
@@ -243,23 +211,33 @@ public class EstudianteService {
 
     private void asignarTelefonos(Estudiante estudiante, List<String> numeros) {
         if (numeros == null) return;
-        List<Telefono> telefonos = numeros.stream()
-                .map(n -> new Telefono(estudiante, n))
-                .toList();
+        List<Telefono> telefonos = new ArrayList<>();
+        for (String numero : numeros) {
+            telefonos.add(new Telefono(estudiante, numero));
+        }
         estudiante.setTelefonos(telefonos);
     }
 
     private void asignarGrupos(Estudiante estudiante, List<Integer> idGrupos) {
         if (idGrupos == null) return;
-        List<Grupo> grupos = idGrupos.stream()
-                .map(idGrupo -> grupoRepository.findById(idGrupo)
-                        .orElseThrow(() -> new ResponseStatusException(
-                                HttpStatus.NOT_FOUND, "Grupo no encontrado con id: " + idGrupo)))
-                .toList();
+        List<Grupo> grupos = new ArrayList<>();
+        for (Integer idGrupo : idGrupos) {
+            Grupo grupo = grupoRepository.findById(idGrupo)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado: " + idGrupo));
+            grupos.add(grupo);
+        }
         estudiante.setGrupos(grupos);
     }
 
     private EstudianteResponseDTO toResponseDTO(Estudiante e) {
+        List<String> telefonos = new ArrayList<>();
+        for (Telefono t : e.getTelefonos()) {
+            telefonos.add(t.getId().getNumero());
+        }
+        List<String> grupos = new ArrayList<>();
+        for (Grupo g : e.getGrupos()) {
+            grupos.add(g.getNomGrupo());
+        }
         return EstudianteResponseDTO.builder()
                 .idUsuario(e.getIdUsuario())
                 .nombre(e.getNombre())
@@ -277,16 +255,22 @@ public class EstudianteService {
                 .sistemaSalud(e.getSistemaSalud())
                 .motivoDerivacion(e.getMotivoDerivacion())
                 .foto(e.getFoto())
-                .telefonos(e.getTelefonos().stream()
-                        .map(t -> t.getId().getNumero()).toList())
-                .grupos(e.getGrupos().stream()
-                        .map(Grupo::getNomGrupo).toList())
+                .telefonos(telefonos)
+                .grupos(grupos)
                 .createdAt(e.getEstudianteCreatedAt())
                 .updatedAt(e.getEstudianteUpdatedAt())
                 .build();
     }
 
     private EstudianteResumenDTO toResumenDTO(Estudiante e) {
+        List<String> telefonos = new ArrayList<>();
+        for (Telefono t : e.getTelefonos()) {
+            telefonos.add(t.getId().getNumero());
+        }
+        List<String> grupos = new ArrayList<>();
+        for (Grupo g : e.getGrupos()) {
+            grupos.add(g.getNomGrupo());
+        }
         return EstudianteResumenDTO.builder()
                 .idUsuario(e.getIdUsuario())
                 .nombre(e.getNombre())
@@ -294,24 +278,22 @@ public class EstudianteService {
                 .documento(e.getDocumento())
                 .email(e.getEmail())
                 .estado(e.getEstado())
-                .grupos(e.getGrupos().stream()
-                        .map(Grupo::getNomGrupo).toList())
-                .telefonos(e.getTelefonos().stream()
-                        .map(t -> t.getId().getNumero()).toList())
+                .grupos(grupos)
+                .telefonos(telefonos)
                 .build();
     }
 
     private boolean tienePermiso(String permiso) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(permiso));
+        for (var authority : auth.getAuthorities()) {
+            if (authority.getAuthority().equals(permiso)) return true;
+        }
+        return false;
     }
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        // El principal debe implementar una interfaz que exponga el idUsuario.
-        // Se configura cuando se implemente UserDetailsService en SecurityConfig.
-        if (auth.getPrincipal() instanceof com.fides.sienep.model.Usuario usuario) {
+        if (auth.getPrincipal() instanceof Usuario usuario) {
             return usuario.getIdUsuario();
         }
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado.");

@@ -3,6 +3,7 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
+import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.service.EstudianteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,7 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+
 
 /**
  * Controller de Estudiante.
@@ -161,8 +162,8 @@ public class EstudianteController {
     @ApiResponse(responseCode = "204", description = "Contraseña actualizada")
     public ResponseEntity<Void> cambiarContrasenia(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> body) {
-        estudianteService.cambiarContrasenia(id, body.get("contrasenia"));
+            @Valid @RequestBody CambiarContraseniaDTO dto) {
+        estudianteService.cambiarContrasenia(id, dto);
         return ResponseEntity.noContent().build();
     }
 
