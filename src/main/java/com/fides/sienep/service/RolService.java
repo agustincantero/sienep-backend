@@ -58,6 +58,13 @@ public class RolService {
         return dto;
     }
 
+    // --- Validaciones Internas ---
+    private void validarRolProtegido(Rol rol) {
+        if ("ADMINISTRADOR".equalsIgnoreCase(rol.getNombre())) {
+            throw new RuntimeException("Acción denegada: No se puede modificar ni dar de baja el rol base ADMINISTRADOR.");
+        }
+    }
+
     // --- Métodos CRUD ---
     @Transactional(readOnly = true)
     public List<RolResponseDTO> obtenerTodos() {
@@ -115,6 +122,8 @@ public class RolService {
     public RolResponseDTO actualizarRol(int id, RolRequestDTO requestDTO) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+
+        validarRolProtegido(rol);
 
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
@@ -178,6 +187,8 @@ public class RolService {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         
+        validarRolProtegido(rol);
+
         rol.setEstado(EstadoLogico.INACTIVO);
         rolRepository.save(rol);
     }
