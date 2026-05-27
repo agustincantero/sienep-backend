@@ -14,23 +14,23 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class IncidenciaRequestDTO {
 
-    @NotBlank(message = "El título no puede estar vacío")
+    @NotBlank(message = "Por favor ingresá el título de la incidencia")
     @Size(max = 150, message = "El título no puede superar los 150 caracteres")
     private String titulo;
 
-    @NotNull(message = "La fecha y hora no puede ser nula")
+    @NotNull(message = "Por favor ingresá la fecha y hora de la incidencia")
     private LocalDateTime fechaHora;
 
-    @NotNull(message = "El estudiante no puede ser nulo")
+    @NotNull(message = "Por favor seleccioná el estudiante asociado a la incidencia")
     private Integer idEstudiante;
 
-    @NotNull(message = "El funcionario no puede ser nulo")
+    @NotNull(message = "Por favor seleccioná el funcionario responsable de la incidencia")
     private Integer idFuncionario;
 
     @Size(max = 50, message = "El canal no puede superar los 50 caracteres")
     private String canal;
 
-    @NotBlank(message = "El lugar no puede estar vacío")
+    @NotBlank(message = "Por favor ingresá el lugar donde ocurrió la incidencia")
     @Size(max = 50, message = "El lugar no puede superar los 50 caracteres")
     private String lugar;
 }

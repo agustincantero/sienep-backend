@@ -26,10 +26,10 @@ public class IncidenciaService {
 
     public IncidenciaResponseDTO crear(IncidenciaRequestDTO dto) {
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
-                .orElseThrow(() -> new EntityNotFoundException("Estudiante con id " + dto.getIdEstudiante() + " no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
         Funcionario funcionario = funcionarioRepository.findById(dto.getIdFuncionario())
-                .orElseThrow(() -> new EntityNotFoundException("Funcionario con id " + dto.getIdFuncionario() + " no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró un funcionario con el id " + dto.getIdFuncionario()));
 
         Incidencia incidencia = new Incidencia(
                 dto.getTitulo(),
@@ -53,9 +53,7 @@ public class IncidenciaService {
     }
 
     public IncidenciaResponseDTO buscarPorId(int id) {
-        Incidencia incidencia = incidenciaRepository.findByCodInstanciaAndEstado(id, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new EntityNotFoundException("Incidencia con id " + id + " no encontrada"));
-        return toResponseDTO(incidencia);
+        return toResponseDTO(buscarActivaOFallar(id));
     }
 
     public List<IncidenciaResponseDTO> listarPorEstudiante(int idEstudiante) {
@@ -77,14 +75,13 @@ public class IncidenciaService {
     }
 
     public IncidenciaResponseDTO actualizar(int id, IncidenciaRequestDTO dto) {
-        Incidencia incidencia = incidenciaRepository.findByCodInstanciaAndEstado(id, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new EntityNotFoundException("Incidencia con id " + id + " no encontrada"));
+        Incidencia incidencia = buscarActivaOFallar(id);
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
-                .orElseThrow(() -> new EntityNotFoundException("Estudiante con id " + dto.getIdEstudiante() + " no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
         Funcionario funcionario = funcionarioRepository.findById(dto.getIdFuncionario())
-                .orElseThrow(() -> new EntityNotFoundException("Funcionario con id " + dto.getIdFuncionario() + " no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró un funcionario con el id " + dto.getIdFuncionario()));
 
         incidencia.setTitulo(dto.getTitulo());
         incidencia.setFechaHora(dto.getFechaHora());
@@ -97,10 +94,14 @@ public class IncidenciaService {
     }
 
     public void darDeBaja(int id) {
-        Incidencia incidencia = incidenciaRepository.findByCodInstanciaAndEstado(id, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new EntityNotFoundException("Incidencia con id " + id + " no encontrada"));
+        Incidencia incidencia = buscarActivaOFallar(id);
         incidencia.setEstado(EstadoLogico.INACTIVO);
         incidenciaRepository.save(incidencia);
+    }
+
+    private Incidencia buscarActivaOFallar(int id) {
+        return incidenciaRepository.findByCodInstanciaAndEstado(id, EstadoLogico.ACTIVO)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró una incidencia activa con el id " + id));
     }
 
     private IncidenciaResponseDTO toResponseDTO(Incidencia incidencia) {

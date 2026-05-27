@@ -10,9 +10,9 @@ import lombok.Setter;
 @NoArgsConstructor
 public class InstanciaComunRequestDTO {
 
-    @NotNull(message = "El código de instancia no puede ser nulo")
+    @NotNull(message = "Por favor seleccioná la instancia a categorizar")
     private Integer codInstancia;
 
-    @NotNull(message = "El id de categoría no puede ser nulo")
+    @NotNull(message = "Por favor seleccioná la categoría a asignar")
     private Integer idCategoria;
 }
