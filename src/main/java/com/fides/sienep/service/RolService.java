@@ -7,6 +7,7 @@ import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Permiso;
 import com.fides.sienep.model.Rol;
 import com.fides.sienep.model.RolPermiso;
+import com.fides.sienep.repository.PermisoRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,11 +22,13 @@ import java.util.stream.Collectors;
 public class RolService {
 
     private final RolRepository rolRepository;
+    private final PermisoRepository permisoRepository;
     private final EntityManager entityManager;
 
     @Autowired
-    public RolService(RolRepository rolRepository, EntityManager entityManager) {
+    public RolService(RolRepository rolRepository, PermisoRepository permisoRepository, EntityManager entityManager) {
         this.rolRepository = rolRepository;
+        this.permisoRepository = permisoRepository;
         this.entityManager = entityManager;
     }
 
@@ -75,8 +78,20 @@ public class RolService {
 
     @Transactional
     public RolResponseDTO crearRol(RolRequestDTO requestDTO) {
+        // Normalización del nombre
+        String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
+        requestDTO.setNombre(nombreNormalizado);
+
         if (rolRepository.existsByNombre(requestDTO.getNombre())) {
             throw new RuntimeException("El nombre del rol ya existe");
+        }
+
+        // Validar que los permisos existen en la BD
+        if (requestDTO.getPermisosIds() != null && !requestDTO.getPermisosIds().isEmpty()) {
+            long permisosExistentes = permisoRepository.countByIdPermisoIn(requestDTO.getPermisosIds());
+            if (permisosExistentes != requestDTO.getPermisosIds().size()) {
+                throw new RuntimeException("Uno o más IDs de permisos proporcionados no existen en la base de datos");
+            }
         }
 
         Rol rol = new Rol();
@@ -101,9 +116,21 @@ public class RolService {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
+        // Normalización del nombre
+        String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
+        requestDTO.setNombre(nombreNormalizado);
+
         // Validar nombre único si lo están cambiando
         if (!rol.getNombre().equals(requestDTO.getNombre()) && rolRepository.existsByNombre(requestDTO.getNombre())) {
             throw new RuntimeException("El nombre del rol ya existe");
+        }
+
+        // Validar que los permisos existen en la BD
+        if (requestDTO.getPermisosIds() != null && !requestDTO.getPermisosIds().isEmpty()) {
+            long permisosExistentes = permisoRepository.countByIdPermisoIn(requestDTO.getPermisosIds());
+            if (permisosExistentes != requestDTO.getPermisosIds().size()) {
+                throw new RuntimeException("Uno o más IDs de permisos proporcionados no existen en la base de datos");
+            }
         }
 
         rol.setNombre(requestDTO.getNombre());
