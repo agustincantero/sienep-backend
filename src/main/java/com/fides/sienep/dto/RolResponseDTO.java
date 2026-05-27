@@ -7,21 +7,21 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-@Schema(description = "Objeto de transferencia de datos que representa un Rol con sus permisos detallados")
+@Schema(description = "DTO que representa un Rol con su información completa y permisos activos.")
 public class RolResponseDTO {
     
-    @Schema(description = "ID único del rol generado por la base de datos", example = "6")
+    @Schema(description = "ID autogenerado del rol", example = "1")
     private int idRol;
     
-    @Schema(description = "Nombre del rol", example = "COORDINADOR")
+    @Schema(description = "Nombre único del rol", example = "ADMINISTRADOR")
     private String nombre;
     
-    @Schema(description = "Descripción del rol", example = "Encargado de coordinar las actividades académicas")
+    @Schema(description = "Descripción del rol", example = "Rol base del sistema con acceso total")
     private String descripcion;
     
     @Schema(description = "Estado actual del rol", example = "ACTIVO")
     private EstadoLogico estado;
     
-    @Schema(description = "Lista detallada de los permisos que este rol tiene habilitados actualmente")
+    @Schema(description = "Lista de permisos actualmente activos asignados a este rol")
     private List<PermisoResumenDTO> permisos;
 }
