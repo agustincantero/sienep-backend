@@ -19,6 +19,7 @@ public class FrecuenciaService {
     private final FrecuenciaRepository frecuenciaRepository;
 
     public FrecuenciaResponseDTO crear(FrecuenciaRequestDTO dto) {
+        validarCoherenciaFrecuencia(dto);
         Frecuencia frecuencia = new Frecuencia(
                 dto.getDescripcion(),
                 dto.getTipo(),
@@ -38,14 +39,12 @@ public class FrecuenciaService {
     }
 
     public FrecuenciaResponseDTO buscarPorId(int id) {
-        Frecuencia frecuencia = frecuenciaRepository.findByIdFrecuenciaAndEstado(id, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new EntityNotFoundException("Frecuencia con id " + id + " no encontrada"));
-        return toResponseDTO(frecuencia);
+        return toResponseDTO(buscarActivaOFallar(id));
     }
 
     public FrecuenciaResponseDTO actualizar(int id, FrecuenciaRequestDTO dto) {
-        Frecuencia frecuencia = frecuenciaRepository.findByIdFrecuenciaAndEstado(id, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new EntityNotFoundException("Frecuencia con id " + id + " no encontrada"));
+        validarCoherenciaFrecuencia(dto);
+        Frecuencia frecuencia = buscarActivaOFallar(id);
         frecuencia.setDescripcion(dto.getDescripcion());
         frecuencia.setTipo(dto.getTipo());
         frecuencia.setIntDias(dto.getIntDias());
@@ -54,10 +53,31 @@ public class FrecuenciaService {
     }
 
     public void darDeBaja(int id) {
-        Frecuencia frecuencia = frecuenciaRepository.findByIdFrecuenciaAndEstado(id, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new EntityNotFoundException("Frecuencia con id " + id + " no encontrada"));
+        Frecuencia frecuencia = buscarActivaOFallar(id);
         frecuencia.setEstado(EstadoLogico.INACTIVO);
         frecuenciaRepository.save(frecuencia);
+    }
+
+    private Frecuencia buscarActivaOFallar(int id) {
+        return frecuenciaRepository.findByIdFrecuenciaAndEstado(id, EstadoLogico.ACTIVO)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró una frecuencia activa con el id " + id));
+    }
+
+    private void validarCoherenciaFrecuencia(FrecuenciaRequestDTO dto) {
+        switch (dto.getTipo()) {
+            case DIARIA -> {
+                if (dto.getIntDias() != null || dto.getDiaSemana() != null)
+                    throw new IllegalArgumentException("La frecuencia diaria no requiere intervalo de días ni día de la semana");
+            }
+            case SEMANAL -> {
+                if (dto.getDiaSemana() == null)
+                    throw new IllegalArgumentException("Por favor indicá el día de la semana para la frecuencia semanal");
+            }
+            case MENSUAL -> {
+                if (dto.getIntDias() == null)
+                    throw new IllegalArgumentException("Por favor indicá el intervalo de días para la frecuencia mensual");
+            }
+        }
     }
 
     private FrecuenciaResponseDTO toResponseDTO(Frecuencia frecuencia) {
