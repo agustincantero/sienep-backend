@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  sienep-db:
+    image: postgres:16
+    container_name: sienep-db
+    environment:
+      POSTGRES_DB: sienep
+      POSTGRES_USER: sienep
+      POSTGRES_PASSWORD: sienep
+    ports:
+      - "5432:5432"
+    volumes:
+      - sienep_data:/var/lib/postgresql/data
+      - ./src/main/resources/proyecto_schema.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sienep -d sienep"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: sienep-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: sienep@sienep.com
+      PGADMIN_DEFAULT_PASSWORD: sienep
+    depends_on:
+      - sienep-db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+
+volumes:
+  sienep_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# INSTRUCCIONES DE USO
+#
+# Levantar la BD (primera vez o después de un reinicio):
+#   docker compose up -d
+#
+# Verificar que está corriendo:
+#   docker compose ps
+#
+# Ver los logs si algo falla:
+#   docker compose logs sienep-db
+#
+# Detener sin borrar datos:
+#   docker compose stop
+#
+# Detener Y borrar los datos (reset completo):
+#   docker compose down -v
+#
+# Conectarse a la BD desde la terminal (opcional):
+#   docker exec -it sienep-db psql -U sienep -d sienep
+#
+# CREDENCIALES (coinciden con application.properties)
+# Host:     localhost
+# Puerto:   5432
+# BD:       sienep
+# Usuario:  sienep
+# Password: sienep
+#
+# URL JDBC: jdbc:postgresql://localhost:5432/sienep
+
+
+# INSTRUCCIONES DE USO PGADMIN
+#
+# Acceder a pgAdmin desde el navegador:
+#   http://localhost:5050
+#
+# Credenciales de pgAdmin:
+#   Email:    sienep@sienep.com
+#   Password: sienep
+#
+# PRIMERA VEZ - REGISTRAR CONEXIÓN A LA BD:
+#   1. Entrar a http://localhost:5050
+#   2. Loguear con sienep@sienep.com / sienep
+#   3. Click derecho en "Servers" → "Register" → "Server"
+#   4. Rellenar con:
+#      Name:       sienep
+#      Hostname:   sienep-db
+#      Port:       5432
+#      Username:   sienep
+#      Password:   sienep
+#   5. Marcar en "Save password?"
+#   5. Click en "Save"
+#   6. Y listo, ya podés ver tablas, datos, hacer queries, etc.
