@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -41,6 +43,7 @@ public abstract class Instancia {
     protected String canal;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado", nullable = false, columnDefinition = "proyecto.estado_logico")
     protected EstadoLogico estado;
 
@@ -58,4 +61,5 @@ public abstract class Instancia {
         this.canal = canal;
         this.estado = EstadoLogico.ACTIVO;
     }
+
 }
