@@ -9,6 +9,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,10 +29,12 @@ public class FrecuenciaService {
     }
 
     public List<FrecuenciaResponseDTO> listarActivas() {
-        return frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO)
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+        List<Frecuencia> frecuencias = frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO);
+        List<FrecuenciaResponseDTO> resultado = new ArrayList<>();
+        for (Frecuencia frecuencia : frecuencias) {
+            resultado.add(toResponseDTO(frecuencia));
+        }
+        return resultado;
     }
 
     public FrecuenciaResponseDTO buscarPorId(int id) {
