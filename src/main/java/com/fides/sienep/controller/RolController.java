@@ -1,6 +1,7 @@
 package com.fides.sienep.controller;
 
-import com.fides.sienep.dto.RolRequestDTO;
+import com.fides.sienep.dto.RolCreateDTO;
+import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.dto.RolResponseDTO;
 import com.fides.sienep.service.RolService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,12 +54,12 @@ public class RolController {
     })
     @PostMapping
     public ResponseEntity<RolResponseDTO> crearRol(
-            @Parameter(description = "Objeto con los datos del nuevo rol", required = true) @Valid @RequestBody RolRequestDTO requestDTO) {
+            @Parameter(description = "Objeto con los datos del nuevo rol", required = true) @Valid @RequestBody RolCreateDTO requestDTO) {
         RolResponseDTO nuevoRol = rolService.crearRol(requestDTO);
         return new ResponseEntity<>(nuevoRol, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Actualizar un rol existente", description = "Modifica los datos de un rol y actualiza su lista de permisos (realizando altas y bajas lógicas según corresponda).")
+    @Operation(summary = "Actualizar un rol existente", description = "Modifica los datos de un rol y actualiza su lista de permisos (realizando altas y bajas lógicas según corresponda). Si se envía una lista vacía de permisos, se eliminan todos los permisos asociados al rol.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Rol actualizado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
@@ -67,7 +68,7 @@ public class RolController {
     @PutMapping("/{id}")
     public ResponseEntity<RolResponseDTO> actualizarRol(
             @Parameter(description = "ID del rol a actualizar", required = true) @PathVariable int id,
-            @Parameter(description = "Objeto con los datos actualizados", required = true) @Valid @RequestBody RolRequestDTO requestDTO) {
+            @Parameter(description = "Objeto con los datos actualizados", required = true) @Valid @RequestBody RolUpdateDTO requestDTO) {
         return ResponseEntity.ok(rolService.actualizarRol(id, requestDTO));
     }
 

@@ -1,7 +1,8 @@
 package com.fides.sienep.service;
 
 import com.fides.sienep.dto.PermisoResumenDTO;
-import com.fides.sienep.dto.RolRequestDTO;
+import com.fides.sienep.dto.RolCreateDTO;
+import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.dto.RolResponseDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Permiso;
@@ -84,12 +85,11 @@ public class RolService {
     }
 
     @Transactional
-    public RolResponseDTO crearRol(RolRequestDTO requestDTO) {
+    public RolResponseDTO crearRol(RolCreateDTO requestDTO) {
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
-        requestDTO.setNombre(nombreNormalizado);
 
-        if (rolRepository.existsByNombre(requestDTO.getNombre())) {
+        if (rolRepository.existsByNombre(nombreNormalizado)) {
             throw new RuntimeException("El nombre del rol ya existe");
         }
 
@@ -102,9 +102,10 @@ public class RolService {
         }
 
         Rol rol = new Rol();
-        rol.setNombre(requestDTO.getNombre());
+        rol.setNombre(nombreNormalizado);
         rol.setDescripcion(requestDTO.getDescripcion());
-        rol.setEstado(requestDTO.getEstado() != null ? requestDTO.getEstado() : EstadoLogico.ACTIVO);
+        // Forzamos ACTIVO siempre en la creación
+        rol.setEstado(EstadoLogico.ACTIVO);
 
         // Asignar permisos si vienen en el DTO
         if (requestDTO.getPermisosIds() != null && !requestDTO.getPermisosIds().isEmpty()) {
@@ -119,7 +120,7 @@ public class RolService {
     }
 
     @Transactional
-    public RolResponseDTO actualizarRol(int id, RolRequestDTO requestDTO) {
+    public RolResponseDTO actualizarRol(int id, RolUpdateDTO requestDTO) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
@@ -127,10 +128,9 @@ public class RolService {
 
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
-        requestDTO.setNombre(nombreNormalizado);
 
         // Validar nombre único si lo están cambiando
-        if (!rol.getNombre().equals(requestDTO.getNombre()) && rolRepository.existsByNombre(requestDTO.getNombre())) {
+        if (!rol.getNombre().equals(nombreNormalizado) && rolRepository.existsByNombre(nombreNormalizado)) {
             throw new RuntimeException("El nombre del rol ya existe");
         }
 
@@ -142,11 +142,12 @@ public class RolService {
             }
         }
 
-        rol.setNombre(requestDTO.getNombre());
+        rol.setNombre(nombreNormalizado);
         rol.setDescripcion(requestDTO.getDescripcion());
         rol.setEstado(requestDTO.getEstado());
 
         // Lógica para actualizar permisos (Manejo de altas y bajas lógicas)
+        // Si el cliente envía una lista vacía ([]), significa que desea revocar (dar de baja lógica) TODOS los permisos del rol.
         if (requestDTO.getPermisosIds() != null) {
             List<Integer> nuevosPermisosIds = requestDTO.getPermisosIds();
 
