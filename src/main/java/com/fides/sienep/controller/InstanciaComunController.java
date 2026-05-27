@@ -31,18 +31,21 @@ public class InstanciaComunController {
         return ResponseEntity.status(HttpStatus.CREATED).body(instanciaComunService.crear(dto));
     }
 
-    @Operation(summary = "Listar categorías de una instancia")
-    @ApiResponse(responseCode = "200", description = "Lista de categorías de la instancia")
-    @GetMapping("/instancia/{codInstancia}")
-    public ResponseEntity<List<InstanciaComunResponseDTO>> listarPorInstancia(@PathVariable int codInstancia) {
-        return ResponseEntity.ok(instanciaComunService.listarPorInstancia(codInstancia));
-    }
+    @Operation(summary = "Listar instancias comunes")
+    @ApiResponse(responseCode = "200", description = "Lista obtenida correctamente")
+    @ApiResponse(responseCode = "400", description = "Debe indicarse al menos un parámetro de búsqueda")
+    @GetMapping
+    public ResponseEntity<List<InstanciaComunResponseDTO>> listar(
+            @RequestParam(required = false) Integer codInstancia,
+            @RequestParam(required = false) Integer idCategoria) {
 
-    @Operation(summary = "Listar instancias de una categoría")
-    @ApiResponse(responseCode = "200", description = "Lista de instancias de la categoría")
-    @GetMapping("/categoria/{idCategoria}")
-    public ResponseEntity<List<InstanciaComunResponseDTO>> listarPorCategoria(@PathVariable int idCategoria) {
-        return ResponseEntity.ok(instanciaComunService.listarPorCategoria(idCategoria));
+        if (codInstancia != null) {
+            return ResponseEntity.ok(instanciaComunService.listarPorInstancia(codInstancia));
+        }
+        if (idCategoria != null) {
+            return ResponseEntity.ok(instanciaComunService.listarPorCategoria(idCategoria));
+        }
+        return ResponseEntity.badRequest().build();
     }
 
     @Operation(summary = "Quitar una categoría de una instancia")

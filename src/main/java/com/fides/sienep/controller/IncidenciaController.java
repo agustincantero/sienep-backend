@@ -31,13 +31,6 @@ public class IncidenciaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(incidenciaService.crear(dto));
     }
 
-    @Operation(summary = "Listar incidencias activas")
-    @ApiResponse(responseCode = "200", description = "Lista de incidencias activas")
-    @GetMapping
-    public ResponseEntity<List<IncidenciaResponseDTO>> listar() {
-        return ResponseEntity.ok(incidenciaService.listarActivas());
-    }
-
     @Operation(summary = "Buscar incidencia por ID")
     @ApiResponse(responseCode = "200", description = "Incidencia encontrada")
     @ApiResponse(responseCode = "404", description = "Incidencia no encontrada")
@@ -46,20 +39,21 @@ public class IncidenciaController {
         return ResponseEntity.ok(incidenciaService.buscarPorId(id));
     }
 
-    @Operation(summary = "Listar incidencias por estudiante")
-    @ApiResponse(responseCode = "200", description = "Lista de incidencias del estudiante")
-    @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
-    @GetMapping("/estudiante/{idEstudiante}")
-    public ResponseEntity<List<IncidenciaResponseDTO>> listarPorEstudiante(@PathVariable int idEstudiante) {
-        return ResponseEntity.ok(incidenciaService.listarPorEstudiante(idEstudiante));
-    }
+    @Operation(summary = "Listar incidencias, con filtro opcional por estudiante o funcionario")
+    @ApiResponse(responseCode = "200", description = "Lista de incidencias")
+    @ApiResponse(responseCode = "400", description = "Debe indicarse solo un filtro a la vez")
+    @GetMapping
+    public ResponseEntity<List<IncidenciaResponseDTO>> listar(
+            @RequestParam(required = false) Integer idEstudiante,
+            @RequestParam(required = false) Integer idFuncionario) {
 
-    @Operation(summary = "Listar incidencias por funcionario")
-    @ApiResponse(responseCode = "200", description = "Lista de incidencias del funcionario")
-    @ApiResponse(responseCode = "404", description = "Funcionario no encontrado")
-    @GetMapping("/funcionario/{idFuncionario}")
-    public ResponseEntity<List<IncidenciaResponseDTO>> listarPorFuncionario(@PathVariable int idFuncionario) {
-        return ResponseEntity.ok(incidenciaService.listarPorFuncionario(idFuncionario));
+        if (idEstudiante != null) {
+            return ResponseEntity.ok(incidenciaService.listarPorEstudiante(idEstudiante));
+        }
+        if (idFuncionario != null) {
+            return ResponseEntity.ok(incidenciaService.listarPorFuncionario(idFuncionario));
+        }
+        return ResponseEntity.ok(incidenciaService.listarActivas());
     }
 
     @Operation(summary = "Actualizar una incidencia")
