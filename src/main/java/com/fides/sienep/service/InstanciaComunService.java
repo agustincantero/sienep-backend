@@ -25,14 +25,14 @@ public class InstanciaComunService {
 
     public InstanciaComunResponseDTO crear(InstanciaComunRequestDTO dto) {
         if (instanciaComunRepository.existsByCodInstanciaAndIdCategoria(dto.getCodInstancia(), dto.getIdCategoria())) {
-            throw new IllegalArgumentException("La instancia " + dto.getCodInstancia() + " ya tiene asignada la categoría " + dto.getIdCategoria());
+            throw new IllegalArgumentException("La instancia ya tiene asignada esa categoría");
         }
 
         Instancia instancia = instanciaRepository.findById(dto.getCodInstancia())
-                .orElseThrow(() -> new EntityNotFoundException("Instancia con id " + dto.getCodInstancia() + " no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró una instancia con el id " + dto.getCodInstancia()));
 
         CategoriaInstancia categoria = categoriaInstanciaRepository.findById(dto.getIdCategoria())
-                .orElseThrow(() -> new EntityNotFoundException("Categoría con id " + dto.getIdCategoria() + " no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró una categoría con el id " + dto.getIdCategoria()));
 
         InstanciaComun instanciaComun = new InstanciaComun(instancia, categoria);
         return toResponseDTO(instanciaComunRepository.save(instanciaComun));
@@ -58,4 +58,20 @@ public class InstanciaComunService {
 
     public void eliminar(int codInstancia, int idCategoria) {
         InstanciaComun.InstanciaComunId id = new InstanciaComun.InstanciaComunId(codInstancia, idCategoria);
-        if
+        if (!instanciaComunRepository.existsById(id)) {
+            throw new EntityNotFoundException("No se encontró la relación entre la instancia " + codInstancia + " y la categoría " + idCategoria);
+        }
+        instanciaComunRepository.deleteById(id);
+    }
+
+    private InstanciaComunResponseDTO toResponseDTO(InstanciaComun ic) {
+        InstanciaComunResponseDTO dto = new InstanciaComunResponseDTO();
+        dto.setCodInstancia(ic.getInstancia().getCodInstancia());
+        dto.setTituloInstancia(ic.getInstancia().getTitulo());
+        dto.setIdCategoria(ic.getCategoria().getIdCategoria());
+        dto.setNombreCategoria(ic.getCategoria().getNomCategoria());
+        dto.setCreatedAt(ic.getCreatedAt());
+        dto.setUpdatedAt(ic.getUpdatedAt());
+        return dto;
+    }
+}
