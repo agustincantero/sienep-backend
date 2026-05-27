@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,6 +29,7 @@ public class Recordatorio {
     private String titulo;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "tipo", nullable = false, columnDefinition = "proyecto.tipo_recordatorio")
     private TipoRecordatorio tipo;
 
@@ -56,10 +59,12 @@ public class Recordatorio {
     private Integer nroOcurrencias;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado_operativo", nullable = false, columnDefinition = "proyecto.estado_operativo")
     private EstadoRecordatorio estadoOperativo;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado", nullable = false, columnDefinition = "proyecto.estado_logico")
     private EstadoLogico estado;
 
