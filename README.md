@@ -19,16 +19,12 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
   - [Ejecución desde IntelliJ IDEA](#ejecución-desde-intellij-idea)
 - [Documentación de la API (Swagger)](#documentación-de-la-api-swagger)
 
----
-
 ## Requisitos previos
 
 1. **Java Development Kit (JDK) 21** o superior.
 2. **Docker y Docker Compose** (para ejecutar la base de datos localmente).
 3. **Git** para el control de versiones.
 4. **IntelliJ IDEA Ultimate** u otro IDE compatible con Spring Boot.
-
----
 
 ## Funcionalidad principal
 
@@ -42,8 +38,6 @@ La API expone los servicios correspondientes a los 7 módulos centrales del sist
 6. **Reportes:** Generación y exportación de informes del sistema.
 7. **Administración y Configuración:** Gestión completa de Roles y Permisos (preexistentes y personalizados), y mantenimiento de las categorías de Instancias y Recordatorios.
 
----
-
 ## Arquitectura general
 
 Este proyecto sigue una arquitectura en capas estándar de Spring Boot orientada al diseño de APIs RESTful:
@@ -53,8 +47,6 @@ Este proyecto sigue una arquitectura en capas estándar de Spring Boot orientada
 - **Repositorios (`repository/`):** Interfaces de Spring Data JPA para el acceso a PostgreSQL.
 - **Modelo (`model/`):** Entidades JPA mapeadas directamente al esquema relacional.
 - **DTOs (`dto/`):** Objetos de transferencia de datos. Se utiliza el patrón CQRS simplificado separando las entradas de las salidas para mantener validaciones limpias e independientes.
-
----
 
 ## Configuración y Ejecución
 
@@ -88,8 +80,6 @@ El proyecto utiliza Maven Wrapper (`mvnw`), por lo que no necesitas tener Maven 
 2. Espera a que termine de descargar e indexar las dependencias de Maven.
 3. Busca la clase principal `SienepApplication.java` en `src/main/java/com/fides/sienep/`.
 4. Haz clic en el ícono verde de "Play" (Run) en el margen izquierdo.
-
----
 
 ## Documentación de la API (Swagger)
 
