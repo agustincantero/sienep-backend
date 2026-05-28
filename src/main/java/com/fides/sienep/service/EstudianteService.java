@@ -5,6 +5,7 @@ import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.MisDatosRequestDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.GrupoRepository;
@@ -76,52 +77,53 @@ public class EstudianteService {
         return toResumenDTO(buscarOFallar(id));
     }
 
-    @PreAuthorize("hasAuthority('VER_ESTUDIANTE')")
-    @Transactional(readOnly = true)
-    public Page<EstudianteResponseDTO> listar(Pageable pageable) {
-        return estudianteRepository.findAll(pageable).map(this::toResponseDTO);
-    }
-
+    /**
+     * Método unificado para listar, buscar y filtrar.
+     * Corresponde al endpoint GET /estudiantes con query params opcionales.
+     *
+     * Lógica de permisos:
+     *   - Si hay texto, grupo, carrera o itr → requiere BUSCAR_ESTUDIANTE (verificado dentro).
+     *   - Roles sin VER_ESTUDIANTE siempre ven solo ACTIVO, aunque pasen ?estado=INACTIVO.
+     *   - Siempre devuelve resumido — los datos completos son por GET /{id}.
+     */
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
-    public Page<EstudianteResumenDTO> listarActivos(Pageable pageable) {
-        return estudianteRepository.findByEstado(EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
-    }
-
-    @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
-    @Transactional(readOnly = true)
-    public Page<EstudianteResumenDTO> buscar(String texto, Pageable pageable) {
-        if (tienePermiso("VER_ESTUDIANTE")) {
-            return estudianteRepository.buscarPorNombre(texto, pageable).map(this::toResumenDTO);
+    public Page<EstudianteResumenDTO> listar(String texto, Integer idGrupo, Integer idCarrera,
+                                             Integer idItr, EstadoLogico estado, Pageable pageable) {
+        boolean aplicaFiltro = texto != null || idGrupo != null || idCarrera != null || idItr != null;
+        if (aplicaFiltro && !tienePermiso("BUSCAR_ESTUDIANTE")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Requiere permiso BUSCAR_ESTUDIANTE para buscar o filtrar.");
         }
-        return estudianteRepository.buscarPorNombreYEstado(texto, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
-    }
 
-    @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
-    @Transactional(readOnly = true)
-    public Page<EstudianteResumenDTO> filtrarPorGrupo(Integer idGrupo, Pageable pageable) {
-        if (tienePermiso("VER_ESTUDIANTE")) {
-            return estudianteRepository.findByGrupo(idGrupo, pageable).map(this::toResumenDTO);
-        }
-        return estudianteRepository.findByGrupoAndEstado(idGrupo, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
-    }
+        // Roles sin VER_ESTUDIANTE solo ven activos
+        EstadoLogico estadoEfectivo = tienePermiso("VER_ESTUDIANTE") ? estado : EstadoLogico.ACTIVO;
 
-    @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
-    @Transactional(readOnly = true)
-    public Page<EstudianteResumenDTO> filtrarPorCarrera(Integer idCarrera, Pageable pageable) {
-        if (tienePermiso("VER_ESTUDIANTE")) {
-            return estudianteRepository.findByCarrera(idCarrera, pageable).map(this::toResumenDTO);
+        Page<Estudiante> resultado;
+        if (texto != null) {
+            resultado = estadoEfectivo != null
+                    ? estudianteRepository.buscarPorNombreYEstado(texto, estadoEfectivo, pageable)
+                    : estudianteRepository.buscarPorNombre(texto, pageable);
+        } else if (idGrupo != null) {
+            resultado = estadoEfectivo != null
+                    ? estudianteRepository.findByGrupoAndEstado(idGrupo, estadoEfectivo, pageable)
+                    : estudianteRepository.findByGrupo(idGrupo, pageable);
+        } else if (idCarrera != null) {
+            resultado = estadoEfectivo != null
+                    ? estudianteRepository.findByCarreraAndEstado(idCarrera, estadoEfectivo, pageable)
+                    : estudianteRepository.findByCarrera(idCarrera, pageable);
+        } else if (idItr != null) {
+            resultado = estadoEfectivo != null
+                    ? estudianteRepository.findByItrAndEstado(idItr, estadoEfectivo, pageable)
+                    : estudianteRepository.findByItr(idItr, pageable);
+        } else {
+            // Sin filtros: lista paginada
+            resultado = estadoEfectivo != null
+                    ? estudianteRepository.findByEstado(estadoEfectivo, pageable)
+                    : estudianteRepository.findAll(pageable);
         }
-        return estudianteRepository.findByCarreraAndEstado(idCarrera, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
-    }
 
-    @PreAuthorize("hasAuthority('BUSCAR_ESTUDIANTE')")
-    @Transactional(readOnly = true)
-    public Page<EstudianteResumenDTO> filtrarPorItr(Integer idItr, Pageable pageable) {
-        if (tienePermiso("VER_ESTUDIANTE")) {
-            return estudianteRepository.findByItr(idItr, pageable).map(this::toResumenDTO);
-        }
-        return estudianteRepository.findByItrAndEstado(idItr, EstadoLogico.ACTIVO, pageable).map(this::toResumenDTO);
+        Page<EstudianteResumenDTO> page = resultado.map(this::toResumenDTO);
+        return page;
     }
 
     // =========================================================
