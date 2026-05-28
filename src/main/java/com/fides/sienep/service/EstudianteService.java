@@ -4,6 +4,7 @@ import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
+import com.fides.sienep.dto.MisDatosRequestDTO;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.GrupoRepository;
@@ -135,14 +136,19 @@ public class EstudianteService {
         return toResponseDTO(estudianteRepository.save(estudiante));
     }
 
-    @PreAuthorize("hasAuthority('EDITAR_MIS_DATOS')")
+    /**
+     * Autoservicio del estudiante. Gateado por ROLE_ESTUDIANTE (authority
+     * sintética asignada en autenticación, no por el RBAC de funcionarios).
+     * Solo edita datos de contacto y solo sobre la cuenta propia.
+     */
+    @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional
-    public EstudianteResponseDTO editarMisDatos(Integer id, EstudianteRequestDTO dto) {
+    public EstudianteResponseDTO editarMisDatos(Integer id, MisDatosRequestDTO dto) {
         if (!getIdUsuarioAutenticado().equals(id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo podés editar tus propios datos.");
         }
         Estudiante estudiante = buscarOFallar(id);
-        aplicarCambios(estudiante, dto);
+        aplicarCambiosContacto(estudiante, dto);
         return toResponseDTO(estudianteRepository.save(estudiante));
     }
 
@@ -207,6 +213,14 @@ public class EstudianteService {
         estudiante.setFoto(dto.getFoto());
         asignarTelefonos(estudiante, dto.getTelefonos());
         asignarGrupos(estudiante, dto.getIdGrupos());
+    }
+
+    private void aplicarCambiosContacto(Estudiante estudiante, MisDatosRequestDTO dto) {
+        estudiante.setCiudad(dto.getCiudad());
+        estudiante.setDepartamento(dto.getDepartamento());
+        estudiante.setCalle(dto.getCalle());
+        estudiante.setNroPuerta(dto.getNroPuerta());
+        asignarTelefonos(estudiante, dto.getTelefonos());
     }
 
     private void asignarTelefonos(Estudiante estudiante, List<String> numeros) {
