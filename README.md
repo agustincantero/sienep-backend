@@ -55,10 +55,7 @@ Este proyecto sigue una arquitectura en capas estándar de Spring Boot orientada
 El proyecto incluye un entorno automatizado. Al iniciar el contenedor por primera vez, ejecutará automáticamente el script `src/main/resources/proyecto_schema.sql` para crear el esquema `proyecto`, las tablas y los datos iniciales.
 
 1. Abre una terminal en la raíz del proyecto.
-2. Ejecuta el siguiente comando:
-   ```bash
-   docker compose up -d
-   ```
+2. Ejecuta el siguiente comando: `docker compose up -d`
 
 **Comandos útiles:**
 * `docker compose ps` - Verifica que `sienep-db` esté corriendo.
