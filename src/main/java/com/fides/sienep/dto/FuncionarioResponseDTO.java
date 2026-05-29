@@ -1,54 +1,21 @@
 package com.fides.sienep.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class FuncionarioResponseDTO {
+
     private Integer idUsuario;
-    private Integer idRol;
-    private String nombreUsuario;
-    private String apellidoUsuario;
-    private String nombreRol;
 
-    public FuncionarioResponseDTO() {
+    private String nombre;
 
-    }
-    // g & s
+    private String apellido;
 
-    public Integer getIdUsuario() {
-        return idUsuario;
-    }
+    private String documento;
 
-    public void setIdUsuario(Integer idUsuario) {
-        this.idUsuario = idUsuario;
-    }
+    private String email;
 
-    public String getNombreRol() {
-        return nombreRol;
-    }
-
-    public void setNombreRol(String nombreRol) {
-        this.nombreRol = nombreRol;
-    }
-
-    public Integer getIdRol() {
-        return idRol;
-    }
-
-    public void setIdRol(Integer idRol) {
-        this.idRol = idRol;
-    }
-
-    public String getNombreUsuario() {
-        return nombreUsuario;
-    }
-
-    public void setNombreUsuario(String nombreUsuario) {
-        this.nombreUsuario = nombreUsuario;
-    }
-
-    public String getApellidoUsuario() {
-        return apellidoUsuario;
-    }
-
-    public void setApellidoUsuario(String apellidoUsuario) {
-        this.apellidoUsuario = apellidoUsuario;
-    }
+    private String rol;
 }
