@@ -3,35 +3,59 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
 import com.fides.sienep.service.FuncionarioService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/funcionarios")
-@RequiredArgsConstructor
 public class FuncionarioController {
 
-    private final FuncionarioService funcionarioService;
+    @Autowired
+    private FuncionarioService funcionarioService;
 
-    @PostMapping
-    public ResponseEntity<FuncionarioResponseDTO> crear(
-            @Valid @RequestBody FuncionarioRequestDTO dto
-    ) {
+    // LISTAR TODOS
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(funcionarioService.crear(dto));
+    @GetMapping
+    public List<FuncionarioResponseDTO> listar() {
+
+        return funcionarioService.listar();
     }
 
+
+    // OBTENER POR ID
+
+
     @GetMapping("/{id}")
-    public ResponseEntity<FuncionarioResponseDTO> obtenerPorId(
+    public FuncionarioResponseDTO obtener(
             @PathVariable Integer id
     ) {
 
-        return ResponseEntity.ok(
-                funcionarioService.obtenerPorId(id)
-        );
+        return funcionarioService.obtenerPorId(id);
+    }
+
+
+    // CREAR
+
+
+    @PostMapping
+    public FuncionarioResponseDTO crear(
+            @RequestBody FuncionarioRequestDTO dto
+    ) {
+
+        return funcionarioService.crear(dto);
+    }
+
+
+    // ELIMINAR
+
+
+    @DeleteMapping("/{id}")
+    public void eliminar(
+            @PathVariable Integer id
+    ) {
+
+        funcionarioService.eliminar(id);
     }
 }
