@@ -1,34 +1,45 @@
 package com.fides.sienep.model;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-public class ComentarioConfidencialInstancia extends ComentarioBase {
+import java.io.Serializable;
+
+@Getter
+@Setter
+@NoArgsConstructor
+
+@Entity
+@Table(name = "inst_com_confidenciales", schema = "proyecto")
+public class ComentarioConfidencialInstancia
+        extends ComentarioBase {
+
+    @EmbeddedId
+    private ComentarioConfidencialInstanciaId id;
+
+    @ManyToOne
+    @MapsId("codInstancia")
+    @JoinColumn(name = "cod_instancia")
     private Instancia instancia;
 
+    @Embeddable
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @EqualsAndHashCode
 
-    public ComentarioConfidencialInstancia(String contenido, Funcionario autor, Instancia instancia) {
-        super(contenido, autor);
-        this.instancia = instancia;
-    }
+    // Se necesita esta clase estatica debido a que tiene clave compuesta
+    // PRIMARY KEY (id_com_confidencial, cod_instancia)
+    public static class ComentarioConfidencialInstanciaId
+            implements Serializable {
 
-    public ComentarioConfidencialInstancia(int idComConfidencial, String comentario, Funcionario autor, Instancia instancia, EstadoLogico estado, LocalDateTime fecHora) {
-        super(idComConfidencial, comentario, autor);
-        this.instancia = instancia;
-        this.estado = estado;
-        this.createdAt = fecHora;
-    }
+        @Column(name = "id_com_confidencial")
+        private Integer idComConfidencial;
 
-    public Instancia getInstancia() {
-        return instancia;
-    }
-
-    public void setInstancia(Instancia instancia) {
-        this.instancia = instancia;
-    }
-
-    @Override
-    public String toString() {
-        return "ComentarioConfidencialInstancia{" + "instancia=" + (instancia != null ? instancia.getIdNegInstancia() : "N/A") + ", contenido='" + contenido + '\'' + ", estado=" + estado + '}';
+        @Column(name = "cod_instancia")
+        private Integer codInstancia;
     }
 }
-
