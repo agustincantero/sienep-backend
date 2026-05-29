@@ -7,164 +7,73 @@ import com.fides.sienep.model.Rol;
 import com.fides.sienep.model.Usuario;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.fides.sienep.repository.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@RequiredArgsConstructor
 public class FuncionarioService {
 
-    @Autowired
-    private FuncionarioRepository funcionarioRepository;
+    private final FuncionarioRepository funcionarioRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private RolRepository rolRepository;
+    private final RolRepository rolRepository;
 
-    // LISTAR TODOS
+    @Transactional
+    public FuncionarioResponseDTO crear(FuncionarioRequestDTO dto) {
 
-    public List<FuncionarioResponseDTO> listar() {
+        Usuario usuario = usuarioRepository.findById(dto.getIdUsuario())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Usuario no encontrado"
+                ));
 
-        List<Funcionario> funcionarios =
-                funcionarioRepository.findAll();
+        Rol rol = rolRepository.findById(dto.getIdRol())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Rol no encontrado"
+                ));
 
-        List<FuncionarioResponseDTO> respuesta =
-                new ArrayList<>();
+        Funcionario funcionario = new Funcionario();
 
-        for (Funcionario funcionario : funcionarios) {
+        funcionario.setUsuario(usuario);
 
-            FuncionarioResponseDTO dto =
-                    new FuncionarioResponseDTO();
+        funcionario.setRol(rol);
 
-            dto.setIdUsuario(
-                    funcionario.getIdUsuario()
-            );
+        funcionario = funcionarioRepository.save(funcionario);
 
-            dto.setNombreUsuario(
-                    funcionario.getUsuario().getNombre()
-            );
-
-            dto.setApellidoUsuario(
-                    funcionario.getUsuario().getApellido()
-            );
-
-            dto.setNombreRol(
-                    funcionario.getRol().getNombre()
-            );
-
-            respuesta.add(dto);
-        }
-
-        return respuesta;
+        return toResponseDTO(funcionario);
     }
 
+    @Transactional(readOnly = true)
+    public FuncionarioResponseDTO obtenerPorId(Integer id) {
 
-    // OBTENER POR ID
-
-    public FuncionarioResponseDTO obtenerPorId(
-            Integer id
-    ) {
-
-        Optional<Funcionario> optional =
-                funcionarioRepository.findById(id);
-
-        if (optional.isEmpty()) {
-            return null;
-        }
-
-        Funcionario funcionario = optional.get();
-
-        FuncionarioResponseDTO dto =
-                new FuncionarioResponseDTO();
-
-        dto.setIdUsuario(
-                funcionario.getIdUsuario()
-        );
-
-        dto.setNombreUsuario(
-                funcionario.getUsuario().getNombre()
-        );
-
-        dto.setApellidoUsuario(
-                funcionario.getUsuario().getApellido()
-        );
-
-        dto.setNombreRol(
-                funcionario.getRol().getNombre()
-        );
-
-        return dto;
+        return toResponseDTO(buscarOFallar(id));
     }
 
-    // CREAR
+    private Funcionario buscarOFallar(Integer id) {
 
-    public FuncionarioResponseDTO crear(
-            FuncionarioRequestDTO dto
-    ) {
-
-        Optional<Usuario> usuarioOptional =
-                usuarioRepository.findById(
-                        dto.getIdUsuario()
-                );
-
-        Optional<Rol> rolOptional =
-                rolRepository.findById(
-                        dto.getIdRol()
-                );
-
-        if (usuarioOptional.isEmpty()
-                || rolOptional.isEmpty()) {
-
-            return null;
-        }
-
-        Funcionario funcionario =
-                new Funcionario();
-
-        funcionario.setUsuario(
-                usuarioOptional.get()
-        );
-
-        funcionario.setRol(
-                rolOptional.get()
-        );
-
-        Funcionario guardado =
-                funcionarioRepository.save(
-                        funcionario
-                );
-
-        FuncionarioResponseDTO response =
-                new FuncionarioResponseDTO();
-
-        response.setIdUsuario(
-                guardado.getIdUsuario()
-        );
-
-        response.setNombreUsuario(
-                guardado.getUsuario().getNombre()
-        );
-
-        response.setApellidoUsuario(
-                guardado.getUsuario().getApellido()
-        );
-
-        response.setNombreRol(
-                guardado.getRol().getNombre()
-        );
-
-        return response;
+        return funcionarioRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Funcionario no encontrado"
+                        ));
     }
 
-    // ELIMINAR
+    private FuncionarioResponseDTO toResponseDTO(Funcionario f) {
 
-    public void eliminar(Integer id) {
-
-        funcionarioRepository.deleteById(id);
+        return FuncionarioResponseDTO.builder()
+                .idUsuario(f.getIdUsuario())
+                .nombre(f.getUsuario().getNombre())
+                .apellido(f.getUsuario().getApellido())
+                .idRol(f.getRol().getIdRol())
+                .nombreRol(f.getRol().getNomRol())
+                .build();
     }
 }
