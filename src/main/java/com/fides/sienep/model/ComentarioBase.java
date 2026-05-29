@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @MappedSuperclass
 public abstract class ComentarioBase {
 
-    @Column(name = "comentario")
+    @Column(name = "comentario", nullable = false, columnDefinition = "TEXT")
     private String comentario;
 
     @Enumerated(EnumType.STRING)
