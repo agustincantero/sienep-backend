@@ -32,9 +32,9 @@ public class Funcionario {
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false, updatable = false, insertable = false)
     private LocalDateTime updatedAt;
 }
