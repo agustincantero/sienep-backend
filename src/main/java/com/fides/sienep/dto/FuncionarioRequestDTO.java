@@ -1,21 +1,31 @@
 package com.fides.sienep.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-
-@Schema(description = "Datos necesarios para crear un funcionario")
 public class FuncionarioRequestDTO {
-
-    @NotNull
+    @Setter
     private Integer idUsuario;
-
-    @NotNull
     private Integer idRol;
+    public FuncionarioRequestDTO(Integer idUsuario, Integer idRol) {
+        this.idUsuario = idUsuario;
+        this.idRol = idRol;
+    }
+    // getters & setters
+
+
+    public Integer getIdUsuario() {
+        return idUsuario;
+    }
+
+    public void setIdUsuario(Integer idUsuario) {
+        this.idUsuario = idUsuario;
+    }
+
+    public Integer getIdRol() {
+        return idRol;
+    }
+
+    public void setIdRol(Integer idRol) {
+        this.idRol = idRol;
+    }
 }
