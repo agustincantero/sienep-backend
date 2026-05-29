@@ -1,6 +1,7 @@
 package com.fides.sienep.model;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -28,6 +29,7 @@ public class ComentarioConfidencialInstancia
     @Getter
     @Setter
     @NoArgsConstructor
+    @EqualsAndHashCode
 
     // Se necesita esta clase estatica debido a que tiene clave compuesta
     // PRIMARY KEY (id_com_confidencial, cod_instancia)
