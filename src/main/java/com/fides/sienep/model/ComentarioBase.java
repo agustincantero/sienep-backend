@@ -1,73 +1,35 @@
 package com.fides.sienep.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 
+@Getter
+@Setter
+@NoArgsConstructor
+
+@MappedSuperclass
 public abstract class ComentarioBase {
-    protected Integer id;
-    protected String contenido;
-    protected Funcionario autor;
-    protected LocalDateTime createdAt;
-    protected LocalDateTime updatedAt;
-    protected EstadoLogico estado;
 
-    public ComentarioBase(Integer id, String contenido, Funcionario autor) {
-        this.id = id;
-        this.contenido = contenido;
-        this.autor = autor;
-        this.estado = EstadoLogico.ACTIVO;
-    }
+    @Column(name = "comentario")
+    private String comentario;
 
-    public ComentarioBase(String contenido, Funcionario autor) {
-        this.contenido = contenido;
-        this.autor = autor;
-        this.estado = EstadoLogico.ACTIVO;
-    }
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "estado")
+    private EstadoLogico estado;
 
-    public ComentarioBase() {
-    }
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getContenido() {
-        return contenido;
-    }
-
-    public void setContenido(String contenido) {
-        this.contenido = contenido;
-    }
-
-    public Funcionario getAutor() {
-        return autor;
-    }
-
-    public void setAutor(Funcionario autor) {
-        this.autor = autor;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public EstadoLogico getEstado() {
-        return estado;
-    }
-
-    public void setEstado(EstadoLogico estado) {
-        this.estado = estado;
-    }
-
-    @Override
-    public String toString() {
-        return "ComentarioBase{" + "id=" + id + ", contenido='" + contenido + '\'' + ", autor=" + (autor != null ? autor.getNombre() : "N/A") + ", estado=" + estado + '}';
-    }
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
