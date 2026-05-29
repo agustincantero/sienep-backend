@@ -35,18 +35,9 @@ public class CategoriaInstanciaService {
 
     // --- Métodos CRUD ---
     @Transactional(readOnly = true)
-    public List<CategoriaInstanciaResponseDTO> obtenerTodas() {
-        List<CategoriaInstancia> categorias = categoriaRepository.findAll();
-        List<CategoriaInstanciaResponseDTO> dtoList = new ArrayList<>();
-        for (CategoriaInstancia cat : categorias) {
-            dtoList.add(toResponseDTO(cat));
-        }
-        return dtoList;
-    }
-
-    @Transactional(readOnly = true)
-    public List<CategoriaInstanciaResponseDTO> buscarPorNombre(String nombre) {
-        List<CategoriaInstancia> categorias = categoriaRepository.findByNomCategoriaContainingIgnoreCase(nombre);
+    public List<CategoriaInstanciaResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
+        List<CategoriaInstancia> categorias = categoriaRepository.buscarConFiltros(nombre, estado);
+        
         List<CategoriaInstanciaResponseDTO> dtoList = new ArrayList<>();
         for (CategoriaInstancia cat : categorias) {
             dtoList.add(toResponseDTO(cat));

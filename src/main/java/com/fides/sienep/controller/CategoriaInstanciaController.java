@@ -3,6 +3,7 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.CategoriaInstanciaCreateDTO;
 import com.fides.sienep.dto.CategoriaInstanciaResponseDTO;
 import com.fides.sienep.dto.CategoriaInstanciaUpdateDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.CategoriaInstanciaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,17 +30,19 @@ public class CategoriaInstanciaController {
         this.categoriaService = categoriaService;
     }
 
-    @Operation(summary = "Obtener todas las categorías o filtrar por nombre", description = "Retorna una lista de categorías. Si se proporciona el parámetro opcional 'nombre', retorna solo las que coincidan parcialmente (ignorando mayúsculas y minúsculas).")
+    @Operation(summary = "Obtener categorías con filtros", description = "Retorna una lista de categorías. Permite filtrar por coincidencias parciales en el nombre y/o por su estado actual.")
     @ApiResponse(responseCode = "200", description = "Operación exitosa")
     @GetMapping
     public ResponseEntity<List<CategoriaInstanciaResponseDTO>> obtenerTodas(
-            @Parameter(description = "Texto opcional para filtrar por nombre de categoría", required = false) 
-            @RequestParam(required = false) String nombre) {
+            @Parameter(description = "Texto opcional para filtrar por nombre", required = false) 
+            @RequestParam(required = false) String nombre,
 
-        if (nombre != null && !nombre.trim().isEmpty()) {
-            return ResponseEntity.ok(categoriaService.buscarPorNombre(nombre));
-        }
-        return ResponseEntity.ok(categoriaService.obtenerTodas());
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO)", required = false) 
+            @RequestParam(required = false) EstadoLogico estado) {
+
+        String nombreLimpio = (nombre != null && !nombre.trim().isEmpty()) ? nombre.trim() : null;
+
+        return ResponseEntity.ok(categoriaService.obtenerTodas(nombreLimpio, estado));
     }
 
     @Operation(summary = "Obtener una categoría por ID", description = "Busca y retorna los detalles de una categoría específica dado su ID.")
