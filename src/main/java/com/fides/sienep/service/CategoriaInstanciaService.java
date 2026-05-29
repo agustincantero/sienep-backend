@@ -45,6 +45,16 @@ public class CategoriaInstanciaService {
     }
 
     @Transactional(readOnly = true)
+    public List<CategoriaInstanciaResponseDTO> buscarPorNombre(String nombre) {
+        List<CategoriaInstancia> categorias = categoriaRepository.findByNomCategoriaContainingIgnoreCase(nombre);
+        List<CategoriaInstanciaResponseDTO> dtoList = new ArrayList<>();
+        for (CategoriaInstancia cat : categorias) {
+            dtoList.add(toResponseDTO(cat));
+        }
+        return dtoList;
+    }
+
+    @Transactional(readOnly = true)
     public CategoriaInstanciaResponseDTO obtenerPorId(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría de instancia no encontrada"));

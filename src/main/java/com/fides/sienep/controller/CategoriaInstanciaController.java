@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categorias-instancias")
-@Tag(name = "Categorías de Instancias Comunes", description = "CRUD para la gestión de categorías que agrupan a las instancias comunes de seguimiento psicopedagógico")
+@Tag(name = "Categorías de Instancias", description = "Gestión de categorías que agrupan a las instancias")
 public class CategoriaInstanciaController {
 
     private final CategoriaInstanciaService categoriaService;
@@ -29,10 +29,16 @@ public class CategoriaInstanciaController {
         this.categoriaService = categoriaService;
     }
 
-    @Operation(summary = "Obtener todas las categorías", description = "Retorna una lista con todas las categorías de instancias.")
+    @Operation(summary = "Obtener todas las categorías o filtrar por nombre", description = "Retorna una lista de categorías. Si se proporciona el parámetro opcional 'nombre', retorna solo las que coincidan parcialmente (ignorando mayúsculas y minúsculas).")
     @ApiResponse(responseCode = "200", description = "Operación exitosa")
     @GetMapping
-    public ResponseEntity<List<CategoriaInstanciaResponseDTO>> obtenerTodas() {
+    public ResponseEntity<List<CategoriaInstanciaResponseDTO>> obtenerTodas(
+            @Parameter(description = "Texto opcional para filtrar por nombre de categoría", required = false) 
+            @RequestParam(required = false) String nombre) {
+
+        if (nombre != null && !nombre.trim().isEmpty()) {
+            return ResponseEntity.ok(categoriaService.buscarPorNombre(nombre));
+        }
         return ResponseEntity.ok(categoriaService.obtenerTodas());
     }
 
