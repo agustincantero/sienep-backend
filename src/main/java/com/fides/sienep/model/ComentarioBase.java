@@ -27,9 +27,9 @@ public abstract class ComentarioBase {
     @Column(name = "estado")
     private EstadoLogico estado;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at",  nullable = false, updatable = false, insertable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false, updatable = false, insertable = false)
     private LocalDateTime updatedAt;
 }
