@@ -9,6 +9,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 @Entity
 @Table(name = "estu_telefonos", schema = "proyecto")
 @Getter
@@ -48,6 +51,7 @@ public class Telefono {
     private Estudiante estudiante;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado", nullable = false)
     @Schema(description = "Estado logico del telefono", example = "ACTIVO")
     private EstadoLogico estado = EstadoLogico.ACTIVO;

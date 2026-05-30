@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -62,6 +64,7 @@ public class Grupo {
     private Integer generacion;
 
     @Enumerated(EnumType.STRING)  // almacena el nombre del enum como String, no el ordinal
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado", nullable = false)
     @Builder.Default  // necesario con @Builder para que el default se aplique
     @Schema(description = "Estado lógico del grupo", example = "ACTIVO")
