@@ -12,7 +12,7 @@ CREATE TYPE proyecto.estado_operativo AS ENUM ('HOY', 'FUTURO', 'VENCIDO');
 CREATE TYPE proyecto.tipo_accion AS ENUM ('INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT');
 CREATE TYPE proyecto.tipo_frecuencia AS ENUM ('diaria', 'semanal', 'mensual', 'personalizada');
 CREATE TYPE proyecto.dia_semana AS ENUM ('lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo');
-CREATE TYPE proyecto.tipo_recordatorio AS ENUM ('llamada', 'reunion', 'tarea administrativa', 'otro');
+CREATE TYPE proyecto.tipo_recordatorio AS ENUM ('llamada', 'reunion', 'tarea_administrativa', 'otro');
 
 CREATE TYPE proyecto.pais_documento AS ENUM (
     'AFG','ALB','DZA','AND','AGO','ATG','ARG','ARM','AUS','AUT','AZE',
