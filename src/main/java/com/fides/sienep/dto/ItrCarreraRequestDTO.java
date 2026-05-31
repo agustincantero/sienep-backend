@@ -9,14 +9,20 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Asociación entre un ITR y una Carrera")
+@Schema(description = "Datos para asociar una carrera a un ITR")
 public class ItrCarreraRequestDTO {
 
     @NotNull
-    @Schema(example = "1")
+    @Schema(
+            description = "ID del ITR",
+            example = "1"
+    )
     private Integer idItr;
 
     @NotNull
-    @Schema(example = "2")
+    @Schema(
+            description = "ID de la carrera",
+            example = "2"
+    )
     private Integer idCarrera;
 }

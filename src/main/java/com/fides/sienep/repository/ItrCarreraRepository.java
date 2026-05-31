@@ -18,9 +18,30 @@ public interface ItrCarreraRepository
             Integer idCarrera
     );
 
-    List<ItrCarrera> findByEstado(EstadoLogico estado);
+    boolean existsByItrIdItrAndCarreraIdCarrera(
+            Integer idItr,
+            Integer idCarrera
+    );
 
-    List<ItrCarrera> findByItrIdItr(Integer idItr);
+    List<ItrCarrera> findByEstado(
+            EstadoLogico estado
+    );
 
-    List<ItrCarrera> findByCarreraIdCarrera(Integer idCarrera);
+    List<ItrCarrera> findByItrIdItr(
+            Integer idItr
+    );
+
+    List<ItrCarrera> findByCarreraIdCarrera(
+            Integer idCarrera
+    );
+
+    List<ItrCarrera> findByItrIdItrAndEstado(
+            Integer idItr,
+            EstadoLogico estado
+    );
+
+    List<ItrCarrera> findByCarreraIdCarreraAndEstado(
+            Integer idCarrera,
+            EstadoLogico estado
+    );
 }

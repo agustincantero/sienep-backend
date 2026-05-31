@@ -25,17 +25,31 @@ public class ItrCarreraService {
     private final ItrRepository itrRepository;
     private final CarreraRepository carreraRepository;
 
-    // CREAR
-
+    /* ******************************
+                  CREAR
+     ******************************/
 
     @Transactional
     public ItrCarreraResponseDTO crear(ItrCarreraRequestDTO dto) {
 
-        if (itrCarreraRepository
-                .findByItrIdItrAndCarreraIdCarrera(
+        var relacionExistente =
+                itrCarreraRepository.findByItrIdItrAndCarreraIdCarrera(
                         dto.getIdItr(),
-                        dto.getIdCarrera())
-                .isPresent()) {
+                        dto.getIdCarrera()
+                );
+
+        if (relacionExistente.isPresent()) {
+
+            ItrCarrera relacion = relacionExistente.get();
+
+            if (relacion.getEstado() == EstadoLogico.INACTIVO) {
+
+                relacion.setEstado(EstadoLogico.ACTIVO);
+
+                return toResponseDTO(
+                        itrCarreraRepository.save(relacion)
+                );
+            }
 
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -67,9 +81,9 @@ public class ItrCarreraService {
         );
     }
 
-
-    // LISTAR
-
+    /* ******************************
+                     LISTAR
+      ******************************/
 
     @Transactional(readOnly = true)
     public List<ItrCarreraResponseDTO> listar() {
@@ -80,9 +94,9 @@ public class ItrCarreraService {
                 .toList();
     }
 
-
-    // OBTENER
-
+    /* ******************************
+                 OBTENER
+    * ******************************/
 
     @Transactional(readOnly = true)
     public ItrCarreraResponseDTO obtener(
@@ -94,9 +108,9 @@ public class ItrCarreraService {
         );
     }
 
-
-    // BAJA LOGICA
-
+    /* ******************************
+                 BAJA LÓGICA
+    * ******************************/
 
     @Transactional
     public void eliminar(
@@ -111,9 +125,9 @@ public class ItrCarreraService {
         itrCarreraRepository.save(relacion);
     }
 
-
-    // REACTIVAR
-
+    /* ******************************
+                 REACTIVAR
+    * ******************************/
 
     @Transactional
     public void reactivar(
@@ -128,8 +142,9 @@ public class ItrCarreraService {
         itrCarreraRepository.save(relacion);
     }
 
-    // PRIVADOS
-
+    /* ******************************
+                 METODOS PRIVADOS
+     * ******************************/
 
     private ItrCarrera buscarOFallar(
             Integer idItr,
@@ -156,6 +171,8 @@ public class ItrCarreraService {
                 .idCarrera(relacion.getCarrera().getIdCarrera())
                 .nombreCarrera(relacion.getCarrera().getNomCarrera())
                 .estado(relacion.getEstado())
+                .createdAt(relacion.getCreatedAt())
+                .updatedAt(relacion.getUpdatedAt())
                 .build();
     }
 }
