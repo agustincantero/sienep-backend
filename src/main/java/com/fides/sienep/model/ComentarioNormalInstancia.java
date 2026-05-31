@@ -1,40 +1,29 @@
 package com.fides.sienep.model;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-public class ComentarioNormalInstancia extends ComentarioBase {
+@Getter
+@Setter
+@NoArgsConstructor
+
+@Entity
+@Table(name = "inst_comentarios", schema = "proyecto")
+public class ComentarioNormalInstancia
+        extends ComentarioBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_comentario")
+    private Integer idComentario;
+
+    @ManyToOne
+    @JoinColumn(name = "cod_instancia")
     private Instancia instancia;
 
-    public ComentarioNormalInstancia(String contenido, Funcionario autor, Instancia instancia) {
-        super(contenido, autor);
-        this.instancia = instancia;
-    }
-
-    public ComentarioNormalInstancia(Integer idComentario, String comentario, Funcionario autor, Instancia instancia, EstadoLogico estado, LocalDateTime fecHora) {
-        super(idComentario, comentario, autor);
-        this.instancia = instancia;
-        this.estado = estado;
-        this.createdAt = fecHora;
-    }
-
-    public ComentarioNormalInstancia(int idComentario, String comentario, Funcionario autor, Instancia instancia, EstadoLogico estado, LocalDateTime fecHora) {
-        super(idComentario, comentario, autor);
-        this.instancia = instancia;
-        this.estado = estado;
-    }
-
-
-    public Instancia getInstancia() {
-        return instancia;
-    }
-
-    public void setInstancia(Instancia instancia) {
-        this.instancia = instancia;
-    }
-
-    @Override
-    public String toString() {
-        return "ComentarioNormalInstancia{" + "instancia=" + (instancia != null ? instancia.getIdNegInstancia() : "N/A") + ", contenido='" + contenido + '\'' + ", estado=" + estado + '}';
-    }
+    @ManyToOne
+    @JoinColumn(name = "id_autor")
+    private Funcionario autor;
 }
-

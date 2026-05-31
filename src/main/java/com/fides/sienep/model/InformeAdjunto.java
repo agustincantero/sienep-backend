@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -82,6 +84,7 @@ public class InformeAdjunto {
     private String nombre;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado", nullable = false)
     @Builder.Default
     @Schema(description = "Estado lógico del informe", example = "ACTIVO")
