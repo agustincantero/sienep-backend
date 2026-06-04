@@ -17,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/itrs")
+@RequestMapping("/api/itrs")
 @RequiredArgsConstructor
 @Tag(name = "ITR", description = "Gestión de ITRs")
 public class ItrController {
