@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/carreras")
+@RequestMapping("/api/carreras")
 @RequiredArgsConstructor
 @Tag(name = "Carreras", description = "Gestión de carreras")
 public class CarreraController {
