@@ -18,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/itr-carreras")
+@RequestMapping("/api/itr-carreras")
 @RequiredArgsConstructor
 @Tag(
         name = "ITR-Carrera",
