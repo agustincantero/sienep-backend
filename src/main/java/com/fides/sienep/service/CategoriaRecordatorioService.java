@@ -7,8 +7,10 @@ import com.fides.sienep.model.CategoriaRecordatorio;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaRecordatorioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +47,7 @@ public class CategoriaRecordatorioService {
     @Transactional(readOnly = true)
     public CategoriaRecordatorioResponseDTO obtenerPorId(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Categoría de recordatorio no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
         return toResponseDTO(categoria);
     }
 
@@ -54,7 +56,7 @@ public class CategoriaRecordatorioService {
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
 
         if (categoriaRepository.existsByNomCategoria(nombreNormalizado)) {
-            throw new RuntimeException("El nombre de la categoría ya existe");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre de la categoría ya existe");
         }
 
         CategoriaRecordatorio categoria = new CategoriaRecordatorio();
@@ -69,12 +71,12 @@ public class CategoriaRecordatorioService {
     @Transactional
     public CategoriaRecordatorioResponseDTO actualizarCategoria(int id, CategoriaRecordatorioUpdateDTO requestDTO) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Categoría de recordatorio no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
 
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
 
         if (!categoria.getNomCategoria().equals(nombreNormalizado) && categoriaRepository.existsByNomCategoria(nombreNormalizado)) {
-            throw new RuntimeException("El nombre de la categoría ya existe");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre de la categoría ya existe");
         }
 
         categoria.setNomCategoria(nombreNormalizado);
@@ -88,7 +90,7 @@ public class CategoriaRecordatorioService {
     @Transactional
     public void darDeBajaCategoria(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Categoría de recordatorio no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
         
         categoria.setEstado(EstadoLogico.INACTIVO);
         categoriaRepository.save(categoria);
