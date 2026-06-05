@@ -67,14 +67,14 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Integer>
     @Query("""
             SELECT DISTINCT e FROM Estudiante e
             JOIN e.grupos g JOIN g.carrera c JOIN c.itrs itr
-            WHERE itr.idItr = :idItr
+            WHERE itr.id.idItr = :idItr
             """)
     Page<Estudiante> findByItr(@Param("idItr") Integer idItr, Pageable pageable);
 
     @Query("""
             SELECT DISTINCT e FROM Estudiante e
             JOIN e.grupos g JOIN g.carrera c JOIN c.itrs itr
-            WHERE itr.idItr = :idItr AND e.estado = :estado
+            WHERE itr.id.idItr = :idItr AND e.estado = :estado
             """)
     Page<Estudiante> findByItrAndEstado(@Param("idItr") Integer idItr,
                                         @Param("estado") EstadoLogico estado,
