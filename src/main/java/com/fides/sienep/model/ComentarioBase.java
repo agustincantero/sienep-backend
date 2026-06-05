@@ -25,7 +25,7 @@ public abstract class ComentarioBase {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado")
-    private EstadoLogico estado;
+    private EstadoLogico estado = EstadoLogico.ACTIVO;
 
     @Column(name = "created_at",  nullable = false, updatable = false, insertable = false)
     private LocalDateTime createdAt;
