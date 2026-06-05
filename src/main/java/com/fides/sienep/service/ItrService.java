@@ -40,11 +40,12 @@ public class ItrService {
 
     @Transactional(readOnly = true)
     public List<ItrResponseDTO> listar() {
-
-        return itrRepository.findAll()
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+        List<Itr> itrs = itrRepository.findAll();
+        List<ItrResponseDTO> dtos = new java.util.ArrayList<>();
+        for (Itr itr : itrs) {
+            dtos.add(toResponseDTO(itr));
+        }
+        return dtos;
     }
 
     @Transactional(readOnly = true)

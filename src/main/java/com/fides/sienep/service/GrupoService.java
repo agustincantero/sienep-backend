@@ -81,9 +81,11 @@ public class GrupoService {
             grupos = grupoRepository.findByEstado(EstadoLogico.ACTIVO);
         }
 
-        return grupos.stream()
-                .map(this::toResponseDTO)
-                .toList();
+        List<GrupoResponseDTO> dtos = new java.util.ArrayList<>();
+        for (Grupo grupo : grupos) {
+            dtos.add(toResponseDTO(grupo));
+        }
+        return dtos;
     }
 
     @Transactional
