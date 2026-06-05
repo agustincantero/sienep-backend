@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -81,9 +82,11 @@ public class GrupoService {
             grupos = grupoRepository.findByEstado(EstadoLogico.ACTIVO);
         }
 
-        return grupos.stream()
-                .map(this::toResponseDTO)
-                .toList();
+        List<GrupoResponseDTO> resultado = new ArrayList<>();
+        for (Grupo grupo : grupos) {
+            resultado.add(toResponseDTO(grupo));
+        }
+        return resultado;
     }
 
     @Transactional
