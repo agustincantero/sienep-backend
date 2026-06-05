@@ -45,12 +45,4 @@ public class Itr {
         this.estado = EstadoLogico.ACTIVO;
     }
 
-    public void agregarCarrera(Carrera carrera) {
-        if (carrera != null) {
-            ItrCarrera itrCarrera = new ItrCarrera(this, carrera);
-            if (!carreras.contains(itrCarrera)) {
-                carreras.add(itrCarrera);
-            }
-        }
-    }
 }
