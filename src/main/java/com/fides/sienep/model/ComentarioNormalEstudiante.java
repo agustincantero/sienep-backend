@@ -70,6 +70,10 @@ public class ComentarioNormalEstudiante extends ComentarioBase {
     @Schema(description = "Estudiante sobre el que se realiza el comentario")
     private Estudiante estudiante;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_autor", nullable = false)
+    private Funcionario autor;
+
     // =============================================================
     // CONSTRUCTORES
     // =============================================================
@@ -78,7 +82,8 @@ public class ComentarioNormalEstudiante extends ComentarioBase {
      * Constructor para crear un nuevo comentario (sin ID todavía).
      */
     public ComentarioNormalEstudiante(String contenido, Funcionario autor, Estudiante estudiante) {
-        super(contenido, autor);
+        super(contenido);
+        this.autor = autor;
         this.estudiante = estudiante;
     }
 
@@ -87,7 +92,8 @@ public class ComentarioNormalEstudiante extends ComentarioBase {
      */
     public ComentarioNormalEstudiante(int idComentario, String comentario, Funcionario autor,
                                       Estudiante estudiante, EstadoLogico estado, LocalDateTime createdAt) {
-        super(comentario, autor);
+        super(comentario);
+        this.autor = autor;
         this.id = idComentario;
         this.estudiante = estudiante;
         this.estado = estado;

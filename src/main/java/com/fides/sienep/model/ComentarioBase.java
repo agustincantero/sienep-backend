@@ -18,10 +18,6 @@ public abstract class ComentarioBase {
     @Column(name = "comentario", nullable = false, columnDefinition = "TEXT")
     protected String contenido;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_autor", nullable = false)
-    protected Funcionario autor;
-
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado")
@@ -33,8 +29,7 @@ public abstract class ComentarioBase {
     @Column(name = "updated_at", updatable = false, insertable = false)
     protected LocalDateTime updatedAt;
 
-    public ComentarioBase(String contenido, Funcionario autor) {
+    public ComentarioBase(String contenido) {
         this.contenido = contenido;
-        this.autor = autor;
     }
 }

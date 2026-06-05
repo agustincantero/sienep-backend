@@ -35,7 +35,7 @@ public class Telefono {
         @Schema(description = "ID del estudiante", accessMode = Schema.AccessMode.READ_ONLY)
         private Integer idUsuario;
 
-        @Column(name = "telefono", nullable = false, length = 15, columnDefinition = "proyecto.dom_telefono")
+        @Column(name = "telefono", nullable = false, length = 15, columnDefinition = "dom_telefono")
         @Schema(description = "Numero de telefono", example = "099123456")
         private String numero;
     }

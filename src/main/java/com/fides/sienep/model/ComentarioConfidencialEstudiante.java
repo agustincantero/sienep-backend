@@ -63,6 +63,10 @@ public class ComentarioConfidencialEstudiante extends ComentarioBase {
     @Schema(description = "Estudiante sobre el que se registra la observación confidencial")
     private Estudiante estudiante;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_autor", nullable = false)
+    private Funcionario autor;
+
     // =============================================================
     // CONSTRUCTORES
     // =============================================================
@@ -71,7 +75,8 @@ public class ComentarioConfidencialEstudiante extends ComentarioBase {
      * Constructor para crear nueva observación confidencial.
      */
     public ComentarioConfidencialEstudiante(String contenido, Funcionario autor, Estudiante estudiante) {
-        super(contenido, autor);
+        super(contenido);
+        this.autor = autor;
         this.estudiante = estudiante;
     }
 
@@ -80,7 +85,8 @@ public class ComentarioConfidencialEstudiante extends ComentarioBase {
      */
     public ComentarioConfidencialEstudiante(Integer id, String contenido, Funcionario autor,
                                             Estudiante estudiante) {
-        super(contenido, autor);
+        super(contenido);
+        this.autor = autor;
         this.id = id;
         this.estudiante = estudiante;
     }
@@ -93,7 +99,8 @@ public class ComentarioConfidencialEstudiante extends ComentarioBase {
      */
     public ComentarioConfidencialEstudiante(int id, String contenido, Funcionario autor,
                                             Estudiante estudiante, boolean activo, LocalDateTime fechaHora) {
-        super(contenido, autor);
+        super(contenido);
+        this.autor = autor;
         this.id = id;
         this.estudiante = estudiante;
         this.estado = activo ? EstadoLogico.ACTIVO : EstadoLogico.INACTIVO;
