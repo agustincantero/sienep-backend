@@ -36,9 +36,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "estu_obs_confidenciales", schema = "proyecto")
 @AttributeOverrides({
-        // id_obs_confidencial es el nombre real de la columna PK en esta tabla
-        @AttributeOverride(name = "id", column = @Column(name = "id_obs_confidencial")),
-
         // obs_confidencial es el nombre real de la columna de contenido en esta tabla
         @AttributeOverride(name = "contenido", column = @Column(name = "obs_confidencial", nullable = false, columnDefinition = "TEXT"))
 })
@@ -49,6 +46,11 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 @Schema(description = "Comentario confidencial sobre un estudiante — acceso restringido a Dirección")
 public class ComentarioConfidencialEstudiante extends ComentarioBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_obs_confidencial")
+    private Integer id;
 
     /**
      * Relación con el estudiante.
@@ -78,7 +80,8 @@ public class ComentarioConfidencialEstudiante extends ComentarioBase {
      */
     public ComentarioConfidencialEstudiante(Integer id, String contenido, Funcionario autor,
                                             Estudiante estudiante) {
-        super(id, contenido, autor);
+        super(contenido, autor);
+        this.id = id;
         this.estudiante = estudiante;
     }
 
@@ -90,7 +93,8 @@ public class ComentarioConfidencialEstudiante extends ComentarioBase {
      */
     public ComentarioConfidencialEstudiante(int id, String contenido, Funcionario autor,
                                             Estudiante estudiante, boolean activo, LocalDateTime fechaHora) {
-        super(id, contenido, autor);
+        super(contenido, autor);
+        this.id = id;
         this.estudiante = estudiante;
         this.estado = activo ? EstadoLogico.ACTIVO : EstadoLogico.INACTIVO;
         this.createdAt = fechaHora;

@@ -44,10 +44,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "estu_obs_comentarios", schema = "proyecto")
 @AttributeOverrides({
-        // El campo 'id' en ComentarioBase usa column="id" como placeholder.
-        // Aquí lo renombramos al nombre real en esta tabla.
-        @AttributeOverride(name = "id", column = @Column(name = "id_comentario")),
-
         // El campo 'contenido' en ComentarioBase usa column="contenido" como placeholder.
         // En esta tabla la columna se llama 'comentario'.
         @AttributeOverride(name = "contenido", column = @Column(name = "comentario", nullable = false, columnDefinition = "TEXT"))
@@ -59,6 +55,11 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 @Schema(description = "Comentario observable de un funcionario sobre un estudiante")
 public class ComentarioNormalEstudiante extends ComentarioBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_comentario")
+    private Integer id;
 
     /**
      * Relación con el estudiante comentado.
@@ -86,7 +87,8 @@ public class ComentarioNormalEstudiante extends ComentarioBase {
      */
     public ComentarioNormalEstudiante(int idComentario, String comentario, Funcionario autor,
                                       Estudiante estudiante, EstadoLogico estado, LocalDateTime createdAt) {
-        super(idComentario, comentario, autor);
+        super(comentario, autor);
+        this.id = idComentario;
         this.estudiante = estudiante;
         this.estado = estado;
         this.createdAt = createdAt;
