@@ -51,7 +51,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"estudiante", "autor"})  // excluimos relaciones para evitar LazyInitializationException
+@ToString(exclude = {"estudiante"})  // excluimos relaciones para evitar LazyInitializationException
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 @Schema(description = "Comentario observable de un funcionario sobre un estudiante")
 public class ComentarioNormalEstudiante extends ComentarioBase {
@@ -69,10 +69,6 @@ public class ComentarioNormalEstudiante extends ComentarioBase {
     @JoinColumn(name = "id_usuario", nullable = false)
     @Schema(description = "Estudiante sobre el que se realiza el comentario")
     private Estudiante estudiante;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_autor", nullable = false)
-    private Funcionario autor;
 
     // =============================================================
     // CONSTRUCTORES

@@ -22,8 +22,4 @@ public class ComentarioNormalInstancia
     @ManyToOne
     @JoinColumn(name = "cod_instancia")
     private Instancia instancia;
-
-    @ManyToOne
-    @JoinColumn(name = "id_autor")
-    private Funcionario autor;
 }

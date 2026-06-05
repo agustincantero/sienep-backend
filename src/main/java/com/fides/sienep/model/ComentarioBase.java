@@ -23,6 +23,10 @@ public abstract class ComentarioBase {
     @Column(name = "estado")
     protected EstadoLogico estado = EstadoLogico.ACTIVO;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_autor", nullable = false)
+    protected Funcionario autor;
+
     @Column(name = "created_at",  updatable = false, insertable = false)
     protected LocalDateTime createdAt;
 

@@ -42,7 +42,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"estudiante", "autor"})
+@ToString(exclude = {"estudiante"})
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 @Schema(description = "Comentario confidencial sobre un estudiante — acceso restringido a Dirección")
 public class ComentarioConfidencialEstudiante extends ComentarioBase {
@@ -62,10 +62,6 @@ public class ComentarioConfidencialEstudiante extends ComentarioBase {
     @JoinColumn(name = "id_estudiante", nullable = false)
     @Schema(description = "Estudiante sobre el que se registra la observación confidencial")
     private Estudiante estudiante;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_autor", nullable = false)
-    private Funcionario autor;
 
     // =============================================================
     // CONSTRUCTORES
