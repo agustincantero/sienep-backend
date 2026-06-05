@@ -15,6 +15,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -70,11 +72,12 @@ class RolServiceTest {
         when(rolRepository.findById(99)).thenReturn(Optional.empty());
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             rolService.obtenerPorId(99);
         });
 
-        assertEquals("Rol no encontrado", exception.getMessage());
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("Rol no encontrado", exception.getReason());
     }
 
     @Test
@@ -119,11 +122,12 @@ class RolServiceTest {
         when(rolRepository.existsByNombre("TUTOR")).thenReturn(true);
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             rolService.crearRol(requestDTO);
         });
 
-        assertEquals("El nombre del rol ya existe", exception.getMessage());
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals("El nombre del rol ya existe", exception.getReason());
         verify(rolRepository, never()).save(any(Rol.class)); // Verificamos que nunca intentó guardar
     }
 
@@ -137,12 +141,26 @@ class RolServiceTest {
         when(rolRepository.findById(1)).thenReturn(Optional.of(admin));
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             rolService.darDeBajaRol(1);
         });
 
-        assertTrue(exception.getMessage().contains("Acción denegada"));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        assertTrue(exception.getReason().contains("Acción denegada"));
         verify(rolRepository, never()).save(any(Rol.class));
+    }
+
+    @Test
+    void darDeBajaRol_DebeDarDeBajaCorrectamente_CuandoEsRolValido() {
+        // Arrange
+        when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));
+        
+        // Act
+        rolService.darDeBajaRol(1);
+        
+        // Assert
+        assertEquals(EstadoLogico.INACTIVO, rolExistente.getEstado());
+        verify(rolRepository, times(1)).save(rolExistente);
     }
 
     @Test
@@ -207,10 +225,11 @@ class RolServiceTest {
         when(rolRepository.existsByNombre("OTRO_ROL_EXISTENTE")).thenReturn(true);
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             rolService.actualizarRol(1, updateDTO);
         });
 
-        assertEquals("El nombre del rol ya existe", exception.getMessage());
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals("El nombre del rol ya existe", exception.getReason());
     }
 }
