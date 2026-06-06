@@ -6,7 +6,7 @@ import com.fides.sienep.dto.CategoriaInstanciaUpdateDTO;
 import com.fides.sienep.model.CategoriaInstancia;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaInstanciaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,14 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CategoriaInstanciaService {
 
     private final CategoriaInstanciaRepository categoriaRepository;
-
-    @Autowired
-    public CategoriaInstanciaService(CategoriaInstanciaRepository categoriaRepository) {
-        this.categoriaRepository = categoriaRepository;
-    }
 
     // --- Mapeos Manuales ---
     private CategoriaInstanciaResponseDTO toResponseDTO(CategoriaInstancia categoria) {

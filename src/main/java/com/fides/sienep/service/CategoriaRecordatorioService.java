@@ -6,7 +6,7 @@ import com.fides.sienep.dto.CategoriaRecordatorioUpdateDTO;
 import com.fides.sienep.model.CategoriaRecordatorio;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaRecordatorioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,14 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CategoriaRecordatorioService {
 
     private final CategoriaRecordatorioRepository categoriaRepository;
-
-    @Autowired
-    public CategoriaRecordatorioService(CategoriaRecordatorioRepository categoriaRepository) {
-        this.categoriaRepository = categoriaRepository;
-    }
 
     private CategoriaRecordatorioResponseDTO toResponseDTO(CategoriaRecordatorio categoria) {
         CategoriaRecordatorioResponseDTO dto = new CategoriaRecordatorioResponseDTO();
