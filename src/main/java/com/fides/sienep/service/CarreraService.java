@@ -48,11 +48,12 @@ public class CarreraService {
     // NO USADO NI IMPLEMENTADO EN SERVICE NI EN CONTROLLER
     @Transactional(readOnly = true)
     public List<CarreraResponseDTO> listar() {
-
-        return carreraRepository.findAll()
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+        List<Carrera> carreras = carreraRepository.findAll();
+        List<CarreraResponseDTO> dtos = new java.util.ArrayList<>();
+        for (Carrera carrera : carreras) {
+            dtos.add(toResponseDTO(carrera));
+        }
+        return dtos;
     }
 
     @Transactional

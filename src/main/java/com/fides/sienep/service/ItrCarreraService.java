@@ -87,11 +87,12 @@ public class ItrCarreraService {
 
     @Transactional(readOnly = true)
     public List<ItrCarreraResponseDTO> listar() {
-
-        return itrCarreraRepository.findAll()
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+        List<ItrCarrera> relaciones = itrCarreraRepository.findAll();
+        List<ItrCarreraResponseDTO> dtos = new java.util.ArrayList<>();
+        for (ItrCarrera relacion : relaciones) {
+            dtos.add(toResponseDTO(relacion));
+        }
+        return dtos;
     }
 
     /* ******************************
