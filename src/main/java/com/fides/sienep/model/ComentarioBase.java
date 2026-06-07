@@ -1,9 +1,6 @@
 package com.fides.sienep.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,21 +12,28 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-
 @MappedSuperclass
 public abstract class ComentarioBase {
 
     @Column(name = "comentario", nullable = false, columnDefinition = "TEXT")
-    private String comentario;
+    protected String contenido;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "estado")
-    private EstadoLogico estado;
+    protected EstadoLogico estado = EstadoLogico.ACTIVO;
 
-    @Column(name = "created_at",  nullable = false, updatable = false, insertable = false)
-    private LocalDateTime createdAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_autor", nullable = false)
+    protected Funcionario autor;
 
-    @Column(name = "updated_at", nullable = false, updatable = false, insertable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "created_at",  updatable = false, insertable = false)
+    protected LocalDateTime createdAt;
+
+    @Column(name = "updated_at", updatable = false, insertable = false)
+    protected LocalDateTime updatedAt;
+
+    public ComentarioBase(String contenido) {
+        this.contenido = contenido;
+    }
 }

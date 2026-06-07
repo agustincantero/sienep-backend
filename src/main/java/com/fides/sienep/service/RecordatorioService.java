@@ -136,7 +136,7 @@ public class RecordatorioService {
         dto.setCodInstancia(r.getInstancia().getCodInstancia());
         dto.setTituloInstancia(r.getInstancia().getTitulo());
         dto.setIdCategoria(r.getCategoria().getIdCategoria());
-        dto.setNombreCategoria(r.getCategoria().getNomCateRecordatorios());
+        dto.setNombreCategoria(r.getCategoria().getNomCategoria());
         dto.setIdResponsable(r.getResponsable().getIdUsuario());
         dto.setNombreResponsable(r.getResponsable().getNombre() + " " + r.getResponsable().getApellido());
         if (r.getFrecuencia() != null) {

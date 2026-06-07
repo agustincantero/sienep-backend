@@ -6,22 +6,20 @@ import com.fides.sienep.dto.CategoriaInstanciaUpdateDTO;
 import com.fides.sienep.model.CategoriaInstancia;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaInstanciaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CategoriaInstanciaService {
 
     private final CategoriaInstanciaRepository categoriaRepository;
-
-    @Autowired
-    public CategoriaInstanciaService(CategoriaInstanciaRepository categoriaRepository) {
-        this.categoriaRepository = categoriaRepository;
-    }
 
     // --- Mapeos Manuales ---
     private CategoriaInstanciaResponseDTO toResponseDTO(CategoriaInstancia categoria) {
@@ -48,7 +46,7 @@ public class CategoriaInstanciaService {
     @Transactional(readOnly = true)
     public CategoriaInstanciaResponseDTO obtenerPorId(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Categoría de instancia no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
         return toResponseDTO(categoria);
     }
 
@@ -58,7 +56,7 @@ public class CategoriaInstanciaService {
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
 
         if (categoriaRepository.existsByNomCategoria(nombreNormalizado)) {
-            throw new RuntimeException("El nombre de la categoría ya existe");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre de la categoría ya existe");
         }
 
         CategoriaInstancia categoria = new CategoriaInstancia();
@@ -73,14 +71,14 @@ public class CategoriaInstanciaService {
     @Transactional
     public CategoriaInstanciaResponseDTO actualizarCategoria(int id, CategoriaInstanciaUpdateDTO requestDTO) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Categoría de instancia no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
 
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
 
         // Validar nombre único si lo están cambiando
         if (!categoria.getNomCategoria().equals(nombreNormalizado) && categoriaRepository.existsByNomCategoria(nombreNormalizado)) {
-            throw new RuntimeException("El nombre de la categoría ya existe");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre de la categoría ya existe");
         }
 
         categoria.setNomCategoria(nombreNormalizado);
@@ -94,7 +92,7 @@ public class CategoriaInstanciaService {
     @Transactional
     public void darDeBajaCategoria(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Categoría de instancia no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
         
         categoria.setEstado(EstadoLogico.INACTIVO);
         categoriaRepository.save(categoria);

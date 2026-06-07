@@ -1,0 +1,50 @@
+package com.fides.sienep.service;
+
+import com.fides.sienep.dto.PermisoResponseDTO;
+import com.fides.sienep.dto.PermisoUpdateDTO;
+import com.fides.sienep.model.Permiso;
+import com.fides.sienep.repository.PermisoRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class PermisoService {
+
+    private final PermisoRepository permisoRepository;
+
+    @Transactional(readOnly = true)
+    public List<PermisoResponseDTO> obtenerTodos() {
+        List<Permiso> permisos = permisoRepository.findAll();
+        List<PermisoResponseDTO> dtos = new ArrayList<>();
+        for (Permiso permiso : permisos) {
+            dtos.add(toResponseDTO(permiso));
+        }
+        return dtos;
+    }
+
+    @Transactional
+    public PermisoResponseDTO actualizarDescripcion(int id, PermisoUpdateDTO requestDTO) {
+        Permiso permiso = permisoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permiso no encontrado"));
+
+        permiso.setDescripcion(requestDTO.getDescripcion());
+        
+        return toResponseDTO(permisoRepository.save(permiso));
+    }
+
+    private PermisoResponseDTO toResponseDTO(Permiso permiso) {
+        return PermisoResponseDTO.builder()
+                .idPermiso(permiso.getIdPermiso())
+                .nombre(permiso.getNombre())
+                .descripcion(permiso.getDescripcion())
+                .estado(permiso.getEstado())
+                .build();
+    }
+}

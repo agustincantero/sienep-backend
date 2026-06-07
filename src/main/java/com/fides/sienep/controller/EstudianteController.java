@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/v1/estudiantes")
+@RequestMapping("/api/estudiantes")
 @RequiredArgsConstructor
 @Tag(name = "Estudiantes", description = "Gestión de estudiantes del sistema SIENEP")
 public class EstudianteController {

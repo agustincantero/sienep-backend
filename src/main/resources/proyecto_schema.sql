@@ -669,11 +669,15 @@ CREATE TABLE proyecto.inst_com_confidenciales (
                                                   estado              proyecto.estado_logico NOT NULL DEFAULT 'ACTIVO',
                                                   created_at          TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                                   updated_at          TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                  id_autor            INT                    NOT NULL,
                                                   PRIMARY KEY (id_com_confidencial, cod_instancia),
                                                   CONSTRAINT chk_inst_com_conf_valido CHECK (TRIM(comentario) <> ''),
                                                   CONSTRAINT fk_inst_com_confidencial_instancia FOREIGN KEY (cod_instancia)
                                                       REFERENCES proyecto.instancias(cod_instancia)
-                                                      ON UPDATE CASCADE ON DELETE RESTRICT
+                                                      ON UPDATE CASCADE ON DELETE RESTRICT,
+                                                  CONSTRAINT fk_inst_com_conf_autor FOREIGN KEY (id_autor)
+                                                      REFERENCES proyecto.funcionarios(id_usuario)
+                                                      ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TRIGGER trg_actualizar_inst_com_confidenciales

@@ -12,12 +12,13 @@ import com.fides.sienep.repository.PermisoRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class RolService {
@@ -62,7 +63,7 @@ public class RolService {
     // --- Validaciones Internas ---
     private void validarRolProtegido(Rol rol) {
         if ("ADMINISTRADOR".equalsIgnoreCase(rol.getNombre())) {
-            throw new RuntimeException("Acción denegada: No se puede modificar ni dar de baja el rol base ADMINISTRADOR.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acción denegada: No se puede modificar ni dar de baja el rol base ADMINISTRADOR.");
         }
     }
 
@@ -80,7 +81,7 @@ public class RolService {
     @Transactional(readOnly = true)
     public RolResponseDTO obtenerPorId(int id) {
         Rol rol = rolRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
         return toResponseDTO(rol);
     }
 
@@ -90,14 +91,14 @@ public class RolService {
         String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
 
         if (rolRepository.existsByNombre(nombreNormalizado)) {
-            throw new RuntimeException("El nombre del rol ya existe");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre del rol ya existe");
         }
 
         // Validar que los permisos existen en la BD
         if (requestDTO.getPermisosIds() != null && !requestDTO.getPermisosIds().isEmpty()) {
             long permisosExistentes = permisoRepository.countByIdPermisoIn(requestDTO.getPermisosIds());
             if (permisosExistentes != requestDTO.getPermisosIds().size()) {
-                throw new RuntimeException("Uno o más IDs de permisos proporcionados no existen en la base de datos");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uno o más IDs de permisos proporcionados no existen en la base de datos");
             }
         }
 
@@ -122,7 +123,7 @@ public class RolService {
     @Transactional
     public RolResponseDTO actualizarRol(int id, RolUpdateDTO requestDTO) {
         Rol rol = rolRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
 
         validarRolProtegido(rol);
 
@@ -131,14 +132,14 @@ public class RolService {
 
         // Validar nombre único si lo están cambiando
         if (!rol.getNombre().equals(nombreNormalizado) && rolRepository.existsByNombre(nombreNormalizado)) {
-            throw new RuntimeException("El nombre del rol ya existe");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre del rol ya existe");
         }
 
         // Validar que los permisos existen en la BD
         if (requestDTO.getPermisosIds() != null && !requestDTO.getPermisosIds().isEmpty()) {
             long permisosExistentes = permisoRepository.countByIdPermisoIn(requestDTO.getPermisosIds());
             if (permisosExistentes != requestDTO.getPermisosIds().size()) {
-                throw new RuntimeException("Uno o más IDs de permisos proporcionados no existen en la base de datos");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uno o más IDs de permisos proporcionados no existen en la base de datos");
             }
         }
 
@@ -186,7 +187,7 @@ public class RolService {
     @Transactional
     public void darDeBajaRol(int id) {
         Rol rol = rolRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
         
         validarRolProtegido(rol);
 

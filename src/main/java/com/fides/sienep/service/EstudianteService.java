@@ -30,7 +30,8 @@ public class EstudianteService {
 
     private final EstudianteRepository estudianteRepository;
     private final GrupoRepository grupoRepository;
-    private final PasswordEncoder passwordEncoder;
+    // TODO: Descomentar cuando la compañera suba su rama con SecurityConfig
+    // private final PasswordEncoder passwordEncoder;
 
     // =========================================================
     // CREAR
@@ -48,7 +49,7 @@ public class EstudianteService {
 
         Estudiante estudiante = new Estudiante(
                 dto.getNombre(), dto.getApellido(), dto.getDocumento(),
-                dto.getPaisDocumento(), passwordEncoder.encode(dto.getContrasenia()),
+                dto.getPaisDocumento(), dto.getContrasenia(), /* TODO: usar passwordEncoder.encode() */
                 dto.getEmail(), dto.getCiudad(), dto.getDepartamento(),
                 dto.getCalle(), dto.getNroPuerta(), dto.getInformacionSalud(),
                 dto.getSistemaSalud(), dto.getFechaNacimiento(),
@@ -164,7 +165,7 @@ public class EstudianteService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No podés cambiar la contraseña de otro usuario.");
         }
         Estudiante estudiante = buscarOFallar(id);
-        estudiante.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
+        estudiante.setContrasenia(dto.getContrasenia()); /* TODO: passwordEncoder.encode() */
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(estudiante.getEstado())) {
             estudiante.setEstado(EstadoLogico.ACTIVO);
         }
