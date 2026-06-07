@@ -83,18 +83,6 @@ public class ComentarioNormalEstudiante extends ComentarioBase {
         this.estudiante = estudiante;
     }
 
-    /**
-     * Constructor completo para reconstrucción desde DB.
-     */
-    public ComentarioNormalEstudiante(int idComentario, String comentario, Funcionario autor,
-                                      Estudiante estudiante, EstadoLogico estado, LocalDateTime createdAt) {
-        super(comentario);
-        this.autor = autor;
-        this.id = idComentario;
-        this.estudiante = estudiante;
-        this.estado = estado;
-        this.createdAt = createdAt;
-    }
 
     // EqualsAndHashCode basado solo en el ID heredado de ComentarioBase
     // Si el ID es null (entidad nueva, no persistida aún), equals/hashCode
