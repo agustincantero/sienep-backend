@@ -73,6 +73,7 @@ public class GrupoController {
     @Operation(summary = "Actualizar grupo", description = "Actualiza nombre y generación de un grupo. La carrera no es modificable.")
     @ApiResponse(responseCode = "200", description = "Grupo actualizado")
     @ApiResponse(responseCode = "404", description = "Grupo no encontrado")
+    @ApiResponse(responseCode = "409", description = "Ya existe un grupo activo con ese nombre para esa carrera y generación")
     public ResponseEntity<GrupoResponseDTO> actualizar(
             @PathVariable Integer id,
             @Valid @RequestBody GrupoRequestDTO dto) {

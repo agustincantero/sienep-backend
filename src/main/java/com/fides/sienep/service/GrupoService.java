@@ -90,14 +90,17 @@ public class GrupoService {
 
     @Transactional
     public GrupoResponseDTO actualizar(Integer id, GrupoRequestDTO dto) {
-
         Grupo grupo = buscarOFallar(id);
 
-        // idCarrera no se modifica — cambiar la carrera de un grupo
-        // es una operación de alto impacto que requeriría migrar estudiantes.
+        if (grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+                dto.getNomGrupo(), grupo.getCarrera().getIdCarrera(),
+                dto.getGeneracion(), EstadoLogico.ACTIVO)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya existe un grupo activo con ese nombre para esa carrera y generación.");
+        }
+
         grupo.setNomGrupo(dto.getNomGrupo());
         grupo.setGeneracion(dto.getGeneracion());
-
         return toResponseDTO(grupoRepository.save(grupo));
     }
 
