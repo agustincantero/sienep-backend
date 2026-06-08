@@ -11,7 +11,7 @@ import com.fides.sienep.model.RolPermiso;
 import com.fides.sienep.repository.PermisoRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,18 +21,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class RolService {
 
     private final RolRepository rolRepository;
     private final PermisoRepository permisoRepository;
     private final EntityManager entityManager;
-
-    @Autowired
-    public RolService(RolRepository rolRepository, PermisoRepository permisoRepository, EntityManager entityManager) {
-        this.rolRepository = rolRepository;
-        this.permisoRepository = permisoRepository;
-        this.entityManager = entityManager;
-    }
 
     // --- Mapeos Manuales ---
     public RolResponseDTO toResponseDTO(Rol rol) {

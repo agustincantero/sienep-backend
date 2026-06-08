@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,14 +20,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/roles")
 @Tag(name = "Roles", description = "Gestión de roles y sus permisos")
+@RequiredArgsConstructor
 public class RolController {
 
     private final RolService rolService;
-
-    @Autowired
-    public RolController(RolService rolService) {
-        this.rolService = rolService;
-    }
 
     @Operation(summary = "Obtener todos los roles", description = "Retorna una lista con todos los roles registrados en el sistema, incluyendo sus permisos activos.")
     @ApiResponse(responseCode = "200", description = "Operación exitosa")
