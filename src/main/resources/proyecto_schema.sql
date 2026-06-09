@@ -10,9 +10,9 @@ CREATE TYPE proyecto.estado_logico AS ENUM (
 
 CREATE TYPE proyecto.estado_operativo AS ENUM ('HOY', 'FUTURO', 'VENCIDO');
 CREATE TYPE proyecto.tipo_accion AS ENUM ('INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT');
-CREATE TYPE proyecto.tipo_frecuencia AS ENUM ('diaria', 'semanal', 'mensual', 'personalizada');
-CREATE TYPE proyecto.dia_semana AS ENUM ('lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo');
-CREATE TYPE proyecto.tipo_recordatorio AS ENUM ('llamada', 'reunion', 'tarea_administrativa', 'otro');
+CREATE TYPE proyecto.tipo_frecuencia AS ENUM ('DIARIA', 'SEMANAL', 'MENSUAL', 'PERSONALIZADA');
+CREATE TYPE proyecto.dia_semana AS ENUM ('LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO');
+CREATE TYPE proyecto.tipo_recordatorio AS ENUM ('LLAMADA', 'REUNION', 'TAREA_ADMINISTRATIVA', 'OTRO');
 
 CREATE TYPE proyecto.pais_documento AS ENUM (
     'AFG','ALB','DZA','AND','AGO','ATG','ARG','ARM','AUS','AUT','AZE',
@@ -189,10 +189,10 @@ CREATE TABLE proyecto.frecuencias (
                                       created_at    TIMESTAMP                 NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                       updated_at    TIMESTAMP                 NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                       CONSTRAINT chk_coherencia_frecuencia CHECK (
-                                          (tipo = 'diaria'       AND int_dias IS NULL     AND dia_semana IS NULL) OR
-                                          (tipo = 'semanal'      AND int_dias IS NULL     AND dia_semana IS NOT NULL) OR
-                                          (tipo = 'mensual'      AND int_dias IS NOT NULL AND dia_semana IS NULL) OR
-                                          (tipo = 'personalizada')
+                                          (tipo = 'DIARIA'       AND int_dias IS NULL     AND dia_semana IS NULL) OR
+                                          (tipo = 'SEMANAL'      AND int_dias IS NULL     AND dia_semana IS NOT NULL) OR
+                                          (tipo = 'MENSUAL'      AND int_dias IS NOT NULL AND dia_semana IS NULL) OR
+                                          (tipo = 'PERSONALIZADA')
                                           )
 );
 
@@ -907,52 +907,4 @@ JOIN proyecto.permisos p ON p.nom_permiso IN (
     'VER_COMENTARIO_NORMAL_INSTANCIA'
 )
 WHERE r.nom_rol = 'LEGALES'
-ON CONFLICT DO NOTHING;
-
--- =============================================
--- USUARIOS BASE
--- (primero en usuarios, luego en funcionarios)
--- =============================================
-INSERT INTO proyecto.usuarios (nombre, apellido, documento, pais_documento, email, contrasenia, estado)
-VALUES
-    ('Admin',   'Sistema', '00000000', 'URY', 'admin@sienep.com',   'Admin123!',   'ACTIVO'),
-    ('Tutor',   'Base',    '11111111', 'URY', 'tutor@sienep.com',   'Tutor123!',   'ACTIVO'),
-    ('Psicop',  'Base',    '22222222', 'URY', 'psico@sienep.com',   'Psico123!',   'ACTIVO'),
-    ('Legales', 'Base',    '33333333', 'URY', 'legales@sienep.com', 'Legales123!', 'ACTIVO'),
-    ('Docente', 'Base',    '44444444', 'URY', 'docente@sienep.com', 'Docente123!', 'ACTIVO')
-ON CONFLICT (email) DO NOTHING;
-
-INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
-SELECT u.id_usuario, r.id_rol
-FROM proyecto.usuarios u
-JOIN proyecto.roles r ON r.nom_rol = 'ADMINISTRADOR'
-WHERE u.email = 'admin@sienep.com'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
-SELECT u.id_usuario, r.id_rol
-FROM proyecto.usuarios u
-JOIN proyecto.roles r ON r.nom_rol = 'TUTOR'
-WHERE u.email = 'tutor@sienep.com'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
-SELECT u.id_usuario, r.id_rol
-FROM proyecto.usuarios u
-JOIN proyecto.roles r ON r.nom_rol = 'PSICOPEDAGOGO'
-WHERE u.email = 'psico@sienep.com'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
-SELECT u.id_usuario, r.id_rol
-FROM proyecto.usuarios u
-JOIN proyecto.roles r ON r.nom_rol = 'LEGALES'
-WHERE u.email = 'legales@sienep.com'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO proyecto.funcionarios (id_usuario, id_rol)
-SELECT u.id_usuario, r.id_rol
-FROM proyecto.usuarios u
-JOIN proyecto.roles r ON r.nom_rol = 'DOCENTE'
-WHERE u.email = 'docente@sienep.com'
 ON CONFLICT DO NOTHING;
