@@ -31,7 +31,7 @@ public class EstudianteService {
     private final EstudianteRepository estudianteRepository;
     private final GrupoRepository grupoRepository;
     // TODO: Descomentar cuando la compañera suba su rama con SecurityConfig
-    // private final PasswordEncoder passwordEncoder;
+     private final PasswordEncoder passwordEncoder;
 
     // =========================================================
     // CREAR
