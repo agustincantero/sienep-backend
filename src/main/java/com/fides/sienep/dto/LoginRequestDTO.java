@@ -16,10 +16,10 @@ public class LoginRequestDTO {
 
     @NotBlank
     @Email
-    @Schema(description = "Email del funcionario", example = "usuario@utec.edu.uy")
+    @Schema(description = "Email del funcionario", example = "admin@sienep.com")
     private String email;
 
     @NotBlank
-    @Schema(description = "Contraseña")
+    @Schema(description = "Contraseña", example = "Admin123!")
     private String contrasenia;
 }
