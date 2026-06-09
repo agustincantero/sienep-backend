@@ -189,10 +189,10 @@ CREATE TABLE proyecto.frecuencias (
                                       created_at    TIMESTAMP                 NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                       updated_at    TIMESTAMP                 NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                       CONSTRAINT chk_coherencia_frecuencia CHECK (
-                                          (tipo = 'diaria'       AND int_dias IS NULL     AND dia_semana IS NULL) OR
-                                          (tipo = 'semanal'      AND int_dias IS NULL     AND dia_semana IS NOT NULL) OR
-                                          (tipo = 'mensual'      AND int_dias IS NOT NULL AND dia_semana IS NULL) OR
-                                          (tipo = 'personalizada')
+                                          (tipo = 'DIARIA'       AND int_dias IS NULL     AND dia_semana IS NULL) OR
+                                          (tipo = 'SEMANAL'      AND int_dias IS NULL     AND dia_semana IS NOT NULL) OR
+                                          (tipo = 'MENSUAL'      AND int_dias IS NOT NULL AND dia_semana IS NULL) OR
+                                          (tipo = 'PERSONALIZADA')
                                           )
 );
 
