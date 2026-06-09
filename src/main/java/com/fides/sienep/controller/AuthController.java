@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -52,9 +53,19 @@ public class AuthController {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
         }
+
         UserDetails ud = userDetailsService.loadUserByUsername(dto.getEmail());
-        String token = jwtTokenUtil.generateToken(ud);
-        log.info("Login exitoso: {}", dto.getEmail());
+
+        String rol = "SIN_ROL";
+        for (GrantedAuthority authority : ud.getAuthorities()) {
+            if (authority.getAuthority().startsWith("ROLE_")) {
+                rol = authority.getAuthority().replace("ROLE_", "");
+                break;
+            }
+        }
+
+        String token = jwtTokenUtil.generateToken(ud, rol);
+        log.info("Login exitoso: {} con rol: {}", dto.getEmail(), rol);
         return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 

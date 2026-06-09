@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
@@ -28,10 +29,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EstudianteService {
 
+    private final FuncionarioRepository funcionarioRepository;
     private final EstudianteRepository estudianteRepository;
     private final GrupoRepository grupoRepository;
-    // TODO: Descomentar cuando la compañera suba su rama con SecurityConfig
-     private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
     // =========================================================
     // CREAR
@@ -49,7 +50,7 @@ public class EstudianteService {
 
         Estudiante estudiante = new Estudiante(
                 dto.getNombre(), dto.getApellido(), dto.getDocumento(),
-                dto.getPaisDocumento(), dto.getContrasenia(), /* TODO: usar passwordEncoder.encode() */
+                dto.getPaisDocumento(), passwordEncoder.encode(dto.getContrasenia()),
                 dto.getEmail(), dto.getCiudad(), dto.getDepartamento(),
                 dto.getCalle(), dto.getNroPuerta(), dto.getInformacionSalud(),
                 dto.getSistemaSalud(), dto.getFechaNacimiento(),
@@ -165,7 +166,7 @@ public class EstudianteService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No podés cambiar la contraseña de otro usuario.");
         }
         Estudiante estudiante = buscarOFallar(id);
-        estudiante.setContrasenia(dto.getContrasenia()); /* TODO: passwordEncoder.encode() */
+        estudiante.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(estudiante.getEstado())) {
             estudiante.setEstado(EstadoLogico.ACTIVO);
         }
@@ -310,9 +311,10 @@ public class EstudianteService {
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth.getPrincipal() instanceof Usuario usuario) {
-            return usuario.getIdUsuario();
-        }
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado.");
+        String email = auth.getName(); // devuelve el username = email
+        return funcionarioRepository.findByEmail(email)  // o estudianteRepository
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Usuario no autenticado."))
+                .getIdUsuario();
     }
 }
