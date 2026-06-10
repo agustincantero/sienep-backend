@@ -8,6 +8,7 @@ import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaRecordatorioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,6 +31,7 @@ public class CategoriaRecordatorioService {
         return dto;
     }
 
+    @PreAuthorize("hasAuthority('VER_CATEGORIA_RECORDATORIO')")
     @Transactional(readOnly = true)
     public List<CategoriaRecordatorioResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
         List<CategoriaRecordatorio> categorias = categoriaRepository.buscarConFiltros(nombre, estado);
@@ -40,6 +42,7 @@ public class CategoriaRecordatorioService {
         return dtoList;
     }
 
+    @PreAuthorize("hasAuthority('VER_CATEGORIA_RECORDATORIO')")
     @Transactional(readOnly = true)
     public CategoriaRecordatorioResponseDTO obtenerPorId(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
@@ -47,6 +50,7 @@ public class CategoriaRecordatorioService {
         return toResponseDTO(categoria);
     }
 
+    @PreAuthorize("hasAuthority('CREAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     public CategoriaRecordatorioResponseDTO crearCategoria(CategoriaRecordatorioCreateDTO requestDTO) {
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
@@ -64,6 +68,7 @@ public class CategoriaRecordatorioService {
         return toResponseDTO(guardada);
     }
 
+    @PreAuthorize("hasAuthority('EDITAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     public CategoriaRecordatorioResponseDTO actualizarCategoria(int id, CategoriaRecordatorioUpdateDTO requestDTO) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
@@ -83,6 +88,7 @@ public class CategoriaRecordatorioService {
         return toResponseDTO(actualizada);
     }
 
+    @PreAuthorize("hasAuthority('ELIMINAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     public void darDeBajaCategoria(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
