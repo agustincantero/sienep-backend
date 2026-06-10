@@ -2,6 +2,7 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteResponseDTO;
+import com.fides.sienep.dto.ComentarioConfidencialEstudianteUpdateDTO;
 import com.fides.sienep.service.ComentarioConfidencialEstudianteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -56,7 +57,7 @@ public class ComentarioConfidencialEstudianteController {
     @ApiResponse(responseCode = "404", description = "Observación no encontrada")
     public ResponseEntity<ComentarioConfidencialEstudianteResponseDTO> editar(
             @PathVariable Integer id,
-            @Valid @RequestBody ComentarioConfidencialEstudianteRequestDTO dto) {
+            @Valid @RequestBody ComentarioConfidencialEstudianteUpdateDTO dto) {
         return ResponseEntity.ok(comentarioService.editar(id, dto));
     }
 

@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ComentarioNormalEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioNormalEstudianteResponseDTO;
+import com.fides.sienep.dto.ComentarioNormalEstudianteUpdateDTO;
 import com.fides.sienep.model.ComentarioNormalEstudiante;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
@@ -9,10 +10,11 @@ import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.repository.ComentarioNormalEstudianteRepository;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
-import lombok.*;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,6 +33,13 @@ public class ComentarioNormalEstudianteService {
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
 
+    // ── Permisos del SQL (verificados contra proyecto_schema.sql): ────────────
+    // VER_COMENTARIO_NORMAL_ESTUDIANTE      → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR, LEGALES, DOCENTE
+    // CREAR_COMENTARIO_NORMAL_ESTUDIANTE    → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR
+    // EDITAR_COMENTARIO_NORMAL_ESTUDIANTE   → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR
+    // ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR
+
+    @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public List<ComentarioNormalEstudianteResponseDTO> listarPorEstudiante(Integer idEstudiante) {
         List<ComentarioNormalEstudiante> comentarios = comentarioRepository
@@ -42,11 +51,13 @@ public class ComentarioNormalEstudianteService {
         return resultado;
     }
 
+    @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public ComentarioNormalEstudianteResponseDTO obtenerPorId(Integer id) {
         return toDTO(buscarOFallar(id));
     }
 
+    @PreAuthorize("hasAuthority('CREAR_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional
     public ComentarioNormalEstudianteResponseDTO crear(
             ComentarioNormalEstudianteRequestDTO dto) {
@@ -67,9 +78,12 @@ public class ComentarioNormalEstudianteService {
         return toDTO(comentario);
     }
 
+    // ── El parámetro cambia a ComentarioNormalEstudianteUpdateDTO ────────────
+    // Así el endpoint solo recibe `contenido`, sin idEstudiante ni idAutor.
+    @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional
     public ComentarioNormalEstudianteResponseDTO editar(
-            Integer id, ComentarioNormalEstudianteRequestDTO dto) {
+            Integer id, ComentarioNormalEstudianteUpdateDTO dto) {
 
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
         comentario.setContenido(dto.getContenido());
@@ -77,14 +91,16 @@ public class ComentarioNormalEstudianteService {
         return toDTO(comentarioRepository.save(comentario));
     }
 
+    @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional
     public void eliminar(Integer id) {
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
         comentario.setEstado(EstadoLogico.ELIMINADO);
-        log.info("Comentario {} dado de baja", id);
+        comentarioRepository.save(comentario);
+        log.info("Comentario {} dado de baja lógica", id);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────
+    // ── helpers ──────────────────────────────────────────────────────────────
 
     private ComentarioNormalEstudiante buscarOFallar(Integer id) {
         return comentarioRepository.findById(id)
