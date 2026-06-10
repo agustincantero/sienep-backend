@@ -803,9 +803,18 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     -- Reportes
     ('VER_REPORTES',            'Permite acceder al módulo de reportes'),
     ('EXPORTAR_REPORTES',       'Permite exportar los reportes generados'),
-    -- Categorías y perfil
-    ('CRUD_CATEGORIA_INSTANCIA',    'Permite gestionar las categorías de instancias'),
-    ('CRUD_CATEGORIA_RECORDATORIO', 'Permite gestionar las categorías de recordatorios'),
+    -- Categorías
+    ('VER_CATEGORIA_INSTANCIA',    'Permite visualizar categorías de instancias'),
+    ('CREAR_CATEGORIA_INSTANCIA',  'Permite crear categorías de instancias'),
+    ('EDITAR_CATEGORIA_INSTANCIA', 'Permite editar categorías de instancias'),
+    ('ELIMINAR_CATEGORIA_INSTANCIA','Permite dar de baja categorías de instancias'),
+    ('VER_CATEGORIA_RECORDATORIO', 'Permite visualizar categorías de recordatorios'),
+    ('CREAR_CATEGORIA_RECORDATORIO','Permite crear categorías de recordatorios'),
+    ('EDITAR_CATEGORIA_RECORDATORIO','Permite editar categorías de recordatorios'),
+    ('ELIMINAR_CATEGORIA_RECORDATORIO','Permite dar de baja categorías de recordatorios'),
+    -- Permisos y perfil
+    ('VER_PERMISOS',               'Permite visualizar la lista de permisos del sistema'),
+    ('EDITAR_PERMISO',             'Permite editar la descripción de los permisos'),
     ('EDITAR_MIS_DATOS',            'Permite editar los datos personales del usuario logueado'),
     -- Comentarios de estudiante
     ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),

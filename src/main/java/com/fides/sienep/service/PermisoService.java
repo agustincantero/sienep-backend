@@ -5,10 +5,11 @@ import com.fides.sienep.dto.PermisoUpdateDTO;
 import com.fides.sienep.model.Permiso;
 import com.fides.sienep.repository.PermisoRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ public class PermisoService {
 
     private final PermisoRepository permisoRepository;
 
+    @PreAuthorize("hasAuthority('VER_PERMISOS')")
     @Transactional(readOnly = true)
     public List<PermisoResponseDTO> obtenerTodos() {
         List<Permiso> permisos = permisoRepository.findAll();
@@ -29,6 +31,7 @@ public class PermisoService {
         return dtos;
     }
 
+    @PreAuthorize("hasAuthority('EDITAR_PERMISO')")
     @Transactional
     public PermisoResponseDTO actualizarDescripcion(int id, PermisoUpdateDTO requestDTO) {
         Permiso permiso = permisoRepository.findById(id)

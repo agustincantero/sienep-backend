@@ -8,6 +8,7 @@ import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaInstanciaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,6 +33,7 @@ public class CategoriaInstanciaService {
     }
 
     // --- Métodos CRUD ---
+    @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
     @Transactional(readOnly = true)
     public List<CategoriaInstanciaResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
         List<CategoriaInstancia> categorias = categoriaRepository.buscarConFiltros(nombre, estado);
@@ -43,6 +45,7 @@ public class CategoriaInstanciaService {
         return dtoList;
     }
 
+    @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
     @Transactional(readOnly = true)
     public CategoriaInstanciaResponseDTO obtenerPorId(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
@@ -50,6 +53,7 @@ public class CategoriaInstanciaService {
         return toResponseDTO(categoria);
     }
 
+    @PreAuthorize("hasAuthority('CREAR_CATEGORIA_INSTANCIA')")
     @Transactional
     public CategoriaInstanciaResponseDTO crearCategoria(CategoriaInstanciaCreateDTO requestDTO) {
         // Normalización del nombre
@@ -68,6 +72,7 @@ public class CategoriaInstanciaService {
         return toResponseDTO(guardada);
     }
 
+    @PreAuthorize("hasAuthority('EDITAR_CATEGORIA_INSTANCIA')")
     @Transactional
     public CategoriaInstanciaResponseDTO actualizarCategoria(int id, CategoriaInstanciaUpdateDTO requestDTO) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
@@ -89,6 +94,7 @@ public class CategoriaInstanciaService {
         return toResponseDTO(actualizada);
     }
 
+    @PreAuthorize("hasAuthority('ELIMINAR_CATEGORIA_INSTANCIA')")
     @Transactional
     public void darDeBajaCategoria(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)

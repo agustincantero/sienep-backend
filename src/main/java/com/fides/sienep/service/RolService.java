@@ -13,6 +13,7 @@ import com.fides.sienep.repository.RolRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -62,6 +63,7 @@ public class RolService {
     }
 
     // --- Métodos CRUD ---
+    @PreAuthorize("hasAuthority('VER_ROLES')")
     @Transactional(readOnly = true)
     public List<RolResponseDTO> obtenerTodos() {
         List<Rol> roles = rolRepository.findAll();
@@ -72,6 +74,7 @@ public class RolService {
         return rolesDTO;
     }
 
+    @PreAuthorize("hasAuthority('VER_ROLES')")
     @Transactional(readOnly = true)
     public RolResponseDTO obtenerPorId(int id) {
         Rol rol = rolRepository.findById(id)
@@ -79,6 +82,7 @@ public class RolService {
         return toResponseDTO(rol);
     }
 
+    @PreAuthorize("hasAuthority('CREAR_ROL')")
     @Transactional
     public RolResponseDTO crearRol(RolCreateDTO requestDTO) {
         // Normalización del nombre
@@ -114,6 +118,7 @@ public class RolService {
         return toResponseDTO(rolGuardado);
     }
 
+    @PreAuthorize("hasAuthority('EDITAR_ROL')")
     @Transactional
     public RolResponseDTO actualizarRol(int id, RolUpdateDTO requestDTO) {
         Rol rol = rolRepository.findById(id)
@@ -178,6 +183,7 @@ public class RolService {
         return toResponseDTO(rolActualizado);
     }
 
+    @PreAuthorize("hasAuthority('ELIMINAR_ROL')")
     @Transactional
     public void darDeBajaRol(int id) {
         Rol rol = rolRepository.findById(id)
