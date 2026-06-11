@@ -3,15 +3,15 @@ package com.fides.sienep.dto;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.PaisDocumento;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Datos completos de un funcionario")
 public class FuncionarioResponseDTO {
 

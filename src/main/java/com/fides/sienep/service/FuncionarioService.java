@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
+import com.fides.sienep.dto.FuncionarioUpdateDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.model.PaisDocumento;
@@ -130,22 +131,11 @@ public class FuncionarioService {
     @Transactional
     public FuncionarioResponseDTO actualizar(
             Integer id,
-            FuncionarioRequestDTO dto
+            FuncionarioUpdateDTO dto
     ) {
 
         Funcionario funcionario =
                 buscarOFallar(id);
-
-        validarDocumento(dto);
-
-        if (!funcionario.getDocumento().equals(dto.getDocumento())
-                && funcionarioRepository.existsByDocumento(dto.getDocumento())) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Ya existe un funcionario con ese documento."
-            );
-        }
 
         if (!funcionario.getEmail().equalsIgnoreCase(dto.getEmail())
                 && funcionarioRepository.existsByEmail(dto.getEmail())) {
@@ -183,7 +173,7 @@ public class FuncionarioService {
 
     @PreAuthorize("hasAuthority('REACTIVAR_FUNCIONARIO')")
     @Transactional
-    public void reactivar(Integer id) {
+    public FuncionarioResponseDTO reactivar(Integer id) {
 
         Funcionario funcionario =
                 buscarOFallar(id);
@@ -193,6 +183,8 @@ public class FuncionarioService {
         );
 
         funcionarioRepository.save(funcionario);
+
+        return toResponseDTO(funcionario);
     }
 
     // =========================================================
@@ -212,7 +204,7 @@ public class FuncionarioService {
 
     private void aplicarCambios(
             Funcionario funcionario,
-            FuncionarioRequestDTO dto
+            FuncionarioUpdateDTO dto
     ) {
 
         Rol rol = rolRepository.findById(dto.getIdRol())
@@ -225,10 +217,13 @@ public class FuncionarioService {
 
         funcionario.setNombre(dto.getNombre());
         funcionario.setApellido(dto.getApellido());
-        funcionario.setDocumento(dto.getDocumento());
-        funcionario.setPaisDocumento(dto.getPaisDocumento());
         funcionario.setEmail(dto.getEmail());
         funcionario.setRol(rol);
+
+        if (dto.getContrasenia() != null && !dto.getContrasenia().isBlank()) {
+            funcionario.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
+        }
+
     }
 
     private void validarDocumento(

@@ -2,13 +2,13 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
+import com.fides.sienep.dto.FuncionarioUpdateDTO;
 import com.fides.sienep.service.FuncionarioService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -58,7 +58,7 @@ public class FuncionarioController {
     @PutMapping("/{id}")
     public ResponseEntity<FuncionarioResponseDTO> actualizar(
             @PathVariable Integer id,
-            @Valid @RequestBody FuncionarioRequestDTO dto) {
+            @Valid @RequestBody FuncionarioUpdateDTO dto) {
 
         return ResponseEntity.ok(funcionarioService.actualizar(id, dto));
     }
@@ -68,7 +68,6 @@ public class FuncionarioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         funcionarioService.darDeBaja(id);
-        //funcionarioService.eliminar(id); || comento esta linea porque el metodo es darDeBaja en service
 
         // 204 No Content: la operación fue exitosa pero no hay nada que devolver en el body (ya no existe el recurso).
         return ResponseEntity.noContent().build();
@@ -86,10 +85,9 @@ public class FuncionarioController {
             description = "Funcionario no encontrado"
     )
     @PatchMapping("/{id}/reactivar")
-    public void reactivar(
-            @PathVariable Integer id
-    ) {
-        funcionarioService.reactivar(id);
+    public ResponseEntity<FuncionarioResponseDTO> reactivar(@PathVariable Integer id) {
+        return ResponseEntity.ok(funcionarioService.reactivar(id));
     }
+
     // ========================================================
 }
