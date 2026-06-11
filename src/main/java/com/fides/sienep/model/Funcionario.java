@@ -25,4 +25,25 @@ public class Funcionario extends Usuario {
     @Column(name = "updated_at",  nullable = false, updatable = false, insertable = false)
     private LocalDateTime updatedAt;
 
+    public Funcionario(
+            String nombre,
+            String apellido,
+            String documento,
+            PaisDocumento paisDocumento,
+            String contrasenia,
+            String email,
+            Rol rol
+    ) {
+
+        super(
+                nombre,
+                apellido,
+                documento,
+                paisDocumento,
+                contrasenia,
+                email
+        );
+
+        this.rol = rol;
+    }
 }
