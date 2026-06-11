@@ -1,7 +1,7 @@
 package com.fides.sienep.config;
 
-import com.fides.sienep.security.CustomUsuarioDetailsService;
 import com.fides.sienep.security.JwtRequestFilter;
+import com.fides.sienep.security.LoginUsuarioDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final CustomUsuarioDetailsService userDetailsService;
+    private final LoginUsuarioDetailsService loginUsuarioDetailsService;
     private final JwtRequestFilter jwtRequestFilter;
     private final PasswordEncoder passwordEncoder;
 
@@ -51,7 +51,8 @@ public class SecurityConfig {
         AuthenticationManagerBuilder builder =
                 http.getSharedObject(AuthenticationManagerBuilder.class);
         builder
-                .userDetailsService(userDetailsService)
+                // LoginUsuarioDetailsService carga por email — solo para el login
+                .userDetailsService(loginUsuarioDetailsService)
                 .passwordEncoder(passwordEncoder);
         return builder.build();
     }
