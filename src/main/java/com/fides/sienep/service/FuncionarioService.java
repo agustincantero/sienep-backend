@@ -2,18 +2,23 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Funcionario;
+import com.fides.sienep.model.PaisDocumento;
 import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
+import com.fides.sienep.utils.ValidadorDeCedulasUy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,96 +26,246 @@ public class FuncionarioService {
 
     private final FuncionarioRepository funcionarioRepository;
     private final RolRepository rolRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    // OBTENER TODOS
+    // =========================================================
+    // CREAR
+    // =========================================================
+
+    @PreAuthorize("hasAuthority('CREAR_FUNCIONARIO')")
+    @Transactional
+    public FuncionarioResponseDTO crear(FuncionarioRequestDTO dto) {
+
+        if (dto.getPaisDocumento() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "paisDocumento es obligatorio"
+            );
+        }
+
+        if (funcionarioRepository.existsByDocumento(dto.getDocumento())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe un funcionario con ese documento."
+            );
+        }
+
+        if (funcionarioRepository.existsByEmail(dto.getEmail())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe un usuario con ese email."
+            );
+        }
+
+        validarDocumento(dto);
+
+        Rol rol = rolRepository.findById(dto.getIdRol())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Rol no encontrado: " + dto.getIdRol()
+                ));
+
+        Funcionario funcionario = new Funcionario(
+                dto.getNombre(),
+                dto.getApellido(),
+                dto.getDocumento(),
+                dto.getPaisDocumento(),
+                passwordEncoder.encode(dto.getContrasenia()),
+                dto.getEmail(),
+                rol
+        );
+
+        return toResponseDTO(
+                funcionarioRepository.save(funcionario)
+        );
+    }
+
+    // =========================================================
+    // CONSULTAS
+    // =========================================================
+
+    @PreAuthorize("hasAuthority('VER_FUNCIONARIO')")
+    @Transactional(readOnly = true)
+    public FuncionarioResponseDTO obtenerPorId(Integer id) {
+        return toResponseDTO(
+                buscarOFallar(id)
+        );
+    }
+
+    @PreAuthorize("hasAuthority('VER_FUNCIONARIO')")
+    @Transactional(readOnly = true)
+    public FuncionarioResponseDTO obtenerPorDocumento(String documento) {
+        Funcionario funcionario = funcionarioRepository
+                .findByDocumentoAndEstado(documento, EstadoLogico.ACTIVO)
+                .orElseThrow(() -> new RuntimeException("Funcionario no encontrado"));
+        return toResponseDTO(funcionario);
+    }
+
+    @PreAuthorize("hasAuthority('VER_FUNCIONARIO')")
+    @Transactional(readOnly = true)
     public List<FuncionarioResponseDTO> obtenerTodos() {
 
-        List<Funcionario> funcionarios = funcionarioRepository.findAll();
+        List<FuncionarioResponseDTO> respuesta =
+                new ArrayList<>();
 
-        List<FuncionarioResponseDTO> respuesta = new ArrayList<>();
+        List<Funcionario> funcionarios =
+                funcionarioRepository.findAll();
 
         for (Funcionario funcionario : funcionarios) {
-            FuncionarioResponseDTO dto = convertirAResponseDTO(funcionario);
-            respuesta.add(dto);
+            respuesta.add(
+                    toResponseDTO(funcionario)
+            );
         }
 
         return respuesta;
     }
 
-    // OBTENER POR ID
-    public FuncionarioResponseDTO obtenerPorId(Integer id) {
 
-        Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + id));
 
-        return convertirAResponseDTO(funcionario);
-    }
-
-    // CREAR
-    public FuncionarioResponseDTO crear(FuncionarioRequestDTO dto) {
-
-        Funcionario funcionario = new Funcionario();
-
-        funcionario.setNombre(dto.getNombre());
-        funcionario.setApellido(dto.getApellido());
-        funcionario.setEmail(dto.getEmail());
-        funcionario.setDocumento(dto.getDocumento());
-
-        Optional<Rol> rolOptional = rolRepository.findById(dto.getIdRol());
-
-        if (rolOptional.isPresent()) {
-            funcionario.setRol(rolOptional.get());
-        }
-
-        Funcionario guardado = funcionarioRepository.save(funcionario);
-
-        return convertirAResponseDTO(guardado);
-    }
-
+    // =========================================================
     // ACTUALIZAR
-    public FuncionarioResponseDTO actualizar(Integer id, FuncionarioRequestDTO dto) {
+    // =========================================================
 
-        Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + id));
+    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    @Transactional
+    public FuncionarioResponseDTO actualizar(
+            Integer id,
+            FuncionarioRequestDTO dto
+    ) {
+
+        Funcionario funcionario =
+                buscarOFallar(id);
+
+        validarDocumento(dto);
+
+        if (!funcionario.getDocumento().equals(dto.getDocumento())
+                && funcionarioRepository.existsByDocumento(dto.getDocumento())) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe un funcionario con ese documento."
+            );
+        }
+
+        if (!funcionario.getEmail().equalsIgnoreCase(dto.getEmail())
+                && funcionarioRepository.existsByEmail(dto.getEmail())) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe un usuario con ese email."
+            );
+        }
+
+        aplicarCambios(funcionario, dto);
+
+        return toResponseDTO(
+                funcionarioRepository.save(funcionario)
+        );
+    }
+
+    // =========================================================
+    // BAJA Y REACTIVACIÓN
+    // =========================================================
+
+    @PreAuthorize("hasAuthority('ELIMINAR_FUNCIONARIO')")
+    @Transactional
+    public void darDeBaja(Integer id) {
+
+        Funcionario funcionario =
+                buscarOFallar(id);
+
+        funcionario.setEstado(
+                EstadoLogico.INACTIVO
+        );
+
+        funcionarioRepository.save(funcionario);
+    }
+
+    @PreAuthorize("hasAuthority('REACTIVAR_FUNCIONARIO')")
+    @Transactional
+    public void reactivar(Integer id) {
+
+        Funcionario funcionario =
+                buscarOFallar(id);
+
+        funcionario.setEstado(
+                EstadoLogico.ACTIVO
+        );
+
+        funcionarioRepository.save(funcionario);
+    }
+
+    // =========================================================
+    // MÉTODOS PRIVADOS
+    // =========================================================
+
+    private Funcionario buscarOFallar(Integer id) {
+
+        return funcionarioRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Funcionario no encontrado: " + id
+                        )
+                );
+    }
+
+    private void aplicarCambios(
+            Funcionario funcionario,
+            FuncionarioRequestDTO dto
+    ) {
+
+        Rol rol = rolRepository.findById(dto.getIdRol())
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Rol no encontrado: " + dto.getIdRol()
+                        )
+                );
 
         funcionario.setNombre(dto.getNombre());
         funcionario.setApellido(dto.getApellido());
-        funcionario.setEmail(dto.getEmail());
         funcionario.setDocumento(dto.getDocumento());
-
-        Optional<Rol> rolOptional =
-                rolRepository.findById(dto.getIdRol());
-
-        if (rolOptional.isPresent()) {
-            funcionario.setRol(rolOptional.get());
-        }
-
-        Funcionario actualizado =
-                funcionarioRepository.save(funcionario);
-
-        return convertirAResponseDTO(actualizado);
+        funcionario.setPaisDocumento(dto.getPaisDocumento());
+        funcionario.setEmail(dto.getEmail());
+        funcionario.setRol(rol);
     }
 
-    // ELIMINAR
-    public void eliminar(Integer id) {
-        funcionarioRepository.deleteById(id);
+    private void validarDocumento(
+            FuncionarioRequestDTO dto
+    ) {
+
+        if (dto.getPaisDocumento() == PaisDocumento.URY
+                && !ValidadorDeCedulasUy.esCedulaValida(
+                dto.getDocumento()
+        )) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La cédula uruguaya es inválida."
+            );
+        }
     }
 
-    // METODO AUXILIAR
-    private FuncionarioResponseDTO convertirAResponseDTO(Funcionario funcionario) {
+    private FuncionarioResponseDTO toResponseDTO(
+            Funcionario funcionario
+    ) {
 
-        FuncionarioResponseDTO dto = new FuncionarioResponseDTO();
-
-        dto.setIdUsuario(funcionario.getIdUsuario());
-        dto.setNombre(funcionario.getNombre());
-        dto.setApellido(funcionario.getApellido());
-        dto.setEmail(funcionario.getEmail());
-
-        if (funcionario.getRol() != null) {
-
-            dto.setRol(funcionario.getRol().getNombre());
-        }
-
-        return dto;
+        return FuncionarioResponseDTO.builder()
+                .idUsuario(funcionario.getIdUsuario())
+                .nombre(funcionario.getNombre())
+                .apellido(funcionario.getApellido())
+                .documento(funcionario.getDocumento())
+                .paisDocumento(funcionario.getPaisDocumento())
+                .email(funcionario.getEmail())
+                .estado(funcionario.getEstado())
+                .rol(
+                        funcionario.getRol() != null
+                                ? funcionario.getRol().getNombre()
+                                : null
+                )
+                .createdAt(funcionario.getCreatedAt())
+                .updatedAt(funcionario.getUpdatedAt())
+                .build();
     }
 }

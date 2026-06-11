@@ -67,10 +67,29 @@ public class FuncionarioController {
     @ApiResponse(responseCode = "204", description = "Funcionario eliminado correctamente")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-
-        funcionarioService.eliminar(id);
+        funcionarioService.darDeBaja(id);
+        //funcionarioService.eliminar(id); || comento esta linea porque el metodo es darDeBaja en service
 
         // 204 No Content: la operación fue exitosa pero no hay nada que devolver en el body (ya no existe el recurso).
         return ResponseEntity.noContent().build();
     }
+
+    // ========================================================
+    //SOLE
+    @Operation(summary = "Reactivar funcionario")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Funcionario reactivado correctamente"
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "Funcionario no encontrado"
+    )
+    @PatchMapping("/{id}/reactivar")
+    public void reactivar(
+            @PathVariable Integer id
+    ) {
+        funcionarioService.reactivar(id);
+    }
+    // ========================================================
 }
