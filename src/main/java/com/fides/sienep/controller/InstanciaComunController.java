@@ -80,4 +80,13 @@ public class InstanciaComunController {
         instanciaComunService.darDeBaja(codInstancia);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Ver mis instancias",
+            description = "Permite al estudiante autenticado ver sus propias instancias activas.")
+    @ApiResponse(responseCode = "200", description = "Instancias obtenidas correctamente")
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+    @GetMapping("/mis-instancias")
+    public ResponseEntity<List<InstanciaComunResponseDTO>> listarMisInstancias() {
+        return ResponseEntity.ok(instanciaComunService.listarMisInstancias());
+    }
 }
