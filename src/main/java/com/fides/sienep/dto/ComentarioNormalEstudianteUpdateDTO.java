@@ -30,9 +30,6 @@ import lombok.Setter;
 public class ComentarioNormalEstudianteUpdateDTO {
 
     @NotBlank(message = "El contenido es obligatorio")
-    @Schema(
-            description = "Nuevo contenido del comentario",
-            example = "El estudiante mostró mejoras significativas en la última semana."
-    )
+    @Schema(description = "Nuevo contenido del comentario", example = "El estudiante mostró mejoras significativas en la última semana.")
     private String contenido;
 }

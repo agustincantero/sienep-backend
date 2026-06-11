@@ -7,14 +7,8 @@ import com.fides.sienep.service.FuncionarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-// ─────────────────────────────────────────────────────────────
-// CAMBIO 1 — eliminamos @Autowired, agregamos @RequiredArgsConstructor
-//
-// Mismo razonamiento que en el Service. El Controller tampoco
-// necesita @Autowired cuando usa constructor injection vía Lombok.
-// ─────────────────────────────────────────────────────────────
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,24 +22,6 @@ import java.util.List;
 public class FuncionarioController {
 
     private final FuncionarioService funcionarioService;
-
-    // ─────────────────────────────────────────────────────────
-    // CAMBIO 2 — ResponseEntity en todos los métodos
-    //
-    // Antes: los métodos devolvían el DTO directamente. Spring
-    // siempre respondía HTTP 200, incluso en un POST donde el
-    // correcto es 201 Created.
-    //
-    // ResponseEntity<T> nos da control explícito sobre:
-    //   - El código de estado HTTP (200, 201, 204, 404...).
-    //   - Los headers de respuesta si hiciera falta.
-    //   - El cuerpo (body) de la respuesta.
-    //
-    // Patrones usados:
-    //   ResponseEntity.ok(body)          → 200 con body
-    //   ResponseEntity.status(201).body  → 201 con body
-    //   ResponseEntity.noContent().build → 204 sin body
-    // ─────────────────────────────────────────────────────────
 
     @Operation(summary = "Obtener todos los funcionarios")
     @ApiResponse(responseCode = "200", description = "Funcionarios obtenidos correctamente")
@@ -69,12 +45,10 @@ public class FuncionarioController {
     @Operation(summary = "Crear funcionario")
     @ApiResponse(responseCode = "201", description = "Funcionario creado correctamente")
     @PostMapping
-    public ResponseEntity<FuncionarioResponseDTO> crear(@RequestBody FuncionarioRequestDTO dto) {
+    public ResponseEntity<FuncionarioResponseDTO> crear(@Valid @RequestBody FuncionarioRequestDTO dto) {
 
         FuncionarioResponseDTO creado = funcionarioService.crear(dto);
 
-        // 201 Created: la convención HTTP dice que crear un recurso
-        // nuevo debe responder 201, no 200.
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
@@ -84,7 +58,7 @@ public class FuncionarioController {
     @PutMapping("/{id}")
     public ResponseEntity<FuncionarioResponseDTO> actualizar(
             @PathVariable Integer id,
-            @RequestBody FuncionarioRequestDTO dto) {
+            @Valid @RequestBody FuncionarioRequestDTO dto) {
 
         return ResponseEntity.ok(funcionarioService.actualizar(id, dto));
     }
@@ -96,8 +70,7 @@ public class FuncionarioController {
 
         funcionarioService.eliminar(id);
 
-        // 204 No Content: la operación fue exitosa pero no hay
-        // nada que devolver en el body (ya no existe el recurso).
+        // 204 No Content: la operación fue exitosa pero no hay nada que devolver en el body (ya no existe el recurso).
         return ResponseEntity.noContent().build();
     }
 }

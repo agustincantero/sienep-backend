@@ -33,12 +33,6 @@ public class ComentarioNormalEstudianteService {
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
 
-    // ── Permisos del SQL (verificados contra proyecto_schema.sql): ────────────
-    // VER_COMENTARIO_NORMAL_ESTUDIANTE      → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR, LEGALES, DOCENTE
-    // CREAR_COMENTARIO_NORMAL_ESTUDIANTE    → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR
-    // EDITAR_COMENTARIO_NORMAL_ESTUDIANTE   → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR
-    // ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE → ADMINISTRADOR, PSICOPEDAGOGO, TUTOR
-
     @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public List<ComentarioNormalEstudianteResponseDTO> listarPorEstudiante(Integer idEstudiante) {
@@ -63,12 +57,10 @@ public class ComentarioNormalEstudianteService {
             ComentarioNormalEstudianteRequestDTO dto) {
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
 
         Funcionario autor = funcionarioRepository.findById(dto.getIdAutor())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + dto.getIdAutor()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + dto.getIdAutor()));
 
         ComentarioNormalEstudiante comentario =
                 new ComentarioNormalEstudiante(dto.getContenido(), autor, estudiante);
@@ -78,8 +70,6 @@ public class ComentarioNormalEstudianteService {
         return toDTO(comentario);
     }
 
-    // ── El parámetro cambia a ComentarioNormalEstudianteUpdateDTO ────────────
-    // Así el endpoint solo recibe `contenido`, sin idEstudiante ni idAutor.
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional
     public ComentarioNormalEstudianteResponseDTO editar(
@@ -100,12 +90,11 @@ public class ComentarioNormalEstudianteService {
         log.info("Comentario {} dado de baja lógica", id);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // Helpers
 
     private ComentarioNormalEstudiante buscarOFallar(Integer id) {
         return comentarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Comentario no encontrado: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario no encontrado: " + id));
     }
 
     private ComentarioNormalEstudianteResponseDTO toDTO(ComentarioNormalEstudiante c) {

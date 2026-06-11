@@ -33,15 +33,6 @@ public class ComentarioConfidencialEstudianteService {
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
 
-    // ── Permisos del SQL (verificados contra proyecto_schema.sql): ────────────
-    // VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE      → ADMINISTRADOR, PSICOPEDAGOGO, LEGALES
-    // CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE    → ADMINISTRADOR, PSICOPEDAGOGO
-    // EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE   → ADMINISTRADOR, PSICOPEDAGOGO
-    // ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE → ADMINISTRADOR, PSICOPEDAGOGO
-    //
-    // Nótese que TUTOR y DOCENTE NO tienen acceso a comentarios confidenciales.
-    // Esto es intencional — son datos sensibles restringidos al equipo psicopedagógico.
-
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public List<ComentarioConfidencialEstudianteResponseDTO> listarPorEstudiante(
@@ -67,12 +58,10 @@ public class ComentarioConfidencialEstudianteService {
             ComentarioConfidencialEstudianteRequestDTO dto) {
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
 
         Funcionario autor = funcionarioRepository.findById(dto.getIdAutor())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + dto.getIdAutor()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + dto.getIdAutor()));
 
         ComentarioConfidencialEstudiante comentario =
                 new ComentarioConfidencialEstudiante(dto.getContenido(), autor, estudiante);
@@ -102,12 +91,11 @@ public class ComentarioConfidencialEstudianteService {
         log.info("Observación confidencial {} dada de baja lógica", id);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // Helpers
 
     private ComentarioConfidencialEstudiante buscarOFallar(Integer id) {
         return comentarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Observación confidencial no encontrada: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Observación confidencial no encontrada: " + id));
     }
 
     private ComentarioConfidencialEstudianteResponseDTO toDTO(

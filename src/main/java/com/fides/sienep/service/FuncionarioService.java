@@ -15,23 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-// ─────────────────────────────────────────────────────────────
-// CAMBIO 1 — @Autowired → @RequiredArgsConstructor
-//
-// @Autowired en campo es inyección por campo (field injection).
-// Funciona, pero tiene un problema grave: el compilador no puede
-// garantizar que el objeto esté completamente construido antes de
-// usarlo. Si arrancás en un contexto de test sin Spring, los campos
-// quedan null.
-//
-// La buena práctica actual es constructor injection:
-//   - Los campos son final → el compilador los exige en la
-//     construcción, imposible olvidar uno.
-//   - Hace la clase testeable sin Spring (MockitoExtension crea el
-//     objeto con new, pasándole los mocks).
-//   - Lombok genera el constructor automáticamente con
-//     @RequiredArgsConstructor (todos los campos final).
-// ─────────────────────────────────────────────────────────────
 @Service
 @RequiredArgsConstructor
 public class FuncionarioService {
@@ -47,9 +30,7 @@ public class FuncionarioService {
         List<FuncionarioResponseDTO> respuesta = new ArrayList<>();
 
         for (Funcionario funcionario : funcionarios) {
-
             FuncionarioResponseDTO dto = convertirAResponseDTO(funcionario);
-
             respuesta.add(dto);
         }
 
@@ -60,10 +41,9 @@ public class FuncionarioService {
     public FuncionarioResponseDTO obtenerPorId(Integer id) {
 
         Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + id));
 
-        return convertirAResponseDTO(funcionario);   // ← esta línea tiene que estar
+        return convertirAResponseDTO(funcionario);
     }
 
     // CREAR
@@ -76,16 +56,13 @@ public class FuncionarioService {
         funcionario.setEmail(dto.getEmail());
         funcionario.setDocumento(dto.getDocumento());
 
-        Optional<Rol> rolOptional =
-                rolRepository.findById(dto.getIdRol());
+        Optional<Rol> rolOptional = rolRepository.findById(dto.getIdRol());
 
         if (rolOptional.isPresent()) {
-
             funcionario.setRol(rolOptional.get());
         }
 
-        Funcionario guardado =
-                funcionarioRepository.save(funcionario);
+        Funcionario guardado = funcionarioRepository.save(funcionario);
 
         return convertirAResponseDTO(guardado);
     }
@@ -93,12 +70,8 @@ public class FuncionarioService {
     // ACTUALIZAR
     public FuncionarioResponseDTO actualizar(Integer id, FuncionarioRequestDTO dto) {
 
-        // CAMBIO 2 — mismo tratamiento que obtenerPorId
         Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Funcionario no encontrado: " + id
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + id));
 
         funcionario.setNombre(dto.getNombre());
         funcionario.setApellido(dto.getApellido());
@@ -109,7 +82,6 @@ public class FuncionarioService {
                 rolRepository.findById(dto.getIdRol());
 
         if (rolOptional.isPresent()) {
-
             funcionario.setRol(rolOptional.get());
         }
 
@@ -121,7 +93,6 @@ public class FuncionarioService {
 
     // ELIMINAR
     public void eliminar(Integer id) {
-
         funcionarioRepository.deleteById(id);
     }
 

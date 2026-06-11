@@ -140,9 +140,9 @@ class EstudianteServiceTest {
     void crear_DebeLanzar400_CuandoCIUruguayaEsInvalida() {
 
         EstudianteRequestDTO dto = buildDtoValido();
-        dto.setDocumento("47520641"); // dígito verificador incorrecto
+        dto.setDocumento("47520642"); // dígito verificador incorrecto (el válido es 1)
 
-        when(estudianteRepository.existsByDocumento("47520641")).thenReturn(false);
+        when(estudianteRepository.existsByDocumento("47520642")).thenReturn(false);
         when(estudianteRepository.existsByEmail(dto.getEmail())).thenReturn(false);
 
         ResponseStatusException ex = assertThrows(

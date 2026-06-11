@@ -52,14 +52,12 @@ public class EstudianteService {
         // violación de constraint único, que llegaría al cliente
         // como un error 500 incomprensible en lugar de un 409 claro.
         if (estudianteRepository.existsByDocumento(dto.getDocumento())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Ya existe un estudiante con ese documento.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un estudiante con ese documento.");
         }
 
         // ── Validación 2: email único ─────────────────────────
         if (estudianteRepository.existsByEmail(dto.getEmail())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
         }
 
         // ── Validación 3: CI uruguaya ─────────────────────────
@@ -72,9 +70,7 @@ public class EstudianteService {
         // verificador de la cédula de identidad uruguaya.
         if (dto.getPaisDocumento() == PaisDocumento.URY
                 && !ValidadorDeCedulasUy.esCedulaValida(dto.getDocumento())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La cédula de identidad uruguaya ingresada no es válida.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cédula de identidad uruguaya ingresada no es válida.");
         }
 
         // ── Validación 4: edad mínima 18 años ────────────────
@@ -86,12 +82,7 @@ public class EstudianteService {
         // El constructor de Estudiante lanza IllegalArgumentException,
         // que Spring no convierte automáticamente en 400 — llega como
         // 500. Aquí controlamos el código de error y el mensaje.
-        int edad = Period.between(dto.getFechaNacimiento(), LocalDate.now()).getYears();
-        if (edad < 18) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "El estudiante debe ser mayor de edad (mínimo 18 años).");
-        }
+        validarEdad(dto.getFechaNacimiento());
 
         Estudiante estudiante = new Estudiante(
                 dto.getNombre(), dto.getApellido(), dto.getDocumento(),
@@ -135,12 +126,10 @@ public class EstudianteService {
      */
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
-    public Page<EstudianteResumenDTO> listar(String texto, Integer idGrupo, Integer idCarrera,
-                                             Integer idItr, EstadoLogico estado, Pageable pageable) {
+    public Page<EstudianteResumenDTO> listar(String texto, Integer idGrupo, Integer idCarrera, Integer idItr, EstadoLogico estado, Pageable pageable) {
         boolean aplicaFiltro = texto != null || idGrupo != null || idCarrera != null || idItr != null;
         if (aplicaFiltro && !tienePermiso("BUSCAR_ESTUDIANTE")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Requiere permiso BUSCAR_ESTUDIANTE para buscar o filtrar.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Requiere permiso BUSCAR_ESTUDIANTE para buscar o filtrar.");
         }
 
         EstadoLogico estadoEfectivo = tienePermiso("VER_ESTUDIANTE") ? estado : EstadoLogico.ACTIVO;
@@ -171,18 +160,6 @@ public class EstudianteService {
         return resultado.map(this::toResumenDTO);
     }
 
-    // =========================================================
-    // ACTUALIZAR — recibe EstudianteUpdateDTO (sin documento)
-    // =========================================================
-
-    // ── ¿Por qué el parámetro es EstudianteUpdateDTO y no EstudianteRequestDTO? ──
-    //
-    // EstudianteUpdateDTO no tiene campo documento ni paisDocumento.
-    // Eso hace IMPOSIBLE que lleguen por este endpoint — Spring no
-    // los deserializa aunque vengan en el JSON.
-    // No necesitamos validar ni lanzar error: el problema no existe.
-    //
-    // El controller también debe cambiar a recibir EstudianteUpdateDTO.
     @PreAuthorize("hasAuthority('EDITAR_ESTUDIANTE')")
     @Transactional
     public EstudianteResponseDTO actualizar(Integer id, EstudianteUpdateDTO dto) {
@@ -200,8 +177,7 @@ public class EstudianteService {
     @Transactional
     public EstudianteResponseDTO editarMisDatos(Integer id, MisDatosRequestDTO dto) {
         if (!getIdUsuarioAutenticado().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Solo podés editar tus propios datos.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo podés editar tus propios datos.");
         }
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambiosContacto(estudiante, dto);
@@ -215,8 +191,7 @@ public class EstudianteService {
     @Transactional
     public void cambiarContrasenia(Integer id, CambiarContraseniaDTO dto) {
         if (!getIdUsuarioAutenticado().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "No podés cambiar la contraseña de otro usuario.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No podés cambiar la contraseña de otro usuario.");
         }
         Estudiante estudiante = buscarOFallar(id);
         estudiante.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
@@ -252,12 +227,23 @@ public class EstudianteService {
 
     private Estudiante buscarOFallar(Integer id) {
         return estudianteRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + id));
+    }
+
+    private void validarEdad(LocalDate fechaNacimiento) {
+        if (fechaNacimiento == null) return;
+        int edad = Period.between(fechaNacimiento, LocalDate.now()).getYears();
+        if (edad < 18) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estudiante debe ser mayor de edad (mínimo 18 años).");
+        }
+        if (fechaNacimiento.isBefore(LocalDate.now().minusYears(100))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de nacimiento no puede ser mayor a 100 años.");
+        }
     }
 
     // Recibe EstudianteUpdateDTO — sin documento ni paisDocumento
     private void aplicarCambios(Estudiante estudiante, EstudianteUpdateDTO dto) {
+        validarEdad(dto.getFechaNacimiento());
         estudiante.setNombre(dto.getNombre());
         estudiante.setApellido(dto.getApellido());
         estudiante.setEmail(dto.getEmail());
@@ -296,8 +282,7 @@ public class EstudianteService {
         List<Grupo> grupos = new ArrayList<>();
         for (Integer idGrupo : idGrupos) {
             Grupo grupo = grupoRepository.findById(idGrupo)
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND, "Grupo no encontrado: " + idGrupo));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado: " + idGrupo));
             grupos.add(grupo);
         }
         estudiante.setGrupos(grupos);

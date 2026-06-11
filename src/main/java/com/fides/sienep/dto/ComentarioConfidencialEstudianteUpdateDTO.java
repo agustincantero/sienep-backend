@@ -20,9 +20,6 @@ import lombok.Setter;
 public class ComentarioConfidencialEstudianteUpdateDTO {
 
     @NotBlank(message = "El contenido es obligatorio")
-    @Schema(
-            description = "Nuevo contenido de la observación confidencial",
-            example = "Se actualizó la evaluación tras la reunión con el equipo."
-    )
+    @Schema(description = "Nuevo contenido de la observación confidencial", example = "Se actualizó la evaluación tras la reunión con el equipo.")
     private String contenido;
 }

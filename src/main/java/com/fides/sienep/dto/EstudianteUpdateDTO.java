@@ -39,11 +39,13 @@ public class EstudianteUpdateDTO {
 
     @NotBlank
     @Size(max = 30)
+    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
     @Schema(description = "Nombre del estudiante", example = "María")
     private String nombre;
 
     @NotBlank
     @Size(max = 30)
+    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
     @Schema(description = "Apellido del estudiante", example = "González")
     private String apellido;
 
@@ -53,15 +55,18 @@ public class EstudianteUpdateDTO {
     private String email;
 
     @Size(max = 50)
+    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
     @Schema(example = "Montevideo")
     private String ciudad;
 
     @Size(max = 20)
+    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
     @Schema(example = "Montevideo")
     private String departamento;
 
     @Size(max = 160)
-    @Schema(example = "Av. 18 de Julio")
+    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
+    @Schema(example = "18 de Julio")
     private String calle;
 
     @Min(1) @Max(9999)
@@ -72,6 +77,7 @@ public class EstudianteUpdateDTO {
     private String informacionSalud;
 
     @Size(max = 80)
+    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
     @Schema(example = "ASSE")
     private String sistemaSalud;
 
@@ -84,11 +90,12 @@ public class EstudianteUpdateDTO {
     private String motivoDerivacion;
 
     @Size(max = 255)
-    @Schema(description = "URL o ruta de la foto")
+    @Pattern(regexp = "^.*\\.(jpg|jpeg|png)$", flags = Pattern.Flag.CASE_INSENSITIVE, message = "La foto debe ser .jpg, .jpeg o .png")
+    @Schema(description = "URL o ruta de la foto", example = "foto.jpg")
     private String foto;
 
     @Schema(description = "Lista de números de teléfono", example = "[\"099123456\", \"22001122\"]")
-    private List<@NotBlank @Size(min = 8, max = 15) String> telefonos;
+    private List<@NotBlank @Pattern(regexp = "^[0-9]{8,12}$", message = "El teléfono debe contener entre 8 y 12 dígitos numéricos") String> telefonos;
 
     @Schema(description = "IDs de los grupos a asignar")
     private List<Integer> idGrupos;
