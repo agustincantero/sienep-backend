@@ -7,6 +7,7 @@ import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CarreraRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +20,7 @@ public class CarreraService {
 
     private final CarreraRepository carreraRepository;
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public CarreraResponseDTO crear(CarreraRequestDTO dto) {
 
@@ -37,6 +39,7 @@ public class CarreraService {
         );
     }
 
+    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public CarreraResponseDTO obtenerPorId(Integer id) {
 
@@ -45,6 +48,7 @@ public class CarreraService {
         );
     }
 
+    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public List<CarreraResponseDTO> listar() {
         List<Carrera> carreras = carreraRepository.findAll();
@@ -55,6 +59,7 @@ public class CarreraService {
         return dtos;
     }
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public CarreraResponseDTO actualizar(
             Integer id,
@@ -70,6 +75,7 @@ public class CarreraService {
         );
     }
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public void darDeBaja(Integer id) {
 
@@ -81,6 +87,7 @@ public class CarreraService {
     }
 
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public void reactivar(Integer id) {
 
