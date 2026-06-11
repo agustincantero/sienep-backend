@@ -1,23 +1,31 @@
 package com.fides.sienep.repository;
 
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.InstanciaComun;
-import com.fides.sienep.model.InstanciaComun.InstanciaComunId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, InstanciaComunId> {
+public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, Integer> {
 
-    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.instancia.codInstancia = :codInstancia")
-    List<InstanciaComun> findByCodInstancia(@Param("codInstancia") int codInstancia);
+    List<InstanciaComun> findByEstado(EstadoLogico estado);
 
-    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.categoria.idCategoria = :idCategoria")
-    List<InstanciaComun> findByIdCategoria(@Param("idCategoria") int idCategoria);
+    Optional<InstanciaComun> findByCodInstanciaAndEstado(int codInstancia, EstadoLogico estado);
 
-    @Query("SELECT CASE WHEN COUNT(ic) > 0 THEN true ELSE false END FROM InstanciaComun ic WHERE ic.instancia.codInstancia = :codInstancia AND ic.categoria.idCategoria = :idCategoria")
-    boolean existsByCodInstanciaAndIdCategoria(@Param("codInstancia") int codInstancia, @Param("idCategoria") int idCategoria);
+    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.estudiante.idUsuario = :idEstudiante AND ic.estado = :estado")
+    List<InstanciaComun> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
+                                                   @Param("estado") EstadoLogico estado);
+
+    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.funcionario.idUsuario = :idFuncionario AND ic.estado = :estado")
+    List<InstanciaComun> findByFuncionarioAndEstado(@Param("idFuncionario") int idFuncionario,
+                                                    @Param("estado") EstadoLogico estado);
+
+    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
+    List<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
+                                                  @Param("estado") EstadoLogico estado);
 }
