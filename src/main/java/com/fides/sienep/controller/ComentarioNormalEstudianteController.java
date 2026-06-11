@@ -25,16 +25,20 @@ public class ComentarioNormalEstudianteController {
     private final ComentarioNormalEstudianteService comentarioService;
 
     @GetMapping
-    @Operation(summary = "Listar comentarios de un estudiante")
+    @Operation(summary = "Listar comentarios de un estudiante",
+            description = "Funcionarios indican idEstudiante como parámetro. " +
+                    "Estudiantes autenticados ven automáticamente sus propios comentarios.")
     @ApiResponse(responseCode = "200", description = "Lista de comentarios")
+    @ApiResponse(responseCode = "400", description = "Falta el parámetro idEstudiante (solo para funcionarios)")
     public ResponseEntity<List<ComentarioNormalEstudianteResponseDTO>> listar(
-            @RequestParam Integer idEstudiante) {
+            @RequestParam(required = false) Integer idEstudiante) {
         return ResponseEntity.ok(comentarioService.listarPorEstudiante(idEstudiante));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener comentario por ID")
     @ApiResponse(responseCode = "200", description = "Comentario encontrado")
+    @ApiResponse(responseCode = "403", description = "El estudiante no puede ver comentarios ajenos")
     @ApiResponse(responseCode = "404", description = "Comentario no encontrado")
     public ResponseEntity<ComentarioNormalEstudianteResponseDTO> obtenerPorId(
             @PathVariable Integer id) {
@@ -57,7 +61,7 @@ public class ComentarioNormalEstudianteController {
     @ApiResponse(responseCode = "404", description = "Comentario no encontrado")
     public ResponseEntity<ComentarioNormalEstudianteResponseDTO> editar(
             @PathVariable Integer id,
-            @Valid @RequestBody ComentarioNormalEstudianteUpdateDTO dto){
+            @Valid @RequestBody ComentarioNormalEstudianteUpdateDTO dto) {
         return ResponseEntity.ok(comentarioService.editar(id, dto));
     }
 

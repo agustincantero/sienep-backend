@@ -120,6 +120,15 @@ public class EstudianteController {
         return ResponseEntity.ok(estudianteService.editarMisDatos(id, dto));
     }
 
+    @Operation(summary = "Ver mi perfil",
+            description = "Permite al estudiante autenticado ver su propio perfil resumido.")
+    @ApiResponse(responseCode = "200", description = "Perfil obtenido correctamente")
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+    @GetMapping("/mi-perfil")
+    public ResponseEntity<EstudianteResumenDTO> verMiPerfil() {
+        return ResponseEntity.ok(estudianteService.verMiPerfil());
+    }
+
     // =========================================================
     // CONTRASEÑA
     // =========================================================

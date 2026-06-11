@@ -15,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,6 +34,12 @@ public class IncidenciaService {
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final InstanciaIdGenerator instanciaIdGenerator;
+
+
+    private Integer getIdUsuarioAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Integer.parseInt(auth.getName());
+    }
 
     @Transactional
     @PreAuthorize("hasAuthority('REGISTRAR_INCIDENCIA')")
@@ -98,6 +106,19 @@ public class IncidenciaService {
     public List<IncidenciaResponseDTO> listarPorFuncionario(int idFuncionario) {
         List<Incidencia> incidencias = incidenciaRepository
                 .findByFuncionarioAndEstado(idFuncionario, EstadoLogico.ACTIVO);
+        List<IncidenciaResponseDTO> resultado = new ArrayList<>();
+        for (Incidencia incidencia : incidencias) {
+            resultado.add(toResponseDTO(incidencia));
+        }
+        return resultado;
+    }
+
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public List<IncidenciaResponseDTO> listarMisIncidencias() {
+        Integer idEstudiante = getIdUsuarioAutenticado();
+        List<Incidencia> incidencias = incidenciaRepository
+                .findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO);
         List<IncidenciaResponseDTO> resultado = new ArrayList<>();
         for (Incidencia incidencia : incidencias) {
             resultado.add(toResponseDTO(incidencia));

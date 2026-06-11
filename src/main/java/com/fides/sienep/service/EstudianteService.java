@@ -184,6 +184,13 @@ public class EstudianteService {
         return toResponseDTO(estudianteRepository.save(estudiante));
     }
 
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public EstudianteResumenDTO verMiPerfil() {
+        Integer id = getIdUsuarioAutenticado();
+        return toResumenDTO(buscarOFallar(id));
+    }
+
     // =========================================================
     // CAMBIAR CONTRASEÑA — dispara activación
     // =========================================================
@@ -352,10 +359,6 @@ public class EstudianteService {
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return funcionarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "Usuario no autenticado."))
-                .getIdUsuario();
+        return Integer.parseInt(auth.getName());
     }
 }
