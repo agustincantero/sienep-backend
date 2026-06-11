@@ -45,7 +45,7 @@ public class FuncionarioRequestDTO {
 
     // ========================================================
     // SOLE
-    @NotNull
+    @NotNull(message = "El país del documento es obligatorio")
     @Schema(description = "País emisor del documento", example = "URY")
     private PaisDocumento paisDocumento;
 

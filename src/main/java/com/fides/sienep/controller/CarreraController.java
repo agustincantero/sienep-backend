@@ -1,7 +1,9 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.CambiarEstadoDTO;
 import com.fides.sienep.dto.CarreraRequestDTO;
 import com.fides.sienep.dto.CarreraResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.CarreraService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -11,6 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/carreras")
@@ -38,8 +43,8 @@ public class CarreraController {
     }
 
 
-    /* LISTAR
-    // =========================================================
+    // LISTAR
+
 
     @GetMapping
     @Operation(
@@ -49,7 +54,7 @@ public class CarreraController {
     @ApiResponse(responseCode = "200", description = "Listado obtenido")
     public ResponseEntity<List<CarreraResponseDTO>> listar() {
         return ResponseEntity.ok(carreraService.listar());
-    }*/
+    }
 
 
     // OBTENER POR ID
@@ -103,13 +108,11 @@ public class CarreraController {
     public ResponseEntity<Void> darDeBaja(
             @PathVariable Integer id) {
 
-        carreraService.eliminar(id);
+        carreraService.darDeBaja(id);
 
         return ResponseEntity.noContent().build();
     }
 
-
-    /* REACTIVAR
 
 
     @PatchMapping("/{id}/estado")
@@ -134,5 +137,5 @@ public class CarreraController {
         carreraService.reactivar(id);
 
         return ResponseEntity.noContent().build();
-    }*/
+    }
 }

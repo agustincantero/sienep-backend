@@ -45,7 +45,6 @@ public class CarreraService {
         );
     }
 
-    // NO USADO NI IMPLEMENTADO EN SERVICE NI EN CONTROLLER
     @Transactional(readOnly = true)
     public List<CarreraResponseDTO> listar() {
         List<Carrera> carreras = carreraRepository.findAll();
@@ -72,7 +71,7 @@ public class CarreraService {
     }
 
     @Transactional
-    public void eliminar(Integer id) {
+    public void darDeBaja(Integer id) {
 
         Carrera carrera = buscarOFallar(id);
 
@@ -81,7 +80,7 @@ public class CarreraService {
         carreraRepository.save(carrera);
     }
 
-    // NO USADO NI IMPLEMENTADO EN SERVICE NI EN CONTROLLER
+
     @Transactional
     public void reactivar(Integer id) {
 
