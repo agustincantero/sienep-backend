@@ -374,8 +374,15 @@ CREATE TRIGGER trg_actualizar_rol_permisos
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
 -- =====================================================
--- TABLA: instancias
+-- TABLA: instancias -> Agrego la SEQUENCE para generar el idNegInstancia con formato correcto.
 -- =====================================================
+
+CREATE SEQUENCE IF NOT EXISTS proyecto.seq_instancia
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO CYCLE;
+
 CREATE TABLE proyecto.instancias (
                                      cod_instancia    SERIAL       PRIMARY KEY,
                                      titulo           VARCHAR(150) NOT NULL,
@@ -618,15 +625,15 @@ CREATE TRIGGER trg_actualizar_involucrados
 -- TABLA: inst_comunes
 -- =====================================================
 CREATE TABLE proyecto.inst_comunes (
-                                       cod_instancia INT       NOT NULL,
-                                       id_categoria  INT       NOT NULL,
+                                       cod_instancia INT NOT NULL,
+                                       id_categoria  INT NOT NULL,
                                        created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                        updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                       PRIMARY KEY (cod_instancia, id_categoria),
-                                       CONSTRAINT fk_comunes_instancia FOREIGN KEY (cod_instancia)
+                                       PRIMARY KEY (cod_instancia),
+                                       CONSTRAINT fk_inst_comun_instancia FOREIGN KEY (cod_instancia)
                                            REFERENCES proyecto.instancias(cod_instancia)
                                            ON UPDATE CASCADE ON DELETE RESTRICT,
-                                       CONSTRAINT fk_comunes_categoria FOREIGN KEY (id_categoria)
+                                       CONSTRAINT fk_inst_comun_categoria FOREIGN KEY (id_categoria)
                                            REFERENCES proyecto.cat_instancias(id_categoria)
                                            ON UPDATE CASCADE ON DELETE RESTRICT
 );
@@ -634,6 +641,7 @@ CREATE TABLE proyecto.inst_comunes (
 CREATE TRIGGER trg_actualizar_inst_comunes
     BEFORE UPDATE ON proyecto.inst_comunes
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
 
 -- =====================================================
 -- TABLA: inst_comentarios
