@@ -4,9 +4,12 @@ import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,15 +24,23 @@ public class RecordatorioService {
     private final FuncionarioRepository funcionarioRepository;
     private final FrecuenciaRepository frecuenciaRepository;
 
+    @Transactional
+    @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
     public RecordatorioResponseDTO crear(RecordatorioRequestDTO dto) {
         Instancia instancia = instanciaRepository.findById(dto.getCodInstancia())
-                .orElseThrow(() -> new EntityNotFoundException("No se encontró una instancia con el id " + dto.getCodInstancia()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró una instancia con el id " + dto.getCodInstancia()));
 
         CategoriaRecordatorio categoria = categoriaRecordatorioRepository.findById(dto.getIdCategoria())
-                .orElseThrow(() -> new EntityNotFoundException("No se encontró una categoría con el id " + dto.getIdCategoria()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
         Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
-                .orElseThrow(() -> new EntityNotFoundException("No se encontró un funcionario con el id " + dto.getIdResponsable()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró un funcionario con el id " + dto.getIdResponsable()));
 
         Recordatorio recordatorio = new Recordatorio(
                 dto.getTitulo(),
@@ -42,7 +53,9 @@ public class RecordatorioService {
 
         if (dto.getIdFrecuencia() != null) {
             Frecuencia frecuencia = frecuenciaRepository.findById(dto.getIdFrecuencia())
-                    .orElseThrow(() -> new EntityNotFoundException("No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
             recordatorio.setFrecuencia(frecuencia);
         }
 
@@ -52,6 +65,8 @@ public class RecordatorioService {
         return toResponseDTO(recordatorioRepository.save(recordatorio));
     }
 
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarActivos() {
         List<Recordatorio> recordatorios = recordatorioRepository.findByEstado(EstadoLogico.ACTIVO);
         List<RecordatorioResponseDTO> resultado = new ArrayList<>();
@@ -61,10 +76,14 @@ public class RecordatorioService {
         return resultado;
     }
 
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public RecordatorioResponseDTO buscarPorId(int id) {
         return toResponseDTO(buscarActivoOFallar(id));
     }
 
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarPorInstancia(int codInstancia) {
         List<Recordatorio> recordatorios = recordatorioRepository.findByInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO);
         List<RecordatorioResponseDTO> resultado = new ArrayList<>();
@@ -74,6 +93,8 @@ public class RecordatorioService {
         return resultado;
     }
 
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarPorResponsable(int idResponsable) {
         List<Recordatorio> recordatorios = recordatorioRepository.findByResponsableAndEstado(idResponsable, EstadoLogico.ACTIVO);
         List<RecordatorioResponseDTO> resultado = new ArrayList<>();
@@ -83,17 +104,25 @@ public class RecordatorioService {
         return resultado;
     }
 
+    @Transactional
+    @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
     public RecordatorioResponseDTO actualizar(int id, RecordatorioRequestDTO dto) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
 
         Instancia instancia = instanciaRepository.findById(dto.getCodInstancia())
-                .orElseThrow(() -> new EntityNotFoundException("No se encontró una instancia con el id " + dto.getCodInstancia()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró una instancia con el id " + dto.getCodInstancia()));
 
         CategoriaRecordatorio categoria = categoriaRecordatorioRepository.findById(dto.getIdCategoria())
-                .orElseThrow(() -> new EntityNotFoundException("No se encontró una categoría con el id " + dto.getIdCategoria()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
         Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
-                .orElseThrow(() -> new EntityNotFoundException("No se encontró un funcionario con el id " + dto.getIdResponsable()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró un funcionario con el id " + dto.getIdResponsable()));
 
         recordatorio.setTitulo(dto.getTitulo());
         recordatorio.setTipo(dto.getTipo());
@@ -106,7 +135,9 @@ public class RecordatorioService {
 
         if (dto.getIdFrecuencia() != null) {
             Frecuencia frecuencia = frecuenciaRepository.findById(dto.getIdFrecuencia())
-                    .orElseThrow(() -> new EntityNotFoundException("No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
             recordatorio.setFrecuencia(frecuencia);
         } else {
             recordatorio.setFrecuencia(null);
@@ -115,6 +146,8 @@ public class RecordatorioService {
         return toResponseDTO(recordatorioRepository.save(recordatorio));
     }
 
+    @Transactional
+    @PreAuthorize("hasAuthority('BAJA_RECORDATORIO')")
     public void darDeBaja(int id) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
         recordatorio.setEstado(EstadoLogico.INACTIVO);
@@ -123,7 +156,9 @@ public class RecordatorioService {
 
     private Recordatorio buscarActivoOFallar(int id) {
         return recordatorioRepository.findByCodRecordatorioAndEstado(id, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new EntityNotFoundException("No se encontró un recordatorio activo con el id " + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró un recordatorio activo con el id " + id));
     }
 
     private RecordatorioResponseDTO toResponseDTO(Recordatorio r) {
