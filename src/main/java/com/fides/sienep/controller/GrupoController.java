@@ -2,6 +2,7 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.GrupoRequestDTO;
 import com.fides.sienep.dto.GrupoResponseDTO;
+import com.fides.sienep.dto.GrupoUpdateDTO;
 import com.fides.sienep.service.GrupoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -67,8 +68,6 @@ public class GrupoController {
     }
 
 
-    // ACTUALIZAR
-
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar grupo", description = "Actualiza nombre y generación de un grupo. La carrera no es modificable.")
     @ApiResponse(responseCode = "200", description = "Grupo actualizado")
@@ -76,7 +75,7 @@ public class GrupoController {
     @ApiResponse(responseCode = "409", description = "Ya existe un grupo activo con ese nombre para esa carrera y generación")
     public ResponseEntity<GrupoResponseDTO> actualizar(
             @PathVariable Integer id,
-            @Valid @RequestBody GrupoRequestDTO dto) {
+            @Valid @RequestBody GrupoUpdateDTO dto) {
 
         return ResponseEntity.ok(grupoService.actualizar(id, dto));
     }

@@ -6,9 +6,10 @@ import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,6 @@ import java.util.Optional;
 public class FuncionarioService {
 
     private final FuncionarioRepository funcionarioRepository;
-
     private final RolRepository rolRepository;
 
     // OBTENER TODOS
@@ -30,9 +30,7 @@ public class FuncionarioService {
         List<FuncionarioResponseDTO> respuesta = new ArrayList<>();
 
         for (Funcionario funcionario : funcionarios) {
-
             FuncionarioResponseDTO dto = convertirAResponseDTO(funcionario);
-
             respuesta.add(dto);
         }
 
@@ -42,22 +40,14 @@ public class FuncionarioService {
     // OBTENER POR ID
     public FuncionarioResponseDTO obtenerPorId(Integer id) {
 
-        Optional<Funcionario> funcionarioOptional =
-                funcionarioRepository.findById(id);
-
-        if (funcionarioOptional.isEmpty()) {
-            return null;
-        }
-
-        Funcionario funcionario = funcionarioOptional.get();
+        Funcionario funcionario = funcionarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + id));
 
         return convertirAResponseDTO(funcionario);
     }
 
     // CREAR
-    public FuncionarioResponseDTO crear(
-            FuncionarioRequestDTO dto
-    ) {
+    public FuncionarioResponseDTO crear(FuncionarioRequestDTO dto) {
 
         Funcionario funcionario = new Funcionario();
 
@@ -66,34 +56,22 @@ public class FuncionarioService {
         funcionario.setEmail(dto.getEmail());
         funcionario.setDocumento(dto.getDocumento());
 
-        Optional<Rol> rolOptional =
-                rolRepository.findById(dto.getIdRol());
+        Optional<Rol> rolOptional = rolRepository.findById(dto.getIdRol());
 
         if (rolOptional.isPresent()) {
-
             funcionario.setRol(rolOptional.get());
         }
 
-        Funcionario guardado =
-                funcionarioRepository.save(funcionario);
+        Funcionario guardado = funcionarioRepository.save(funcionario);
 
         return convertirAResponseDTO(guardado);
     }
 
     // ACTUALIZAR
-    public FuncionarioResponseDTO actualizar(
-            Integer id,
-            FuncionarioRequestDTO dto
-    ) {
+    public FuncionarioResponseDTO actualizar(Integer id, FuncionarioRequestDTO dto) {
 
-        Optional<Funcionario> funcionarioOptional =
-                funcionarioRepository.findById(id);
-
-        if (funcionarioOptional.isEmpty()) {
-            return null;
-        }
-
-        Funcionario funcionario = funcionarioOptional.get();
+        Funcionario funcionario = funcionarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + id));
 
         funcionario.setNombre(dto.getNombre());
         funcionario.setApellido(dto.getApellido());
@@ -104,7 +82,6 @@ public class FuncionarioService {
                 rolRepository.findById(dto.getIdRol());
 
         if (rolOptional.isPresent()) {
-
             funcionario.setRol(rolOptional.get());
         }
 
@@ -116,29 +93,22 @@ public class FuncionarioService {
 
     // ELIMINAR
     public void eliminar(Integer id) {
-
         funcionarioRepository.deleteById(id);
     }
 
     // METODO AUXILIAR
-    private FuncionarioResponseDTO convertirAResponseDTO(
-            Funcionario funcionario
-    ) {
+    private FuncionarioResponseDTO convertirAResponseDTO(Funcionario funcionario) {
 
-        FuncionarioResponseDTO dto =
-                new FuncionarioResponseDTO();
+        FuncionarioResponseDTO dto = new FuncionarioResponseDTO();
 
         dto.setIdUsuario(funcionario.getIdUsuario());
-
         dto.setNombre(funcionario.getNombre());
         dto.setApellido(funcionario.getApellido());
         dto.setEmail(funcionario.getEmail());
 
         if (funcionario.getRol() != null) {
 
-            dto.setRol(
-                    funcionario.getRol().getNombre()
-            );
+            dto.setRol(funcionario.getRol().getNombre());
         }
 
         return dto;

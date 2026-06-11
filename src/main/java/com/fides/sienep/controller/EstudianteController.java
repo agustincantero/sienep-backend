@@ -104,7 +104,7 @@ public class EstudianteController {
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
     public ResponseEntity<EstudianteResponseDTO> actualizar(
             @PathVariable Integer id,
-            @Valid @RequestBody EstudianteRequestDTO dto) {
+            @Valid @RequestBody EstudianteUpdateDTO dto) {
         return ResponseEntity.ok(estudianteService.actualizar(id, dto));
     }
 

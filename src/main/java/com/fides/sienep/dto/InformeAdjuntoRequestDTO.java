@@ -18,8 +18,9 @@ public class InformeAdjuntoRequestDTO {
 
     @NotBlank(message = "La URL del archivo es obligatoria")
     @Pattern(
-            regexp = "^[A-Za-z0-9_./:%?&=-]{1,255}$",
-            message = "La URL contiene caracteres no permitidos"
+            regexp = "^[A-Za-z0-9_./:%?&=-]+\\.(pdf|jpg|jpeg|png)$",
+            flags = Pattern.Flag.CASE_INSENSITIVE,
+            message = "La URL debe terminar en .pdf, .jpg, .jpeg o .png y no contener caracteres inválidos"
     )
     @Schema(description = "URL de acceso al archivo",
             example = "https://storage.example.com/informes/informe_2024.pdf")

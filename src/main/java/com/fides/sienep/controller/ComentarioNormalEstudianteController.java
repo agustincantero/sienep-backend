@@ -2,6 +2,7 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.ComentarioNormalEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioNormalEstudianteResponseDTO;
+import com.fides.sienep.dto.ComentarioNormalEstudianteUpdateDTO;
 import com.fides.sienep.service.ComentarioNormalEstudianteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -56,7 +57,7 @@ public class ComentarioNormalEstudianteController {
     @ApiResponse(responseCode = "404", description = "Comentario no encontrado")
     public ResponseEntity<ComentarioNormalEstudianteResponseDTO> editar(
             @PathVariable Integer id,
-            @Valid @RequestBody ComentarioNormalEstudianteRequestDTO dto) {
+            @Valid @RequestBody ComentarioNormalEstudianteUpdateDTO dto){
         return ResponseEntity.ok(comentarioService.editar(id, dto));
     }
 

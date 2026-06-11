@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,10 +28,10 @@ public class InformeAdjuntoService {
     private final InformeAdjuntoRepository informeRepository;
     private final EstudianteRepository estudianteRepository;
 
+    @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
     public List<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario) {
-        List<InformeAdjunto> informes = informeRepository
-                .findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO);
+        List<InformeAdjunto> informes = informeRepository.findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO);
         List<InformeAdjuntoResponseDTO> resultado = new ArrayList<>();
         for (InformeAdjunto i : informes) {
             resultado.add(toDTO(i));
@@ -38,30 +39,28 @@ public class InformeAdjuntoService {
         return resultado;
     }
 
+    @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
     public InformeAdjuntoResponseDTO obtenerPorId(Integer id) {
         return toDTO(buscarOFallar(id));
     }
 
+    @PreAuthorize("hasAuthority('ADJUNTAR_INFORME')")
     @Transactional
     public InformeAdjuntoResponseDTO adjuntar(InformeAdjuntoRequestDTO dto) {
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdUsuario())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdUsuario()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdUsuario()));
 
         if (informeRepository.existsByEstudianteIdUsuarioAndNombre(
                 dto.getIdUsuario(), dto.getNombre())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Ya existe un informe con ese nombre para este estudiante");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un informe con ese nombre para este estudiante");
         }
 
-        // Validar extensión permitida
         String url = dto.getUrlArchivo().toLowerCase();
         if (!url.endsWith(".pdf") && !url.endsWith(".jpg")
                 && !url.endsWith(".jpeg") && !url.endsWith(".png")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La extensión del archivo no está permitida. Use PDF, JPG, JPEG o PNG");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La extensión del archivo no está permitida. Use PDF, JPG, JPEG o PNG");
         }
 
         InformeAdjunto informe = InformeAdjunto.builder()
@@ -76,19 +75,25 @@ public class InformeAdjuntoService {
         return toDTO(informe);
     }
 
+    // ── ¿Por qué hasRole('ADMINISTRADOR') y no hasAuthority? ─────────────────
+    // No existe un permiso ELIMINAR_ADJUNTO en el schema SQL.
+    // Restringirlo al rol ADMINISTRADOR es la decisión más segura
+    // hasta que el equipo defina si ese permiso debe existir.
+    // hasRole('ADMINISTRADOR') equivale a hasAuthority('ROLE_ADMINISTRADOR').
+    @PreAuthorize("hasAuthority('ELIMINAR_INFORME')")
     @Transactional
     public void eliminar(Integer id) {
         InformeAdjunto informe = buscarOFallar(id);
         informe.setEstado(EstadoLogico.ELIMINADO);
-        log.info("Informe {} dado de baja", id);
+        informeRepository.save(informe);
+        log.info("Informe {} dado de baja lógica", id);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────
+    // Helpers
 
     private InformeAdjunto buscarOFallar(Integer id) {
         return informeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
     }
 
     private InformeAdjuntoResponseDTO toDTO(InformeAdjunto i) {

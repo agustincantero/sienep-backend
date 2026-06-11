@@ -1,15 +1,17 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
+import com.fides.sienep.dto.EstudianteUpdateDTO;
 import com.fides.sienep.dto.MisDatosRequestDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
+import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
+import com.fides.sienep.utils.ValidadorDeCedulasUy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,12 +45,44 @@ public class EstudianteService {
     @PreAuthorize("hasAuthority('CREAR_ESTUDIANTE')")
     @Transactional
     public EstudianteResponseDTO crear(EstudianteRequestDTO dto) {
+
+        // ── Validación 1: documento único ─────────────────────
+        // Verificamos antes de ir a la BD con un SELECT COUNT rápido.
+        // Si no lo hiciéramos, la BD lanzaría una excepción de
+        // violación de constraint único, que llegaría al cliente
+        // como un error 500 incomprensible en lugar de un 409 claro.
         if (estudianteRepository.existsByDocumento(dto.getDocumento())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un estudiante con ese documento.");
         }
+
+        // ── Validación 2: email único ─────────────────────────
         if (estudianteRepository.existsByEmail(dto.getEmail())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
         }
+
+        // ── Validación 3: CI uruguaya ─────────────────────────
+        // Solo aplica cuando el país del documento es Uruguay (URY).
+        // Si el estudiante viene de otro país, su documento no tiene
+        // dígito verificador uruguayo — no tiene sentido validarlo.
+        //
+        // ValidadorDeCedulasUy.esCedulaValida() implementa el
+        // algoritmo oficial del BPS/DGI para verificar el dígito
+        // verificador de la cédula de identidad uruguaya.
+        if (dto.getPaisDocumento() == PaisDocumento.URY
+                && !ValidadorDeCedulasUy.esCedulaValida(dto.getDocumento())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cédula de identidad uruguaya ingresada no es válida.");
+        }
+
+        // ── Validación 4: edad mínima 18 años ────────────────
+        // Period.between calcula la diferencia exacta entre dos fechas
+        // considerando años bisiestos y meses de distinta duración.
+        // Es más correcto que restar timestamps en milisegundos.
+        //
+        // ¿Por qué validar acá si el modelo ya lo hace?
+        // El constructor de Estudiante lanza IllegalArgumentException,
+        // que Spring no convierte automáticamente en 400 — llega como
+        // 500. Aquí controlamos el código de error y el mensaje.
+        validarEdad(dto.getFechaNacimiento());
 
         Estudiante estudiante = new Estudiante(
                 dto.getNombre(), dto.getApellido(), dto.getDocumento(),
@@ -90,14 +126,12 @@ public class EstudianteService {
      */
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
-    public Page<EstudianteResumenDTO> listar(String texto, Integer idGrupo, Integer idCarrera,
-                                             Integer idItr, EstadoLogico estado, Pageable pageable) {
+    public Page<EstudianteResumenDTO> listar(String texto, Integer idGrupo, Integer idCarrera, Integer idItr, EstadoLogico estado, Pageable pageable) {
         boolean aplicaFiltro = texto != null || idGrupo != null || idCarrera != null || idItr != null;
         if (aplicaFiltro && !tienePermiso("BUSCAR_ESTUDIANTE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Requiere permiso BUSCAR_ESTUDIANTE para buscar o filtrar.");
         }
 
-        // Roles sin VER_ESTUDIANTE solo ven activos
         EstadoLogico estadoEfectivo = tienePermiso("VER_ESTUDIANTE") ? estado : EstadoLogico.ACTIVO;
 
         Page<Estudiante> resultado;
@@ -118,23 +152,17 @@ public class EstudianteService {
                     ? estudianteRepository.findByItrAndEstado(idItr, estadoEfectivo, pageable)
                     : estudianteRepository.findByItr(idItr, pageable);
         } else {
-            // Sin filtros: lista paginada
             resultado = estadoEfectivo != null
                     ? estudianteRepository.findByEstado(estadoEfectivo, pageable)
                     : estudianteRepository.findAll(pageable);
         }
 
-        Page<EstudianteResumenDTO> page = resultado.map(this::toResumenDTO);
-        return page;
+        return resultado.map(this::toResumenDTO);
     }
-
-    // =========================================================
-    // ACTUALIZAR
-    // =========================================================
 
     @PreAuthorize("hasAuthority('EDITAR_ESTUDIANTE')")
     @Transactional
-    public EstudianteResponseDTO actualizar(Integer id, EstudianteRequestDTO dto) {
+    public EstudianteResponseDTO actualizar(Integer id, EstudianteUpdateDTO dto) {
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambios(estudiante, dto);
         return toResponseDTO(estudianteRepository.save(estudiante));
@@ -202,7 +230,20 @@ public class EstudianteService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + id));
     }
 
-    private void aplicarCambios(Estudiante estudiante, EstudianteRequestDTO dto) {
+    private void validarEdad(LocalDate fechaNacimiento) {
+        if (fechaNacimiento == null) return;
+        int edad = Period.between(fechaNacimiento, LocalDate.now()).getYears();
+        if (edad < 18) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estudiante debe ser mayor de edad (mínimo 18 años).");
+        }
+        if (fechaNacimiento.isBefore(LocalDate.now().minusYears(100))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de nacimiento no puede ser mayor a 100 años.");
+        }
+    }
+
+    // Recibe EstudianteUpdateDTO — sin documento ni paisDocumento
+    private void aplicarCambios(Estudiante estudiante, EstudianteUpdateDTO dto) {
+        validarEdad(dto.getFechaNacimiento());
         estudiante.setNombre(dto.getNombre());
         estudiante.setApellido(dto.getApellido());
         estudiante.setEmail(dto.getEmail());
@@ -311,8 +352,8 @@ public class EstudianteService {
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName(); // devuelve el username = email
-        return funcionarioRepository.findByEmail(email)  // o estudianteRepository
+        String email = auth.getName();
+        return funcionarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "Usuario no autenticado."))
                 .getIdUsuario();

@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.GrupoRequestDTO;
 import com.fides.sienep.dto.GrupoResponseDTO;
+import com.fides.sienep.dto.GrupoUpdateDTO;
 import com.fides.sienep.model.Carrera;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Grupo;
@@ -9,10 +10,13 @@ import com.fides.sienep.repository.CarreraRepository;
 import com.fides.sienep.repository.GrupoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,28 +26,22 @@ public class GrupoService {
     private final GrupoRepository grupoRepository;
     private final CarreraRepository carreraRepository;
 
+    @PreAuthorize("hasAuthority('CREAR_GRUPO')")
     @Transactional
     public GrupoResponseDTO crear(GrupoRequestDTO dto) {
 
         Carrera carrera = carreraRepository.findById(dto.getIdCarrera())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Carrera no encontrada."
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada."));
 
         if (carrera.getEstado() == EstadoLogico.INACTIVO) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "No se puede crear un grupo para una carrera inactiva."
-            );
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede crear un grupo para una carrera inactiva.");
         }
+
+        validarGeneracion(dto.getGeneracion());
 
         if (grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
                 dto.getNomGrupo(), dto.getIdCarrera(), dto.getGeneracion(), EstadoLogico.ACTIVO)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Ya existe un grupo activo con ese nombre para esa carrera y generación."
-            );
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un grupo activo con ese nombre para esa carrera y generación.");
         }
 
         Grupo grupo = Grupo.builder()
@@ -55,71 +53,77 @@ public class GrupoService {
         return toResponseDTO(grupoRepository.save(grupo));
     }
 
+    @PreAuthorize("hasAuthority('VER_GRUPOS')")
     @Transactional(readOnly = true)
     public GrupoResponseDTO obtenerPorId(Integer id) {
         return toResponseDTO(buscarOFallar(id));
     }
 
+    @PreAuthorize("hasAuthority('VER_GRUPOS')")
     @Transactional(readOnly = true)
     public List<GrupoResponseDTO> listar(Integer idCarrera, Integer generacion) {
 
         List<Grupo> grupos;
 
         if (idCarrera != null && generacion != null) {
-            grupos = grupoRepository.findByCarreraIdCarreraAndGeneracionAndEstado(
-                    idCarrera, generacion, EstadoLogico.ACTIVO);
-
+            grupos = grupoRepository.findByCarreraIdCarreraAndGeneracionAndEstado(idCarrera, generacion, EstadoLogico.ACTIVO);
         } else if (idCarrera != null) {
-            grupos = grupoRepository.findByCarreraIdCarreraAndEstado(
-                    idCarrera, EstadoLogico.ACTIVO);
-
+            grupos = grupoRepository.findByCarreraIdCarreraAndEstado(idCarrera, EstadoLogico.ACTIVO);
         } else if (generacion != null) {
-            grupos = grupoRepository.findByGeneracionAndEstado(
-                    generacion, EstadoLogico.ACTIVO);
-
+            grupos = grupoRepository.findByGeneracionAndEstado(generacion, EstadoLogico.ACTIVO);
         } else {
             grupos = grupoRepository.findByEstado(EstadoLogico.ACTIVO);
         }
 
-        List<GrupoResponseDTO> dtos = new java.util.ArrayList<>();
+        List<GrupoResponseDTO> dtos = new ArrayList<>();
         for (Grupo grupo : grupos) {
             dtos.add(toResponseDTO(grupo));
         }
         return dtos;
     }
 
+    @PreAuthorize("hasAuthority('EDITAR_GRUPOS')")
     @Transactional
-    public GrupoResponseDTO actualizar(Integer id, GrupoRequestDTO dto) {
+    public GrupoResponseDTO actualizar(Integer id, GrupoUpdateDTO dto) {
         Grupo grupo = buscarOFallar(id);
 
-        if (grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+        validarGeneracion(dto.getGeneracion());
+
+        grupoRepository.findByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
                 dto.getNomGrupo(), grupo.getCarrera().getIdCarrera(),
-                dto.getGeneracion(), EstadoLogico.ACTIVO)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Ya existe un grupo activo con ese nombre para esa carrera y generación.");
-        }
+                dto.getGeneracion(), EstadoLogico.ACTIVO
+        ).ifPresent(grupoExistente -> {
+            if (!grupoExistente.getIdGrupo().equals(id)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe otro grupo activo con ese nombre para esa carrera y generación.");
+            }
+        });
 
         grupo.setNomGrupo(dto.getNomGrupo());
         grupo.setGeneracion(dto.getGeneracion());
         return toResponseDTO(grupoRepository.save(grupo));
     }
 
+    @PreAuthorize("hasAuthority('ELIMINAR_GRUPOS')")
     @Transactional
     public void darDeBaja(Integer id) {
-
         Grupo grupo = buscarOFallar(id);
         grupo.setEstado(EstadoLogico.INACTIVO);
         grupoRepository.save(grupo);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // Helpers
+
+    private void validarGeneracion(Integer generacion) {
+        int anioActual = LocalDate.now().getYear();
+        if (generacion <= 1900 || generacion > anioActual) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El año de generación debe ser mayor a 1900 y menor o igual al año actual (" + anioActual + ").");
+        }
+    }
 
     private Grupo buscarOFallar(Integer id) {
         return grupoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Grupo no encontrado."
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado."));
     }
 
     private GrupoResponseDTO toResponseDTO(Grupo grupo) {
