@@ -1,6 +1,7 @@
 package com.fides.sienep.security;
 
 import com.fides.sienep.model.*;
+import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.annotation.PostConstruct;
@@ -16,20 +17,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
+/**
+ * Carga el usuario por ID (subject del token JWT).
+ * Usado por JwtRequestFilter en cada request autenticado.
+ * Soporta tanto Funcionarios como Estudiantes.
+ */
 @Service
 @RequiredArgsConstructor
 public class CustomUsuarioDetailsService implements UserDetailsService {
 
     private final FuncionarioRepository funcionarioRepository;
+    private final EstudianteRepository estudianteRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
 
-    /**
-     * Spring Security llama a este método con el "username" extraído del token.
-     * Como el subject del token ahora es el idUsuario (como String),
-     * buscamos el funcionario por ID en vez de por email.
-     */
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String idUsuarioStr)
@@ -42,30 +45,52 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("ID de usuario inválido: " + idUsuarioStr);
         }
 
-        Funcionario funcionario = funcionarioRepository.findById(idUsuario)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("Usuario no encontrado con id: " + idUsuario));
+        // 1. Buscar como Funcionario
+        Optional<Funcionario> funcionarioOpt = funcionarioRepository.findById(idUsuario);
+        if (funcionarioOpt.isPresent()) {
+            return buildFuncionarioDetails(funcionarioOpt.get());
+        }
 
+        // 2. Si no es Funcionario, buscar como Estudiante
+        Estudiante estudiante = estudianteRepository.findById(idUsuario)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "Usuario no encontrado con id: " + idUsuario));
+
+        return buildEstudianteDetails(estudiante);
+    }
+
+    private UserDetails buildFuncionarioDetails(Funcionario funcionario) {
         if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
-            throw new UsernameNotFoundException(
-                    "Usuario inactivo o pendiente de activación");
+            throw new UsernameNotFoundException("Funcionario inactivo: " + funcionario.getIdUsuario());
         }
 
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority(
-                "ROLE_" + funcionario.getRol().getNombre()));
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + funcionario.getRol().getNombre()));
 
         for (RolPermiso rp : funcionario.getRol().getRolPermisos()) {
             if (rp.getEstado() == EstadoLogico.ACTIVO) {
-                authorities.add(new SimpleGrantedAuthority(
-                        rp.getPermiso().getNombre()));
+                authorities.add(new SimpleGrantedAuthority(rp.getPermiso().getNombre()));
             }
         }
 
-        // El username de UserDetails ahora es el ID como String
-        // para que validateToken() pueda comparar subject == username
         return User.withUsername(String.valueOf(funcionario.getIdUsuario()))
                 .password(funcionario.getContrasenia())
+                .authorities(authorities)
+                .build();
+    }
+
+    private UserDetails buildEstudianteDetails(Estudiante estudiante) {
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+            throw new UsernameNotFoundException("Estudiante inactivo: " + estudiante.getIdUsuario());
+        }
+
+        // Rol sintético — los estudiantes no tienen rol en BD
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_ESTUDIANTE"));
+        authorities.add(new SimpleGrantedAuthority("VER_COMENTARIO_NORMAL_ESTUDIANTE"));
+
+        return User.withUsername(String.valueOf(estudiante.getIdUsuario()))
+                .password(estudiante.getContrasenia())
                 .authorities(authorities)
                 .build();
     }
@@ -85,8 +110,7 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
         if (funcionarioRepository.findByEmail(email).isPresent()) return;
 
         Rol rol = rolRepository.findByNombre(nomRol)
-                .orElseThrow(() -> new RuntimeException(
-                        "Rol no encontrado: " + nomRol));
+                .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + nomRol));
 
         Funcionario funcionario = new Funcionario();
         funcionario.setNombre(nombre);

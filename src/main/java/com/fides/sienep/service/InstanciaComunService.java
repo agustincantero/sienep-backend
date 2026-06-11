@@ -16,6 +16,8 @@ import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,6 +35,10 @@ public class InstanciaComunService {
     private final CategoriaInstanciaRepository categoriaInstanciaRepository;
     private final InstanciaIdGenerator instanciaIdGenerator;
 
+    private Integer getIdUsuarioAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Integer.parseInt(auth.getName());
+    }
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
     public InstanciaComunResponseDTO crear(InstanciaComunRequestDTO dto) {
@@ -111,6 +117,19 @@ public class InstanciaComunService {
     public List<InstanciaComunResponseDTO> listarPorCategoria(int idCategoria) {
         List<InstanciaComun> instancias = instanciaComunRepository
                 .findByCategoriaAndEstado(idCategoria, EstadoLogico.ACTIVO);
+        List<InstanciaComunResponseDTO> resultado = new ArrayList<>();
+        for (InstanciaComun instancia : instancias) {
+            resultado.add(toResponseDTO(instancia));
+        }
+        return resultado;
+    }
+
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public List<InstanciaComunResponseDTO> listarMisInstancias() {
+        Integer idEstudiante = getIdUsuarioAutenticado();
+        List<InstanciaComun> instancias = instanciaComunRepository
+                .findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO);
         List<InstanciaComunResponseDTO> resultado = new ArrayList<>();
         for (InstanciaComun instancia : instancias) {
             resultado.add(toResponseDTO(instancia));

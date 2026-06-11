@@ -184,6 +184,13 @@ public class EstudianteService {
         return toResponseDTO(estudianteRepository.save(estudiante));
     }
 
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public EstudianteResumenDTO verMiPerfil() {
+        Integer id = getIdUsuarioAutenticado();
+        return toResumenDTO(buscarOFallar(id));
+    }
+
     // =========================================================
     // CAMBIAR CONTRASEÑA — dispara activación
     // =========================================================

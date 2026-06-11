@@ -19,6 +19,7 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Integer>
     // Con filtro de estado: para cuando solo deben aparecer activos (ej: login, búsqueda pública).
     Optional<Estudiante> findByDocumento(String documento);
     Optional<Estudiante> findByDocumentoAndEstado(String documento, EstadoLogico estado);
+    Optional<Estudiante> findByEmail(String email);
 
     // Búsqueda por nombre/apellido — versión con y sin filtro de estado
     @Query("""

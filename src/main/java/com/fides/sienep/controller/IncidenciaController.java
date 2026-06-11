@@ -73,4 +73,13 @@ public class IncidenciaController {
         incidenciaService.darDeBaja(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Ver mis incidencias",
+            description = "Permite al estudiante autenticado ver sus propias incidencias activas.")
+    @ApiResponse(responseCode = "200", description = "Incidencias obtenidas correctamente")
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+    @GetMapping("/mis-incidencias")
+    public ResponseEntity<List<IncidenciaResponseDTO>> listarMisIncidencias() {
+        return ResponseEntity.ok(incidenciaService.listarMisIncidencias());
+    }
 }
