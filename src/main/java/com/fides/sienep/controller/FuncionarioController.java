@@ -3,12 +3,12 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
 import com.fides.sienep.service.FuncionarioService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import java.util.List;
 
@@ -54,7 +54,7 @@ public class FuncionarioController {
     )
     @PostMapping
     public FuncionarioResponseDTO crear(
-            @RequestBody FuncionarioRequestDTO dto
+            @Valid @RequestBody FuncionarioRequestDTO dto
     ) {
 
         return funcionarioService.crear(dto);
@@ -65,10 +65,14 @@ public class FuncionarioController {
             responseCode = "200",
             description = "Funcionario actualizado correctamente"
     )
+    @ApiResponse(
+            responseCode = "404",
+            description = "Funcionario no encontrado"
+    )
     @PutMapping("/{id}")
     public FuncionarioResponseDTO actualizar(
             @PathVariable Integer id,
-            @RequestBody FuncionarioRequestDTO dto
+            @Valid @RequestBody FuncionarioRequestDTO dto
     ) {
 
         return funcionarioService.actualizar(id, dto);
@@ -77,13 +81,31 @@ public class FuncionarioController {
     @Operation(summary = "Eliminar funcionario")
     @ApiResponse(
             responseCode = "200",
-            description = "Funcionario eliminado correctamente"
+            description = "Funcionario dado de baja correctamente"
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "Funcionario no encontrado"
     )
     @DeleteMapping("/{id}")
-    public void eliminar(
+    public void darDeBaja(@PathVariable Integer id) {
+        funcionarioService.darDeBaja(id);
+    }
+
+    @Operation(summary = "Reactivar funcionario")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Funcionario reactivado correctamente"
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "Funcionario no encontrado"
+    )
+    @PatchMapping("/{id}/reactivar")
+    public void reactivar(
             @PathVariable Integer id
     ) {
 
-        funcionarioService.eliminar(id);
+        funcionarioService.reactivar(id);
     }
 }
