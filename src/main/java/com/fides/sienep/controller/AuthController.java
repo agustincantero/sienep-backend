@@ -2,7 +2,8 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
-import com.fides.sienep.security.CustomUsuarioDetailsService;
+import com.fides.sienep.model.Funcionario;
+import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.utils.JwtTokenUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,8 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,12 +27,11 @@ import org.springframework.web.server.ResponseStatusException;
 @Tag(name = "Autenticación", description = "Login y logout del sistema")
 public class AuthController {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(AuthController.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationManager authManager;
-    private final CustomUsuarioDetailsService userDetailsService;
     private final JwtTokenUtil jwtTokenUtil;
+    private final FuncionarioRepository funcionarioRepository;
 
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión",
@@ -42,30 +40,28 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "Login exitoso"),
             @ApiResponse(responseCode = "401", description = "Credenciales inválidas")
     })
-    public ResponseEntity<LoginResponseDTO> login(
-            @RequestBody @Valid LoginRequestDTO dto) {
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
+
+        // 1. Buscar funcionario por email para obtener ID y rol
+        Funcionario funcionario = funcionarioRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
+
+        // 2. Validar email + contraseña (usa LoginUsuarioDetailsService internamente)
         try {
             authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             dto.getEmail(), dto.getContrasenia()));
         } catch (BadCredentialsException e) {
-            log.warn("Login fallido para: {}", dto.getEmail());
+            log.warn("Login fallido para id: {}", funcionario.getIdUsuario());
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
         }
 
-        UserDetails ud = userDetailsService.loadUserByUsername(dto.getEmail());
-
-        String rol = "SIN_ROL";
-        for (GrantedAuthority authority : ud.getAuthorities()) {
-            if (authority.getAuthority().startsWith("ROLE_")) {
-                rol = authority.getAuthority().replace("ROLE_", "");
-                break;
-            }
-        }
-
-        String token = jwtTokenUtil.generateToken(ud, rol);
-        log.info("Login exitoso: {} con rol: {}", dto.getEmail(), rol);
+        // 3. Generar token — el rol viene directo del funcionario, sin query extra
+        String rol = funcionario.getRol().getNombre();
+        String token = jwtTokenUtil.generateToken(funcionario.getIdUsuario(), rol);
+        log.info("Login exitoso: id={} rol={}", funcionario.getIdUsuario(), rol);
         return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 

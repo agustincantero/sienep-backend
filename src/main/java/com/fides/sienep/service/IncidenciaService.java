@@ -9,6 +9,7 @@ import com.fides.sienep.model.Incidencia;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.IncidenciaRepository;
+import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +31,7 @@ public class IncidenciaService {
     private final IncidenciaRepository incidenciaRepository;
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
+    private final InstanciaIdGenerator instanciaIdGenerator;
 
     @Transactional
     @PreAuthorize("hasAuthority('REGISTRAR_INCIDENCIA')")
@@ -54,11 +55,8 @@ public class IncidenciaService {
                 dto.getLugar()
         );
 
-        // RF14 — generación automática del identificador de instancia
-        String idNeg = UUID.randomUUID().toString()
-                .replace("-", "")
-                .substring(0, 16)
-                .toUpperCase();
+        // RF14 — generación automática del identificador de instancia: INST-{año}-{6 dígitos}
+        String idNeg = instanciaIdGenerator.generarIdNeg();
         incidencia.setIdNegInstancia(idNeg);
 
         Incidencia guardada = incidenciaRepository.save(incidencia);
@@ -141,6 +139,10 @@ public class IncidenciaService {
         incidenciaRepository.save(incidencia);
         log.info("Baja lógica incidencia: {}", id);
     }
+
+    // ----------------------------------------------------------------
+    // Helpers privados
+    // ----------------------------------------------------------------
 
     private Incidencia buscarActivaOFallar(int id) {
         return incidenciaRepository.findByCodInstanciaAndEstado(id, EstadoLogico.ACTIVO)

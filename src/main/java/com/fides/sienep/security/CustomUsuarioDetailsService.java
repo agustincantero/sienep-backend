@@ -25,14 +25,26 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Spring Security llama a este método con el "username" extraído del token.
+     * Como el subject del token ahora es el idUsuario (como String),
+     * buscamos el funcionario por ID en vez de por email.
+     */
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email)
+    public UserDetails loadUserByUsername(String idUsuarioStr)
             throws UsernameNotFoundException {
 
-        Funcionario funcionario = funcionarioRepository.findByEmail(email)
+        int idUsuario;
+        try {
+            idUsuario = Integer.parseInt(idUsuarioStr);
+        } catch (NumberFormatException e) {
+            throw new UsernameNotFoundException("ID de usuario inválido: " + idUsuarioStr);
+        }
+
+        Funcionario funcionario = funcionarioRepository.findById(idUsuario)
                 .orElseThrow(() ->
-                        new UsernameNotFoundException("Usuario no encontrado"));
+                        new UsernameNotFoundException("Usuario no encontrado con id: " + idUsuario));
 
         if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
             throw new UsernameNotFoundException(
@@ -50,7 +62,9 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
             }
         }
 
-        return User.withUsername(funcionario.getEmail())
+        // El username de UserDetails ahora es el ID como String
+        // para que validateToken() pueda comparar subject == username
+        return User.withUsername(String.valueOf(funcionario.getIdUsuario()))
                 .password(funcionario.getContrasenia())
                 .authorities(authorities)
                 .build();

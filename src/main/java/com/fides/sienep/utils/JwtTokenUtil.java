@@ -17,12 +17,12 @@ public class JwtTokenUtil {
     private final SecretKey secretKey = Jwts.SIG.HS256.key().build();
     private static final long VALIDEZ_SEG = 5 * 60 * 60; // 5 horas
 
-    public String generateToken(UserDetails userDetails, String rol) {
+    public String generateToken(int idUsuario, String rol) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("rol", rol);
         return Jwts.builder()
                 .claims(claims)
-                .subject(userDetails.getUsername())
+                .subject(String.valueOf(idUsuario))
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + VALIDEZ_SEG * 1000))
                 .signWith(secretKey)
@@ -34,12 +34,9 @@ public class JwtTokenUtil {
                 && !isTokenExpired(token);
     }
 
+    // Devuelve el subject — es el idUsuario como String
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
-    }
-
-    public String extractRol(String token) {
-        return extractClaim(token, claims -> claims.get("rol", String.class));
     }
 
     private Boolean isTokenExpired(String token) {
