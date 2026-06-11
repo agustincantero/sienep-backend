@@ -66,17 +66,57 @@ Las credenciales y la URL JDBC ya están preconfiguradas en el archivo `applicat
 
 ### Ejecución desde la Terminal
 
-El proyecto utiliza Maven Wrapper (`mvnw`), por lo que no necesitas tener Maven instalado globalmente.
+A continuación se muestra cómo configurar las variables para una sesión de terminal. *(Para una configuración permanente, consulte la documentación de su sistema operativo).*
 
-* **Windows:** `.\mvnw spring-boot:run`
-* **Linux/Mac:** `./mvnw spring-boot:run`
+**Paso 1: Configurar variables**
+
+*Windows - Opción 1: PowerShell*
+```powershell
+$env:JWT_SECRET="SienepGrupo01DZA2026"
+$env:DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
+$env:DB_USER="sienep"
+$env:DB_PASSWORD="sienep"
+```
+
+*Windows - Opción 2: Símbolo del sistema (CMD)*
+```cmd
+set JWT_SECRET=SienepGrupo01DZA2026
+set DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto
+set DB_USER=sienep
+set DB_PASSWORD=sienep
+```
+
+*macOS & Linux (bash/zsh)*
+```bash
+export JWT_SECRET="SienepGrupo01DZA2026"
+export DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
+export DB_USER="sienep"
+export DB_PASSWORD="sienep"
+```
+
+**Paso 2: Ejecutar el proyecto**
+
+Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando Maven Wrapper:
+
+*   **En Windows:** `.\mvnw spring-boot:run`
+*   **En macOS/Linux:** `./mvnw spring-boot:run`
 
 ### Ejecución desde IntelliJ IDEA
 
-1. Abre el proyecto en IntelliJ.
-2. Espera a que termine de descargar e indexar las dependencias de Maven.
-3. Busca la clase principal `SienepApplication.java` en `src/main/java/com/fides/sienep/`.
-4. Haz clic en el ícono verde de "Play" (Run) en el margen izquierdo.
+1. Abrí el proyecto en IntelliJ.
+2. Entrá en **Run → Edit Configurations…**.
+3. Hacé clic en **Add New Configuration → Application**.
+4. En el campo **Name**, escribí por ejemplo `RunSienep`.
+5. Completá los campos:
+   * **Main class**: la clase principal de la aplicación (`com.fides.sienep.SienepApplication`).
+   * **Working directory**: ruta del proyecto (se completa automáticamente).
+6. En **Environment variables**, agregá lo siguiente:
+   ```text
+   JWT_SECRET=SienepGrupo01DZA2026;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep
+   ```
+   *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
+7. Aplicá los cambios (**Apply → OK**).
+8. Ejecutá la aplicación con el botón ▶️.
 
 ## Documentación de la API (Swagger)
 
