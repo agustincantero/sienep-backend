@@ -28,9 +28,9 @@ public class ItrCarreraController {
 
     private final ItrCarreraService itrCarreraService;
 
-    /* ******************************
-             CREAR
-    * ******************************/
+    //===============================
+     //        CREAR
+    //===============================
 
     @PostMapping
     @Operation(
@@ -57,9 +57,9 @@ public class ItrCarreraController {
                 .body(itrCarreraService.crear(dto));
     }
 
-    /* ******************************
-                 LISTAR
-   * ******************************/
+    //=============================
+    //             LISTAR
+   //===========================
 
     @GetMapping
     @Operation(
@@ -77,9 +77,9 @@ public class ItrCarreraController {
         );
     }
 
-    /* ******************************
-             OBTENER
-    * ******************************/
+    //=============================
+     //        OBTENER
+   //================================
 
     @GetMapping("/{idItr}/{idCarrera}")
     @Operation(
@@ -106,9 +106,9 @@ public class ItrCarreraController {
         );
     }
 
-    /* ******************************
-             BAJA LÓGICA
-    * ******************************/
+    //=================================
+     //        BAJA LOGICA
+    //=============================
 
     @DeleteMapping("/{idItr}/{idCarrera}")
     @Operation(
@@ -123,11 +123,11 @@ public class ItrCarreraController {
             responseCode = "404",
             description = "Relación no encontrada"
     )
-    public ResponseEntity<Void> eliminar(
+    public ResponseEntity<Void> darDeBaja(
             @PathVariable Integer idItr,
             @PathVariable Integer idCarrera) {
 
-        itrCarreraService.eliminar(
+        itrCarreraService.darDeBaja(
                 idItr,
                 idCarrera
         );
@@ -135,9 +135,9 @@ public class ItrCarreraController {
         return ResponseEntity.noContent().build();
     }
 
-    /* ******************************
-                 REACTIVAR
-    * ******************************/
+    //==========================
+     //            REACTIVAR
+    //==========================
 
     @PatchMapping("/{idItr}/{idCarrera}/estado")
     @Operation(

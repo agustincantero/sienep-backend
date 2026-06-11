@@ -11,6 +11,7 @@ import com.fides.sienep.repository.ItrCarreraRepository;
 import com.fides.sienep.repository.ItrRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,10 +26,11 @@ public class ItrCarreraService {
     private final ItrRepository itrRepository;
     private final CarreraRepository carreraRepository;
 
-    /* ******************************
-                  CREAR
-     ******************************/
+    // =============================
+    //              CREAR
+     //================================
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public ItrCarreraResponseDTO crear(ItrCarreraRequestDTO dto) {
 
@@ -81,10 +83,11 @@ public class ItrCarreraService {
         );
     }
 
-    /* ******************************
-                     LISTAR
-      ******************************/
+    //===========================
+     //                LISTAR
+      //===========================
 
+    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public List<ItrCarreraResponseDTO> listar() {
         List<ItrCarrera> relaciones = itrCarreraRepository.findAll();
@@ -95,10 +98,11 @@ public class ItrCarreraService {
         return dtos;
     }
 
-    /* ******************************
-                 OBTENER
-    * ******************************/
+    //============================
+    //             OBTENER
+    //========================
 
+    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public ItrCarreraResponseDTO obtener(
             Integer idItr,
@@ -109,12 +113,13 @@ public class ItrCarreraService {
         );
     }
 
-    /* ******************************
-                 BAJA LÓGICA
-    * ******************************/
+    //=============================
+     //            BAJA LOGICA
+    //=============================
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
-    public void eliminar(
+    public void darDeBaja(
             Integer idItr,
             Integer idCarrera) {
 
@@ -126,10 +131,11 @@ public class ItrCarreraService {
         itrCarreraRepository.save(relacion);
     }
 
-    /* ******************************
-                 REACTIVAR
-    * ******************************/
+    //=================================
+     //            REACTIVAR
+    //================================
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public void reactivar(
             Integer idItr,
@@ -143,9 +149,9 @@ public class ItrCarreraService {
         itrCarreraRepository.save(relacion);
     }
 
-    /* ******************************
-                 METODOS PRIVADOS
-     * ******************************/
+    //========================================
+    //             METODOS PRIVADOS
+    //======================================
 
     private ItrCarrera buscarOFallar(
             Integer idItr,

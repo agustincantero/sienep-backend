@@ -8,6 +8,7 @@ import com.fides.sienep.model.ItrCarrera;
 import com.fides.sienep.repository.ItrRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,6 +22,7 @@ public class ItrService {
 
     private final ItrRepository itrRepository;
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public ItrResponseDTO crear(ItrRequestDTO dto) {
 
@@ -38,6 +40,7 @@ public class ItrService {
         );
     }
 
+    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public List<ItrResponseDTO> listar() {
         List<Itr> itrs = itrRepository.findAll();
@@ -48,6 +51,7 @@ public class ItrService {
         return dtos;
     }
 
+    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public ItrResponseDTO obtenerPorId(Integer id) {
 
@@ -56,6 +60,7 @@ public class ItrService {
         );
     }
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public ItrResponseDTO actualizar(Integer id,
                                      ItrRequestDTO dto) {
@@ -69,6 +74,7 @@ public class ItrService {
         );
     }
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public void darDeBaja(Integer id) {
 
@@ -79,6 +85,7 @@ public class ItrService {
         itrRepository.save(itr);
     }
 
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Transactional
     public void reactivar(Integer id) {
 
@@ -88,6 +95,10 @@ public class ItrService {
 
         itrRepository.save(itr);
     }
+
+    // =========================================================
+    // METODOS PRIVADOS
+    // =========================================================
 
     private Itr buscarOFallar(Integer id) {
 
