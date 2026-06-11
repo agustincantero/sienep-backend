@@ -776,7 +776,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     -- Adjuntos
     ('VER_ADJUNTOS',            'Permite ver los archivos adjuntos de un estudiante o instancia'),
     ('ADJUNTAR_INFORME',        'Permite adjuntar un informe u otro archivo al sistema'),
-    ('ELIMINAR_INFORME', 'Permite dar de baja un informe.')
+    ('ELIMINAR_INFORME',        'Permite dar de baja un informe.'),
     -- Instancias
     ('VER_INSTANCIAS',          'Permite visualizar las instancias registradas'),
     ('CREAR_INSTANCIA',         'Permite crear nuevas instancias'),
