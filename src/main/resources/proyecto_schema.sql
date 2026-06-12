@@ -847,7 +847,13 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('CREAR_GRUPO', 'Permite crear nuevos grupos'),
     ('VER_GRUPOS', 'Permite visualizar grupos existentes'),
     ('EDITAR_GRUPOS', 'Permite editar grupos existentes'),
-    ('ELIMINAR_GRUPOS', 'Permite eliminar grupos')
+    ('ELIMINAR_GRUPOS', 'Permite eliminar grupos'),
+    -- Carreras
+    ('VER_CARRERAS', 'Permite ver la lista de carreras del sistema'),
+    ('CREAR_CARRERA', 'Permite registrar una nueva carrera'),
+    ('EDITAR_CARRERA', 'Permite editar los datos de una carrera'),
+    ('ELIMINAR_CARRERA', 'Permite dar de baja una carrera'),
+    ('REACTIVAR_CARRERA', 'Permite reactivar una carrera dada de baja')
 ON CONFLICT (nom_permiso) DO NOTHING;
 
 -- =============================================
