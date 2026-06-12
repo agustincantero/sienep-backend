@@ -85,7 +85,7 @@ public class FuncionarioService {
     // CONSULTAS
     // =========================================================
 
-    @PreAuthorize("hasAuthority('VER_FUNCIONARIO')")
+    @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
     @Transactional(readOnly = true)
     public FuncionarioResponseDTO obtenerPorId(Integer id) {
         return toResponseDTO(
@@ -93,7 +93,7 @@ public class FuncionarioService {
         );
     }
 
-    @PreAuthorize("hasAuthority('VER_FUNCIONARIO')")
+    @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
     @Transactional(readOnly = true)
     public FuncionarioResponseDTO obtenerPorDocumento(String documento) {
         Funcionario funcionario = funcionarioRepository
@@ -102,7 +102,7 @@ public class FuncionarioService {
         return toResponseDTO(funcionario);
     }
 
-    @PreAuthorize("hasAuthority('VER_FUNCIONARIO')")
+    @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
     @Transactional(readOnly = true)
     public List<FuncionarioResponseDTO> obtenerTodos() {
 
