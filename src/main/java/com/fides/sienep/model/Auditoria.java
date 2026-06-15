@@ -35,7 +35,7 @@ public class Auditoria {
     @JoinColumn(name = "id_usuario", nullable = true)
     private Usuario autor;
 
-    @Column(name = "usuario_bd", length = 50)
+    @Column(name = "usuario_bd", length = 63)
     private String usuarioBd;
 
     // Se usa nullable, insertable y updatable en false por que lo gestiona la BD con CURRENT_TIMESTAMP

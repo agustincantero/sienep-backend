@@ -716,7 +716,7 @@ CREATE TABLE proyecto.auditoria (
                                     entidad      VARCHAR(100)           NOT NULL,
                                     accion       proyecto.tipo_accion   NOT NULL,
                                     id_usuario   INT,
-                                    usuario_bd   VARCHAR(50),
+                                    usuario_bd   VARCHAR(63),
                                     fec_hora     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                     ip           VARCHAR(45),
                                     valor_anterior JSONB,
