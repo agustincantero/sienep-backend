@@ -25,6 +25,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
+import com.fides.sienep.service.AuditoriaService;
+import com.fides.sienep.model.TipoAccion;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.Authentication;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -37,6 +42,7 @@ public class AuthController {
     private final JwtTokenUtil jwtTokenUtil;
     private final FuncionarioRepository funcionarioRepository;
     private final EstudianteRepository estudianteRepository;
+    private final AuditoriaService auditoriaService;
 
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión",
@@ -45,7 +51,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "Login exitoso"),
             @ApiResponse(responseCode = "401", description = "Credenciales inválidas")
     })
-    public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto, HttpServletRequest request) {
 
         // 1. Resolver quién es — funcionario o estudiante
         int idUsuario;
@@ -77,6 +83,10 @@ public class AuthController {
         // 3. Generar token
         String token = jwtTokenUtil.generateToken(idUsuario, rol);
         log.info("Login exitoso: id={} rol={}", idUsuario, rol);
+
+        // --- AUDITORIA ---
+        auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGIN, idUsuario, request.getRemoteAddr());
+
         return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 
@@ -84,7 +94,15 @@ public class AuthController {
     @Operation(summary = "Cerrar sesión",
             description = "Stateless: el cliente descarta el token.")
     @ApiResponse(responseCode = "200", description = "Sesión cerrada")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(HttpServletRequest request, Authentication auth) {
+        if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
+            try {
+                int idUsuario = Integer.parseInt(auth.getName());
+                auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGOUT, idUsuario, request.getRemoteAddr());
+            } catch (Exception e) {
+                log.warn("No se pudo auditar el logout: " + e.getMessage());
+            }
+        }
         return ResponseEntity.ok().build();
     }
 }
