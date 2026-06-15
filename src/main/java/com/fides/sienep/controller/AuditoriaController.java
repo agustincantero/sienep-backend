@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.fides.sienep.model.TipoAccion;
@@ -18,7 +17,6 @@ import java.util.List;
 @RequestMapping("/api/auditorias")
 @RequiredArgsConstructor
 @Tag(name = "Auditoría", description = "Endpoints para la consulta y trazabilidad de eventos del sistema")
-@PreAuthorize("hasAuthority('VER_AUDITORIA')")
 public class AuditoriaController {
 
     private final AuditoriaService auditoriaService;

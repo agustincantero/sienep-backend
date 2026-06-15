@@ -20,9 +20,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Service
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('VER_AUDITORIA')")
 public class AuditoriaService {
 
     private final AuditoriaRepository auditoriaRepository;
