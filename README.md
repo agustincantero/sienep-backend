@@ -72,7 +72,7 @@ A continuación se muestra cómo configurar las variables para una sesión de te
 
 *Windows - Opción 1: PowerShell*
 ```powershell
-$env:JWT_SECRET="SienepGrupo01DZA2026"
+$env:JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
 $env:DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 $env:DB_USER="sienep"
 $env:DB_PASSWORD="sienep"
@@ -80,7 +80,7 @@ $env:DB_PASSWORD="sienep"
 
 *Windows - Opción 2: Símbolo del sistema (CMD)*
 ```cmd
-set JWT_SECRET=SienepGrupo01DZA2026
+set JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura
 set DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto
 set DB_USER=sienep
 set DB_PASSWORD=sienep
@@ -88,7 +88,7 @@ set DB_PASSWORD=sienep
 
 *macOS & Linux (bash/zsh)*
 ```bash
-export JWT_SECRET="SienepGrupo01DZA2026"
+export JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
 export DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 export DB_USER="sienep"
 export DB_PASSWORD="sienep"
@@ -105,14 +105,11 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 
 1. Abrí el proyecto en IntelliJ.
 2. Entrá en **Run → Edit Configurations…**.
-3. Hacé clic en **Add New Configuration → Application**.
-4. En el campo **Name**, escribí por ejemplo `RunSienep`.
-5. Completá los campos:
-   * **Main class**: la clase principal de la aplicación (`com.fides.sienep.SienepApplication`).
-   * **Working directory**: ruta del proyecto (se completa automáticamente).
-6. En **Environment variables**, agregá lo siguiente:
+3. Seleccioná el perfil de Spring Boot llamado **SienepApplication** (IntelliJ lo suele detectar y crear automáticamente).
+4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
+5. En el campo de **Environment variables**, agregá lo siguiente:
    ```text
-   JWT_SECRET=SienepGrupo01DZA2026;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep
+   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep
    ```
    *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 7. Aplicá los cambios (**Apply → OK**).
