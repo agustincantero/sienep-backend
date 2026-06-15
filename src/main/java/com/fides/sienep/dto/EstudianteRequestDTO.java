@@ -96,7 +96,7 @@ public class EstudianteRequestDTO {
 
     @Size(max = 255)
     @Pattern(regexp = "^.*\\.(jpg|jpeg|png)$", flags = Pattern.Flag.CASE_INSENSITIVE, message = "La foto debe ser .jpg, .jpeg o .png")
-    @Schema(description = "URL o ruta de la foto")
+    @Schema(description = "URL o ruta de la foto", example = "perfil_maria.jpg")
     private String foto;
 
     @Schema(description = "Lista de números de teléfono", example = "[\"099123456\", \"22001122\"]")
