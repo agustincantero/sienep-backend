@@ -715,13 +715,90 @@ CREATE TABLE proyecto.auditoria (
                                     id_auditoria SERIAL                 PRIMARY KEY,
                                     entidad      VARCHAR(100)           NOT NULL,
                                     accion       proyecto.tipo_accion   NOT NULL,
-                                    id_usuario   INT                    NOT NULL,
+                                    id_usuario   INT,
+                                    usuario_bd   VARCHAR(63),
                                     fec_hora     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                    detalle      TEXT,
+                                    ip           VARCHAR(45),
+                                    valor_anterior JSONB,
+                                    valor_nuevo    JSONB,
                                     CONSTRAINT fk_auditoria_usuario FOREIGN KEY (id_usuario)
                                         REFERENCES proyecto.usuarios(id_usuario)
-                                        ON UPDATE CASCADE ON DELETE CASCADE
+                                        ON UPDATE CASCADE ON DELETE SET NULL
 );
+
+-- =====================================================
+-- FUNCION GENÉRICA DE AUDITORIA
+-- =====================================================
+CREATE OR REPLACE FUNCTION proyecto.trg_auditoria_general()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_usuario_id INT;
+    v_ip VARCHAR(45);
+    v_valor_anterior JSONB;
+    v_valor_nuevo JSONB;
+    v_accion proyecto.tipo_accion;
+BEGIN
+    -- Obtener usuario e IP de las variables de sesión de Postgres
+    BEGIN
+        v_usuario_id := NULLIF(current_setting('sienep.usuario_actual', true), '')::INT;
+        v_ip := NULLIF(current_setting('sienep.ip_actual', true), '');
+    EXCEPTION WHEN OTHERS THEN
+        v_usuario_id := NULL;
+        v_ip := NULL;
+    END;
+
+    -- Preparar los JSON quitando la contraseña por seguridad
+    IF TG_OP = 'INSERT' THEN
+        v_accion := 'INSERT';
+        v_valor_anterior := NULL;
+        v_valor_nuevo := to_jsonb(NEW) - 'contrasenia';
+    ELSIF TG_OP = 'UPDATE' THEN
+        v_accion := 'UPDATE';
+        v_valor_anterior := to_jsonb(OLD) - 'contrasenia';
+        v_valor_nuevo := to_jsonb(NEW) - 'contrasenia';
+    ELSIF TG_OP = 'DELETE' THEN
+        v_accion := 'DELETE';
+        v_valor_anterior := to_jsonb(OLD) - 'contrasenia';
+        v_valor_nuevo := NULL;
+    END IF;
+
+    -- Insertar en la tabla de auditoría (registrando también el usuario_bd)
+    INSERT INTO proyecto.auditoria (entidad, accion, id_usuario, ip, usuario_bd, valor_anterior, valor_nuevo)
+    VALUES (UPPER(TG_TABLE_NAME), v_accion, v_usuario_id, v_ip, CURRENT_USER, v_valor_anterior, v_valor_nuevo);
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Asignar triggers a las tablas principales y secundarias
+CREATE TRIGGER trg_audit_usuarios AFTER INSERT OR UPDATE OR DELETE ON proyecto.usuarios FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_estudiantes AFTER INSERT OR UPDATE OR DELETE ON proyecto.estudiantes FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_funcionarios AFTER INSERT OR UPDATE OR DELETE ON proyecto.funcionarios FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_instancias AFTER INSERT OR UPDATE OR DELETE ON proyecto.instancias FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_recordatorios AFTER INSERT OR UPDATE OR DELETE ON proyecto.recordatorios FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_carreras AFTER INSERT OR UPDATE OR DELETE ON proyecto.carreras FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_itrs AFTER INSERT OR UPDATE OR DELETE ON proyecto.itrs FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_roles AFTER INSERT OR UPDATE OR DELETE ON proyecto.roles FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_permisos AFTER INSERT OR UPDATE OR DELETE ON proyecto.permisos FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_frecuencias AFTER INSERT OR UPDATE OR DELETE ON proyecto.frecuencias FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_cat_instancias AFTER INSERT OR UPDATE OR DELETE ON proyecto.cat_instancias FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_cat_recordatorios AFTER INSERT OR UPDATE OR DELETE ON proyecto.cat_recordatorios FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_grupos AFTER INSERT OR UPDATE OR DELETE ON proyecto.grupos FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_itr_carrera AFTER INSERT OR UPDATE OR DELETE ON proyecto.itr_carrera FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_rol_permisos AFTER INSERT OR UPDATE OR DELETE ON proyecto.rol_permisos FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_incidencias AFTER INSERT OR UPDATE OR DELETE ON proyecto.incidencias FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_estu_grupos AFTER INSERT OR UPDATE OR DELETE ON proyecto.estu_grupos FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_estu_informesadjs AFTER INSERT OR UPDATE OR DELETE ON proyecto.estu_informesadjs FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_estu_telefonos AFTER INSERT OR UPDATE OR DELETE ON proyecto.estu_telefonos FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_estu_obs_comentarios AFTER INSERT OR UPDATE OR DELETE ON proyecto.estu_obs_comentarios FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_estu_obs_confidenciales AFTER INSERT OR UPDATE OR DELETE ON proyecto.estu_obs_confidenciales FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_involucrados AFTER INSERT OR UPDATE OR DELETE ON proyecto.involucrados FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_inst_comunes AFTER INSERT OR UPDATE OR DELETE ON proyecto.inst_comunes FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_inst_comentarios AFTER INSERT OR UPDATE OR DELETE ON proyecto.inst_comentarios FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_inst_com_confidenciales AFTER INSERT OR UPDATE OR DELETE ON proyecto.inst_com_confidenciales FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
 
 
 SET search_path TO proyecto;
@@ -741,20 +818,20 @@ ON CONFLICT (nom_rol) DO NOTHING;
 -- CATEGORIAS DE INSTANCIA
 -- =============================================
 INSERT INTO proyecto.cat_instancias (nom_cate_instancias) VALUES
-    ('Reunión'),
-    ('Llamada'),
-    ('Coordinación'),
-    ('Informe')
+    ('REUNIÓN'),
+    ('LLAMADA'),
+    ('COORDINACIÓN'),
+    ('INFORME')
 ON CONFLICT (nom_cate_instancias) DO NOTHING;
 
 -- =============================================
 -- CATEGORIAS DE RECORDATORIO
 -- =============================================
 INSERT INTO proyecto.cat_recordatorios (nom_cate_recordatorios, descripcion) VALUES
-    ('Administrativo',  'Tareas administrativas del sistema'),
-    ('Académico',       'Recordatorios relacionados a actividades académicas'),
-    ('Seguimiento',     'Acciones de seguimiento a estudiantes'),
-    ('Urgente',         'Recordatorios que requieren atención inmediata')
+    ('ADMINISTRATIVO',  'Tareas administrativas del sistema'),
+    ('ACADÉMICO',       'Recordatorios relacionados a actividades académicas'),
+    ('SEGUIMIENTO',     'Acciones de seguimiento a estudiantes'),
+    ('URGENTE',         'Recordatorios que requieren atención inmediata')
 ON CONFLICT (nom_cate_recordatorios) DO NOTHING;
 
 -- =============================================
@@ -825,6 +902,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('VER_PERMISOS',               'Permite visualizar la lista de permisos del sistema'),
     ('EDITAR_PERMISO',             'Permite editar la descripción de los permisos'),
     ('EDITAR_MIS_DATOS',            'Permite editar los datos personales del usuario logueado'),
+    ('VER_AUDITORIA',              'Permite consultar el historial de eventos y auditoría del sistema'),
     -- Comentarios de estudiante
     ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),
     ('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',      'Permite ver comentarios confidenciales de estudiantes'),

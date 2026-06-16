@@ -7,6 +7,8 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 @Entity
 @Table(name = "auditoria", schema = "proyecto")
 @Getter
@@ -27,24 +29,38 @@ public class Auditoria {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
-    private AccionAuditoria accion;
+    private TipoAccion accion;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_usuario", nullable = false)
+    @JoinColumn(name = "id_usuario", nullable = true)
     private Usuario autor;
+
+    @Column(name = "usuario_bd", length = 63)
+    private String usuarioBd;
 
     // Se usa nullable, insertable y updatable en false por que lo gestiona la BD con CURRENT_TIMESTAMP
     @Column(name = "fec_hora", nullable = false, insertable = false, updatable = false)
     private LocalDateTime fechaHora;
 
-    @Column(columnDefinition = "TEXT")
-    private String detalle;
+    @Column(length = 45)
+    private String ip;
 
-    public Auditoria(String entidad, AccionAuditoria accion, Usuario autor, String detalle) {
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "valor_anterior", columnDefinition = "jsonb")
+    private JsonNode valorAnterior;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "valor_nuevo", columnDefinition = "jsonb")
+    private JsonNode valorNuevo;
+
+    public Auditoria(String entidad, TipoAccion accion, Usuario autor, String usuarioBd, String ip, JsonNode valorAnterior, JsonNode valorNuevo) {
         this.entidad = entidad;
         this.accion = accion;
         this.autor = autor;
-        this.detalle = detalle;
+        this.usuarioBd = usuarioBd;
+        this.ip = ip;
+        this.valorAnterior = valorAnterior;
+        this.valorNuevo = valorNuevo;
     }
 }
 
