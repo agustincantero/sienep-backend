@@ -13,6 +13,16 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Interceptor global de excepciones para toda la API.
+ * Se encarga de capturar excepciones lanzadas por los controladores o servicios
+ * y transformarlas en respuestas JSON estandarizadas y limpias para el Frontend.
+ *
+ * Captura:
+ * - MethodArgumentNotValidException: Errores de validación de DTOs (ej: @NotBlank)
+ * - HttpMessageNotReadableException: JSON mal formado o valores inválidos (ej: Enums)
+ * - ResponseStatusException: Errores controlados de lógica de negocio o validaciones
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
