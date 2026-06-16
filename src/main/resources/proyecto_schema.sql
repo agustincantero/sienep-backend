@@ -931,7 +931,13 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('CREAR_CARRERA', 'Permite registrar una nueva carrera'),
     ('EDITAR_CARRERA', 'Permite editar los datos de una carrera'),
     ('ELIMINAR_CARRERA', 'Permite dar de baja una carrera'),
-    ('REACTIVAR_CARRERA', 'Permite reactivar una carrera dada de baja')
+    ('REACTIVAR_CARRERA', 'Permite reactivar una carrera dada de baja'),
+    -- ITRs
+    ('VER_ITRS', 'Permite ver la lista de ITRs del sistema'),
+    ('CREAR_ITR', 'Permite registrar un nuevo ITR'),
+    ('EDITAR_ITR', 'Permite editar los datos de un ITR'),
+    ('ELIMINAR_ITR', 'Permite dar de baja un ITR'),
+    ('REACTIVAR_ITR', 'Permite reactivar un ITR dado de baja')
 ON CONFLICT (nom_permiso) DO NOTHING;
 
 -- =============================================
