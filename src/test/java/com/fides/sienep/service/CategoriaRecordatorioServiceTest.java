@@ -1,0 +1,156 @@
+package com.fides.sienep.service;
+
+import com.fides.sienep.dto.CategoriaRecordatorioCreateDTO;
+import com.fides.sienep.dto.CategoriaRecordatorioResponseDTO;
+import com.fides.sienep.dto.CategoriaRecordatorioUpdateDTO;
+import com.fides.sienep.model.CategoriaRecordatorio;
+import com.fides.sienep.model.EstadoLogico;
+import com.fides.sienep.repository.CategoriaRecordatorioRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+public class CategoriaRecordatorioServiceTest {
+
+    @Mock
+    private CategoriaRecordatorioRepository categoriaRepository;
+
+    @InjectMocks
+    private CategoriaRecordatorioService categoriaService;
+
+    @Test
+    void obtenerTodas_DebeRetornarListaDeCategorias() {
+        CategoriaRecordatorio cat = new CategoriaRecordatorio();
+        cat.setIdCategoria(1);
+        cat.setNomCategoria("CAT_REC");
+        cat.setEstado(EstadoLogico.ACTIVO);
+        
+        when(categoriaRepository.buscarConFiltros("CAT", EstadoLogico.ACTIVO)).thenReturn(List.of(cat));
+
+        List<CategoriaRecordatorioResponseDTO> resultado = categoriaService.obtenerTodas("CAT", EstadoLogico.ACTIVO);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        assertEquals("CAT_REC", resultado.get(0).getNomCategoria());
+    }
+
+    @Test
+    void obtenerPorId_Exito() {
+        CategoriaRecordatorio cat = new CategoriaRecordatorio();
+        cat.setIdCategoria(1);
+        cat.setNomCategoria("CAT_REC");
+        
+        when(categoriaRepository.findById(1)).thenReturn(Optional.of(cat));
+
+        CategoriaRecordatorioResponseDTO resultado = categoriaService.obtenerPorId(1);
+
+        assertNotNull(resultado);
+        assertEquals("CAT_REC", resultado.getNomCategoria());
+    }
+
+    @Test
+    void obtenerPorId_LanzaNotFound() {
+        when(categoriaRepository.findById(99)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () -> categoriaService.obtenerPorId(99));
+    }
+
+    @Test
+    void crearCategoria_Exito() {
+        CategoriaRecordatorioCreateDTO dto = new CategoriaRecordatorioCreateDTO();
+        dto.setNomCategoria("  Recordatorio Nuevo  ");
+        dto.setDescripcion("Una descripcion");
+
+        when(categoriaRepository.existsByNomCategoria("RECORDATORIO_NUEVO")).thenReturn(false);
+        when(categoriaRepository.save(any(CategoriaRecordatorio.class))).thenAnswer(invocation -> {
+            CategoriaRecordatorio guardada = invocation.getArgument(0);
+            guardada.setIdCategoria(1);
+            return guardada;
+        });
+
+        CategoriaRecordatorioResponseDTO resultado = categoriaService.crearCategoria(dto);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getIdCategoria());
+        assertEquals("RECORDATORIO_NUEVO", resultado.getNomCategoria());
+        assertEquals(EstadoLogico.ACTIVO, resultado.getEstado());
+    }
+
+    @Test
+    void crearCategoria_LanzaConflict_CuandoNombreYaExiste() {
+        CategoriaRecordatorioCreateDTO dto = new CategoriaRecordatorioCreateDTO();
+        dto.setNomCategoria("Existente");
+
+        when(categoriaRepository.existsByNomCategoria("EXISTENTE")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> categoriaService.crearCategoria(dto));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+    }
+
+    @Test
+    void actualizarCategoria_Exito() {
+        CategoriaRecordatorio cat = new CategoriaRecordatorio();
+        cat.setIdCategoria(1);
+        cat.setNomCategoria("VIEJA");
+        
+        CategoriaRecordatorioUpdateDTO dto = new CategoriaRecordatorioUpdateDTO();
+        dto.setNomCategoria("NUEVA");
+        dto.setEstado(EstadoLogico.ACTIVO);
+
+        when(categoriaRepository.findById(1)).thenReturn(Optional.of(cat));
+        when(categoriaRepository.existsByNomCategoria("NUEVA")).thenReturn(false);
+        when(categoriaRepository.save(any(CategoriaRecordatorio.class))).thenAnswer(i -> i.getArgument(0));
+
+        CategoriaRecordatorioResponseDTO resultado = categoriaService.actualizarCategoria(1, dto);
+
+        assertNotNull(resultado);
+        assertEquals("NUEVA", resultado.getNomCategoria());
+    }
+
+    @Test
+    void actualizarCategoria_LanzaConflict_CuandoNombreYaExiste() {
+        CategoriaRecordatorio cat = new CategoriaRecordatorio();
+        cat.setIdCategoria(1);
+        cat.setNomCategoria("VIEJA");
+        
+        CategoriaRecordatorioUpdateDTO dto = new CategoriaRecordatorioUpdateDTO();
+        dto.setNomCategoria("OTRA_EXISTENTE");
+
+        when(categoriaRepository.findById(1)).thenReturn(Optional.of(cat));
+        when(categoriaRepository.existsByNomCategoria("OTRA_EXISTENTE")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> categoriaService.actualizarCategoria(1, dto));
+    }
+
+    @Test
+    void darDeBajaCategoria_Exito() {
+        CategoriaRecordatorio cat = new CategoriaRecordatorio();
+        cat.setIdCategoria(5);
+        cat.setEstado(EstadoLogico.ACTIVO);
+
+        when(categoriaRepository.findById(5)).thenReturn(Optional.of(cat));
+
+        categoriaService.darDeBajaCategoria(5);
+
+        assertEquals(EstadoLogico.INACTIVO, cat.getEstado());
+        verify(categoriaRepository).save(cat);
+    }
+    
+    @Test
+    void darDeBajaCategoria_LanzaNotFound() {
+        when(categoriaRepository.findById(99)).thenReturn(Optional.empty());
+        assertThrows(ResponseStatusException.class, () -> categoriaService.darDeBajaCategoria(99));
+    }
+}
