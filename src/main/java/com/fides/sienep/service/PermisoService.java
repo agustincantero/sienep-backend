@@ -11,7 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
-import java.util.ArrayList;
+import com.fides.sienep.mapper.PermisoMapper;
+
 import java.util.List;
 
 @Service
@@ -19,16 +20,13 @@ import java.util.List;
 public class PermisoService {
 
     private final PermisoRepository permisoRepository;
+    private final PermisoMapper mapper;
 
     @PreAuthorize("hasAuthority('VER_PERMISOS')")
     @Transactional(readOnly = true)
     public List<PermisoResponseDTO> obtenerTodos() {
         List<Permiso> permisos = permisoRepository.findAll();
-        List<PermisoResponseDTO> dtos = new ArrayList<>();
-        for (Permiso permiso : permisos) {
-            dtos.add(toResponseDTO(permiso));
-        }
-        return dtos;
+        return mapper.toDtoList(permisos);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_PERMISO')")
@@ -39,15 +37,7 @@ public class PermisoService {
 
         permiso.setDescripcion(requestDTO.getDescripcion());
         
-        return toResponseDTO(permisoRepository.save(permiso));
+        return mapper.toDto(permisoRepository.save(permiso));
     }
 
-    private PermisoResponseDTO toResponseDTO(Permiso permiso) {
-        return PermisoResponseDTO.builder()
-                .idPermiso(permiso.getIdPermiso())
-                .nombre(permiso.getNombre())
-                .descripcion(permiso.getDescripcion())
-                .estado(permiso.getEstado())
-                .build();
-    }
 }

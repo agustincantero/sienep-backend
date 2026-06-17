@@ -10,7 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
+import com.fides.sienep.mapper.CategoriaRecordatorioMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,6 +29,10 @@ public class CategoriaRecordatorioServiceTest {
 
     @Mock
     private CategoriaRecordatorioRepository categoriaRepository;
+
+    @SuppressWarnings("unused")
+    @Spy
+    private CategoriaRecordatorioMapper mapper = Mappers.getMapper(CategoriaRecordatorioMapper.class);
 
     @InjectMocks
     private CategoriaRecordatorioService categoriaService;
