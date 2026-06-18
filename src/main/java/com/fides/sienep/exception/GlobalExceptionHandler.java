@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,6 +25,7 @@ import java.util.Map;
  * - HttpMessageNotReadableException: JSON mal formado o valores inválidos (ej: Enums)
  * - ResponseStatusException: Errores controlados de lógica de negocio o validaciones
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -36,11 +39,11 @@ public class GlobalExceptionHandler {
 
         // Recolecta exactamente qué campos fallaron y el mensaje personalizado
         Map<String, String> detalles = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
+        for (var error : ex.getBindingResult().getAllErrors()) {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
             detalles.put(fieldName, errorMessage);
-        });
+        }
         body.put("detalles", detalles);
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
@@ -72,5 +75,20 @@ public class GlobalExceptionHandler {
         body.put("message", ex.getReason());
 
         return new ResponseEntity<>(body, ex.getStatusCode());
+    }
+
+    // 4. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        // Imprime la traza en consola para el desarrollador
+        log.error("Excepción no controlada en el servidor: ", ex);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("error", "Error interno del servidor");
+        body.put("message", "Ocurrió un error inesperado.");
+
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
