@@ -25,7 +25,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 @Service
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('VER_AUDITORIA')")
 @Slf4j
 public class AuditoriaService {
 
@@ -51,6 +50,7 @@ public class AuditoriaService {
         auditoriaRepository.save(auditoria);
     }
 
+    @PreAuthorize("hasAuthority('VER_AUDITORIA')")
     @Transactional(readOnly = true)
     public Page<AuditoriaResponseDTO> listarAuditorias(int page, int size, String entidad, TipoAccion accion, Integer idAutor) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("fechaHora").descending());
@@ -80,6 +80,7 @@ public class AuditoriaService {
         return new PageImpl<>(respuestas, pageable, auditoriasPage.getTotalElements());
     }
 
+    @PreAuthorize("hasAuthority('VER_AUDITORIA')")
     @Transactional(readOnly = true)
     public AuditoriaResponseDTO obtenerAuditoriaPorId(int id) {
         Auditoria auditoria = auditoriaRepository.findById(id)
