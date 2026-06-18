@@ -14,7 +14,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface RolMapper {
 
-    @Mapping(target = "permisos", source = "rolPermisos")
+    @Mapping(target = "permisos", expression = "java(mapPermisosActivos(entidad.getRolPermisos()))")
     RolResponseDTO toDto(Rol entidad);
     
     List<RolResponseDTO> toDtoList(List<Rol> entidades);
