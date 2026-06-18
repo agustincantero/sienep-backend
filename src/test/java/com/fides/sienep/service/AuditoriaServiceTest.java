@@ -130,6 +130,17 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    void listarAuditorias_SinFiltros_Exito() {
+        Page<Auditoria> pageMock = new PageImpl<>(List.of());
+        when(auditoriaRepository.findAll(any(Specification.class), any(Pageable.class)))
+            .thenReturn(pageMock);
+
+        Page<AuditoriaResponseDTO> resultado = auditoriaService.listarAuditorias(0, 10, null, null, null);
+
+        assertNotNull(resultado);
+    }
+
+    @Test
     @SuppressWarnings({"unchecked", "rawtypes"})
     void listarAuditorias_Specification_Cobertura() {
         // Arrange

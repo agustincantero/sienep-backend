@@ -7,6 +7,7 @@ import com.fides.sienep.repository.AuditoriaRepository;
 import com.fides.sienep.repository.UsuarioRepository;
 import com.fides.sienep.dto.AuditoriaResponseDTO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @Service
 @RequiredArgsConstructor
 @PreAuthorize("hasAuthority('VER_AUDITORIA')")
+@Slf4j
 public class AuditoriaService {
 
     private final AuditoriaRepository auditoriaRepository;
@@ -33,7 +35,10 @@ public class AuditoriaService {
     @Transactional
     public void registrarEventoManual(String entidad, TipoAccion accion, Integer idUsuario, String ip) {
         Usuario autor = usuarioRepository.findById(idUsuario).orElse(null);
-        if (autor == null) return;
+        if (autor == null) {
+            log.warn("Intento fallido de auditoría: No se encontró al usuario con ID {} para la acción {} en la entidad {}", idUsuario, accion, entidad);
+            return;
+        }
 
         Auditoria auditoria = new Auditoria();
         auditoria.setEntidad(entidad.toUpperCase());
