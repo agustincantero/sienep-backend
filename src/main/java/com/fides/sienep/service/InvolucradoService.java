@@ -3,13 +3,12 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.InvolucradoRequestDTO;
 import com.fides.sienep.dto.InvolucradoResponseDTO;
 import com.fides.sienep.model.EstadoLogico;
-import com.fides.sienep.model.Instancia;
+import com.fides.sienep.model.Incidencia;
 import com.fides.sienep.model.Involucrado;
-import com.fides.sienep.repository.InstanciaRepository;
+import com.fides.sienep.repository.IncidenciaRepository;
 import com.fides.sienep.repository.InvolucradoRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -19,20 +18,18 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InvolucradoService {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(InvolucradoService.class);
-
     private final InvolucradoRepository involucradoRepository;
-    private final InstanciaRepository instanciaRepository;
+    private final IncidenciaRepository incidenciaRepository;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
     public InvolucradoResponseDTO agregar(int codInstancia, InvolucradoRequestDTO dto) {
-        Instancia instancia = buscarInstanciaOFallar(codInstancia);
+        buscarIncidenciaOFallar(codInstancia);
 
         java.util.Optional<Involucrado> existente = involucradoRepository
                 .findByIdCodInstanciaAndIdNomInvolucrado(codInstancia, dto.getNomInvolucrado());
@@ -41,22 +38,23 @@ public class InvolucradoService {
             Involucrado inv = existente.get();
             if (inv.getEstado() == EstadoLogico.ACTIVO) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Ya existe un involucrado con ese nombre en esta instancia.");
+                        "Ya existe un involucrado con ese nombre en esta incidencia.");
             }
             inv.setEstado(EstadoLogico.ACTIVO);
-            log.info("Involucrado reactivado: {} en instancia {}", dto.getNomInvolucrado(), codInstancia);
+            log.info("Involucrado reactivado: {} en incidencia {}", dto.getNomInvolucrado(), codInstancia);
             return toResponseDTO(involucradoRepository.save(inv));
         }
 
-        Involucrado involucrado = new Involucrado(instancia, dto.getNomInvolucrado());
-        log.info("Involucrado agregado: {} en instancia {}", dto.getNomInvolucrado(), codInstancia);
+        Involucrado involucrado = new Involucrado(
+                incidenciaRepository.findById(codInstancia).get(), dto.getNomInvolucrado());
+        log.info("Involucrado agregado: {} en incidencia {}", dto.getNomInvolucrado(), codInstancia);
         return toResponseDTO(involucradoRepository.save(involucrado));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InvolucradoResponseDTO> listar(int codInstancia) {
-        buscarInstanciaOFallar(codInstancia);
+        buscarIncidenciaOFallar(codInstancia);
         List<Involucrado> involucrados =
                 involucradoRepository.findByIdCodInstanciaAndEstado(
                         codInstancia, EstadoLogico.ACTIVO);
@@ -70,28 +68,25 @@ public class InvolucradoService {
     @Transactional
     @PreAuthorize("hasAuthority('BAJA_INSTANCIA')")
     public void darDeBaja(int codInstancia, String nomInvolucrado) {
-        Involucrado involucrado = buscarInvolucradoOFallar(
-                codInstancia, nomInvolucrado);
+        buscarIncidenciaOFallar(codInstancia);
+        Involucrado involucrado = buscarInvolucradoOFallar(codInstancia, nomInvolucrado);
         involucrado.setEstado(EstadoLogico.INACTIVO);
         involucradoRepository.save(involucrado);
-        log.info("Baja lógica involucrado: {} en instancia {}",
-                nomInvolucrado, codInstancia);
+        log.info("Baja lógica involucrado: {} en incidencia {}", nomInvolucrado, codInstancia);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    private Instancia buscarInstanciaOFallar(int codInstancia) {
-        return instanciaRepository.findById(codInstancia)
+    private Incidencia buscarIncidenciaOFallar(int codInstancia) {
+        return incidenciaRepository.findByCodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "Instancia no encontrada: " + codInstancia));
+                        "No se encontró una incidencia activa con el id " + codInstancia));
     }
 
-    private Involucrado buscarInvolucradoOFallar(int codInstancia,
-                                                 String nomInvolucrado) {
+    private Involucrado buscarInvolucradoOFallar(int codInstancia, String nomInvolucrado) {
         return involucradoRepository
-                .findByIdCodInstanciaAndIdNomInvolucrado(
-                        codInstancia, nomInvolucrado)
+                .findByIdCodInstanciaAndIdNomInvolucrado(codInstancia, nomInvolucrado)
                 .filter(i -> i.getEstado() == EstadoLogico.ACTIVO)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
