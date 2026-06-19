@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,6 +30,7 @@ public class InvolucradoService {
     private final InstanciaRepository instanciaRepository;
 
     @Transactional
+    @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
     public InvolucradoResponseDTO agregar(int codInstancia,
                                           InvolucradoRequestDTO dto) {
         Instancia instancia = buscarInstanciaOFallar(codInstancia);
@@ -57,6 +59,7 @@ public class InvolucradoService {
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InvolucradoResponseDTO> listar(int codInstancia) {
         buscarInstanciaOFallar(codInstancia);
         List<Involucrado> involucrados =
@@ -70,6 +73,7 @@ public class InvolucradoService {
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('BAJA_INSTANCIA')")
     public void darDeBaja(int codInstancia, String nomInvolucrado) {
         Involucrado involucrado = buscarInvolucradoOFallar(
                 codInstancia, nomInvolucrado);
