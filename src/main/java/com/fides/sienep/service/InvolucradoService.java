@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,34 +30,31 @@ public class InvolucradoService {
     private final InstanciaRepository instanciaRepository;
 
     @Transactional
-    public InvolucradoResponseDTO agregar(int codInstancia,
-                                          InvolucradoRequestDTO dto) {
+    @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
+    public InvolucradoResponseDTO agregar(int codInstancia, InvolucradoRequestDTO dto) {
         Instancia instancia = buscarInstanciaOFallar(codInstancia);
 
-        // Verificar que no exista ya un involucrado con ese nombre en esa instancia
-        involucradoRepository
-                .findByIdCodInstanciaAndIdNomInvolucrado(
-                        codInstancia, dto.getNomInvolucrado())
-                .ifPresent(i -> {
-                    if (i.getEstado() == EstadoLogico.ACTIVO) {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT,
-                                "Ya existe un involucrado con ese nombre en esta instancia.");
-                    }
-                    // Si estaba inactivo, lo reactivamos
-                    i.setEstado(EstadoLogico.ACTIVO);
-                    involucradoRepository.save(i);
-                    log.info("Involucrado reactivado: {} en instancia {}",
-                            dto.getNomInvolucrado(), codInstancia);
-                });
+        java.util.Optional<Involucrado> existente = involucradoRepository
+                .findByIdCodInstanciaAndIdNomInvolucrado(codInstancia, dto.getNomInvolucrado());
+
+        if (existente.isPresent()) {
+            Involucrado inv = existente.get();
+            if (inv.getEstado() == EstadoLogico.ACTIVO) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Ya existe un involucrado con ese nombre en esta instancia.");
+            }
+            inv.setEstado(EstadoLogico.ACTIVO);
+            log.info("Involucrado reactivado: {} en instancia {}", dto.getNomInvolucrado(), codInstancia);
+            return toResponseDTO(involucradoRepository.save(inv));
+        }
 
         Involucrado involucrado = new Involucrado(instancia, dto.getNomInvolucrado());
-        Involucrado guardado = involucradoRepository.save(involucrado);
-        log.info("Involucrado agregado: {} en instancia {}",
-                dto.getNomInvolucrado(), codInstancia);
-        return toResponseDTO(guardado);
+        log.info("Involucrado agregado: {} en instancia {}", dto.getNomInvolucrado(), codInstancia);
+        return toResponseDTO(involucradoRepository.save(involucrado));
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InvolucradoResponseDTO> listar(int codInstancia) {
         buscarInstanciaOFallar(codInstancia);
         List<Involucrado> involucrados =
@@ -70,6 +68,7 @@ public class InvolucradoService {
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('BAJA_INSTANCIA')")
     public void darDeBaja(int codInstancia, String nomInvolucrado) {
         Involucrado involucrado = buscarInvolucradoOFallar(
                 codInstancia, nomInvolucrado);
