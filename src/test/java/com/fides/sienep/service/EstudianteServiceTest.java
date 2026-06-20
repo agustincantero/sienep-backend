@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
+import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.PaisDocumento;
@@ -39,12 +40,17 @@ class EstudianteServiceTest {
     @Mock
     private FuncionarioRepository funcionarioRepository;
 
-    // ── ¿Por qué mockeamos PasswordEncoder? ──────────────────────────────────
-    // BCryptPasswordEncoder hace cálculos costosos (por diseño, para frenar
-    // ataques de fuerza bruta). En tests unitarios no queremos ni necesitamos
-    // ese costo — lo reemplazamos por un mock que devuelve un string fijo.
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    // ── ¿Por qué mockeamos EstudianteMapper? ─────────────────────────────────
+    // EstudianteService ahora delega la conversión entidad→DTO al mapper.
+    // En tests unitarios no queremos ejecutar la implementación real del mapper
+    // (eso sería un test de integración). Lo mockeamos para controlar
+    // exactamente qué devuelve y mantener el test enfocado en la lógica
+    // del service, no en la del mapper.
+    @Mock
+    private EstudianteMapper estudianteMapper;
 
     @InjectMocks
     private EstudianteService estudianteService;
@@ -56,7 +62,6 @@ class EstudianteServiceTest {
         estudianteExistente = new Estudiante();
         estudianteExistente.setNombre("Ana");
         estudianteExistente.setApellido("García");
-        // CI uruguaya real válida (dígito verificador correcto)
         estudianteExistente.setDocumento("47520640");
         estudianteExistente.setPaisDocumento(PaisDocumento.URY);
         estudianteExistente.setEmail("ana.garcia@utec.edu.uy");
@@ -73,8 +78,16 @@ class EstudianteServiceTest {
     @Test
     void obtenerPorId_DebeRetornarDTO_CuandoElEstudianteExiste() {
 
+        // El mapper mock devuelve un DTO con los datos que nos interesan verificar
+        EstudianteResponseDTO dtoEsperado = EstudianteResponseDTO.builder()
+                .nombre("Ana")
+                .documento("47520640")
+                .build();
+
         when(estudianteRepository.findById(1))
                 .thenReturn(Optional.of(estudianteExistente));
+        when(estudianteMapper.toDto(estudianteExistente))
+                .thenReturn(dtoEsperado);
 
         EstudianteResponseDTO resultado = estudianteService.obtenerPorId(1);
 
@@ -82,6 +95,7 @@ class EstudianteServiceTest {
         assertEquals("Ana", resultado.getNombre());
         assertEquals("47520640", resultado.getDocumento());
         verify(estudianteRepository, times(1)).findById(1);
+        verify(estudianteMapper, times(1)).toDto(estudianteExistente);
     }
 
     // =========================================================
@@ -101,6 +115,8 @@ class EstudianteServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         assertTrue(ex.getReason().contains("Estudiante no encontrado"));
         verify(estudianteRepository, times(1)).findById(99);
+        // El mapper nunca debe ser llamado si el estudiante no existe
+        verify(estudianteMapper, never()).toDto(any());
     }
 
     // =========================================================
@@ -119,28 +135,19 @@ class EstudianteServiceTest {
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         assertTrue(ex.getReason().contains("documento"));
-        // Nunca debe intentar guardar
         verify(estudianteRepository, never()).save(any());
+        verify(estudianteMapper, never()).toDto(any());
     }
 
     // =========================================================
     // TEST 4 — crear: CI uruguaya inválida → 400
     // =========================================================
 
-    /**
-     * "47520641" es la CI "47520640" con el dígito verificador cambiado
-     * de 0 a 1 → el algoritmo de validación debe rechazarla.
-     *
-     * ¿Por qué testear esto específicamente?
-     * El validador recibe el string del DTO — si el service no lo llama,
-     * el test falla aunque el código de la validación sea correcto.
-     * Este test verifica que el SERVICE efectivamente invoca al validador.
-     */
     @Test
     void crear_DebeLanzar400_CuandoCIUruguayaEsInvalida() {
 
         EstudianteRequestDTO dto = buildDtoValido();
-        dto.setDocumento("47520642"); // dígito verificador incorrecto (el válido es 1)
+        dto.setDocumento("47520642");
 
         when(estudianteRepository.existsByDocumento("47520642")).thenReturn(false);
         when(estudianteRepository.existsByEmail(dto.getEmail())).thenReturn(false);
@@ -152,24 +159,18 @@ class EstudianteServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().contains("cédula"));
         verify(estudianteRepository, never()).save(any());
+        verify(estudianteMapper, never()).toDto(any());
     }
 
     // =========================================================
     // TEST 5 — crear: menor de edad → 400
     // =========================================================
 
-    /**
-     * Usamos un documento extranjero (ARG) para evitar que falle
-     * por la validación de CI uruguaya antes de llegar a la de edad.
-     * Cada test debe probar UNA sola cosa — esto se llama "un assert
-     * conceptual por test".
-     */
     @Test
     void crear_DebeLanzar400_CuandoEstudianteEsMenorDeEdad() {
 
         EstudianteRequestDTO dto = buildDtoValido();
         dto.setPaisDocumento(PaisDocumento.ARG);
-        // Fecha que hace al estudiante menor de 18
         dto.setFechaNacimiento(LocalDate.now().minusYears(17));
 
         when(estudianteRepository.existsByDocumento(anyString())).thenReturn(false);
@@ -182,18 +183,13 @@ class EstudianteServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().contains("mayor de edad"));
         verify(estudianteRepository, never()).save(any());
+        verify(estudianteMapper, never()).toDto(any());
     }
 
     // =========================================================
     // TEST 6 — darDeBaja: baja lógica → estado INACTIVO
     // =========================================================
 
-    /**
-     * Verifica que darDeBaja cambia el estado a INACTIVO y llama a save().
-     * NO elimina el registro físicamente (baja lógica).
-     *
-     * Este test documenta el contrato de que NUNCA hay deleteById.
-     */
     @Test
     void darDeBaja_DebePonerEstadoInactivo_YGuardar() {
 
@@ -207,28 +203,24 @@ class EstudianteServiceTest {
         assertEquals(EstadoLogico.INACTIVO, estudianteExistente.getEstado(),
                 "El estado debe ser INACTIVO después de dar de baja");
         verify(estudianteRepository, times(1)).save(estudianteExistente);
-        // Garantía explícita: nunca se eliminó físicamente
         verify(estudianteRepository, never()).deleteById(any());
+        // darDeBaja no devuelve DTO — el mapper nunca debe ser llamado
+        verify(estudianteMapper, never()).toDto(any());
     }
 
     // =========================================================
-    // HELPER — construye un DTO válido reutilizable
+    // HELPER
     // =========================================================
 
-    /**
-     * Centralizar la construcción del DTO base en un método privado
-     * sigue el principio DRY (Don't Repeat Yourself).
-     * Cada test solo sobreescribe el campo que quiere probar.
-     */
     private EstudianteRequestDTO buildDtoValido() {
         EstudianteRequestDTO dto = new EstudianteRequestDTO();
         dto.setNombre("Carlos");
         dto.setApellido("Pérez");
-        dto.setDocumento("47520640");      // CI uruguaya válida
+        dto.setDocumento("47520640");
         dto.setPaisDocumento(PaisDocumento.URY);
         dto.setEmail("carlos.perez@utec.edu.uy");
         dto.setContrasenia("Temp1234!");
-        dto.setFechaNacimiento(LocalDate.of(1998, 7, 20)); // mayor de edad
+        dto.setFechaNacimiento(LocalDate.of(1998, 7, 20));
         return dto;
     }
 }
