@@ -28,8 +28,9 @@ public class InvolucradoService {
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
-    public InvolucradoResponseDTO agregar(int codInstancia, InvolucradoRequestDTO dto) {
-        buscarIncidenciaOFallar(codInstancia);
+    public InvolucradoResponseDTO agregar(int codInstancia,
+                                          InvolucradoRequestDTO dto) {
+        Instancia instancia = buscarInstanciaOFallar(codInstancia);
 
         java.util.Optional<Involucrado> existente = involucradoRepository
                 .findByIdCodInstanciaAndIdNomInvolucrado(codInstancia, dto.getNomInvolucrado());
