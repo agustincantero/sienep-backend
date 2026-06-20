@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Error de Validación en los datos enviados");
+        body.put("error", "Error de validación en los datos enviados");
 
         // Recolecta exactamente qué campos fallaron y el mensaje personalizado
         Map<String, String> detalles = new HashMap<>();

@@ -10,6 +10,7 @@ import com.fides.sienep.repository.PermisoRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -53,6 +54,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Obtener Rol por ID - Éxito")
     void obtenerPorId_DebeRetornarDTO_CuandoElRolExiste() {
         // Arrange (Preparación): Le decimos al repositorio falso cómo debe comportarse
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));
@@ -67,6 +69,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Obtener Rol por ID - No encontrado (404)")
     void obtenerPorId_DebeLanzarExcepcion_CuandoElRolNoExiste() {
         // Arrange
         when(rolRepository.findById(99)).thenReturn(Optional.empty());
@@ -81,6 +84,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Crear Rol - Éxito (Guarda y formatea el nombre)")
     void crearRol_DebeGuardarYRetornarDTO_CuandoDatosSonValidos() {
         // Arrange
         RolCreateDTO requestDTO = new RolCreateDTO();
@@ -114,6 +118,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Crear Rol - Conflicto si el nombre ya existe (409)")
     void crearRol_DebeLanzarExcepcion_CuandoNombreYaExiste() {
         // Arrange
         RolCreateDTO requestDTO = new RolCreateDTO();
@@ -132,6 +137,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Dar de baja Rol - Lanza Forbidden si intenta borrar ADMINISTRADOR")
     void darDeBajaRol_DebeLanzarExcepcion_SiEsAdministrador() {
         // Arrange
         Rol admin = new Rol();
@@ -151,6 +157,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Dar de baja Rol - Éxito (Baja lógica)")
     void darDeBajaRol_DebeDarDeBajaCorrectamente_CuandoEsRolValido() {
         // Arrange
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));
@@ -164,6 +171,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Listar todos los roles - Éxito")
     void obtenerTodos_DebeRetornarListaDeDTOs() {
         // Arrange
         when(rolRepository.findAll()).thenReturn(List.of(rolExistente));
@@ -178,6 +186,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar Rol - Modifica datos y sincroniza permisos con éxito")
     void actualizarRol_DebeActualizarDatosYManejarPermisosCorrectamente() {
         // Arrange
         RolUpdateDTO updateDTO = new RolUpdateDTO();
@@ -216,6 +225,7 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar Rol - Conflicto si intenta usar un nombre existente")
     void actualizarRol_DebeLanzarExcepcion_SiIntentaPonerUnNombreQueYaExiste() {
         // Arrange
         RolUpdateDTO updateDTO = new RolUpdateDTO();
