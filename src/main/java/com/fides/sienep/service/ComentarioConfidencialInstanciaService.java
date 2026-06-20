@@ -1,0 +1,114 @@
+package com.fides.sienep.service;
+
+import com.fides.sienep.dto.ComentarioConfidencialInstanciaRequestDTO;
+import com.fides.sienep.dto.ComentarioConfidencialInstanciaResponseDTO;
+import com.fides.sienep.model.ComentarioConfidencialInstancia;
+import com.fides.sienep.model.EstadoLogico;
+import com.fides.sienep.model.Funcionario;
+import com.fides.sienep.model.Instancia;
+import com.fides.sienep.repository.ComentarioConfidencialInstanciaRepository;
+import com.fides.sienep.repository.FuncionarioRepository;
+import com.fides.sienep.repository.InstanciaRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class ComentarioConfidencialInstanciaService {
+
+    private final ComentarioConfidencialInstanciaRepository comentarioRepository;
+    private final InstanciaRepository instanciaRepository;
+    private final FuncionarioRepository funcionarioRepository;
+
+    private Integer getIdUsuarioAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Integer.parseInt(auth.getName());
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
+    public ComentarioConfidencialInstanciaResponseDTO crear(int codInstancia,
+                                                            ComentarioConfidencialInstanciaRequestDTO dto) {
+        Instancia instancia = buscarInstanciaOFallar(codInstancia);
+
+        Funcionario autor = funcionarioRepository.findById(getIdUsuarioAutenticado())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
+
+        ComentarioConfidencialInstancia comentario = new ComentarioConfidencialInstancia();
+        comentario.setId(new ComentarioConfidencialInstancia.ComentarioConfidencialInstanciaId());
+        comentario.setInstancia(instancia);
+        comentario.setContenido(dto.getContenido());
+        comentario.setAutor(autor);
+
+        return toResponseDTO(comentarioRepository.save(comentario));
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
+    public List<ComentarioConfidencialInstanciaResponseDTO> listarPorInstancia(int codInstancia) {
+        buscarInstanciaOFallar(codInstancia);
+        List<ComentarioConfidencialInstancia> comentarios = comentarioRepository
+                .findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO);
+        List<ComentarioConfidencialInstanciaResponseDTO> resultado = new ArrayList<>();
+        for (ComentarioConfidencialInstancia comentario : comentarios) {
+            resultado.add(toResponseDTO(comentario));
+        }
+        return resultado;
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
+    public ComentarioConfidencialInstanciaResponseDTO actualizar(int idComConfidencial,
+                                                                 ComentarioConfidencialInstanciaRequestDTO dto) {
+        ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
+        comentario.setContenido(dto.getContenido());
+        return toResponseDTO(comentarioRepository.save(comentario));
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
+    public void darDeBaja(int idComConfidencial) {
+        ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
+        comentario.setEstado(EstadoLogico.INACTIVO);
+        comentarioRepository.save(comentario);
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    private Instancia buscarInstanciaOFallar(int codInstancia) {
+        return instanciaRepository.findById(codInstancia)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró una instancia con el id " + codInstancia));
+    }
+
+    private ComentarioConfidencialInstancia buscarActivoOFallar(int idComConfidencial) {
+        return comentarioRepository.findById_IdComConfidencialAndEstado(idComConfidencial, EstadoLogico.ACTIVO)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró un comentario confidencial activo con el id " + idComConfidencial));
+    }
+
+    private ComentarioConfidencialInstanciaResponseDTO toResponseDTO(ComentarioConfidencialInstancia c) {
+        ComentarioConfidencialInstanciaResponseDTO dto = new ComentarioConfidencialInstanciaResponseDTO();
+        dto.setIdComConfidencial(c.getId().getIdComConfidencial());
+        dto.setCodInstancia(c.getId().getCodInstancia());
+        dto.setContenido(c.getContenido());
+        dto.setIdAutor(c.getAutor().getIdUsuario());
+        dto.setNombreAutor(c.getAutor().getNombre() + " " + c.getAutor().getApellido());
+        dto.setEstado(c.getEstado());
+        dto.setCreatedAt(c.getCreatedAt());
+        dto.setUpdatedAt(c.getUpdatedAt());
+        return dto;
+    }
+}

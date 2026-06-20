@@ -47,10 +47,9 @@ public class InstanciaComunService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
-        Funcionario funcionario = funcionarioRepository.findById(dto.getIdFuncionario())
+        Funcionario funcionario = funcionarioRepository.findById(getIdUsuarioAutenticado())
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "No se encontró un funcionario con el id " + dto.getIdFuncionario()));
+                        HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
 
         CategoriaInstancia categoria = categoriaInstanciaRepository.findById(dto.getIdCategoria())
                 .orElseThrow(() -> new ResponseStatusException(

@@ -24,9 +24,6 @@ public class IncidenciaRequestDTO {
     @NotNull(message = "Por favor seleccioná el estudiante asociado a la incidencia")
     private Integer idEstudiante;
 
-    @NotNull(message = "Por favor seleccioná el funcionario responsable de la incidencia")
-    private Integer idFuncionario;
-
     @Size(max = 50, message = "El canal no puede superar los 50 caracteres")
     private String canal;
 

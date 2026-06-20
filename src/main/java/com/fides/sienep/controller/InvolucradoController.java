@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/instancias/{codInstancia}/involucrados")
+@RequestMapping("/api/incidencias/{codInstancia}/involucrados")
 @RequiredArgsConstructor
 @Tag(name = "Involucrados",
         description = "Gestión de involucrados externos en instancias")

@@ -11,6 +11,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -46,6 +47,7 @@ public class AuditoriaServiceTest {
     private AuditoriaService auditoriaService;
 
     @Test
+    @DisplayName("Registrar evento manual - Éxito")
     void registrarEventoManual_Exito() {
         Usuario autor = new Estudiante();
         autor.setIdUsuario(1);
@@ -60,6 +62,7 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    @DisplayName("Registrar evento manual - Usuario no encontrado (No guarda)")
     void registrarEventoManual_UsuarioNoEncontrado_NoGuardaNada() {
         when(usuarioRepository.findById(99)).thenReturn(Optional.empty());
 
@@ -69,6 +72,7 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    @DisplayName("Obtener auditoría por ID - Éxito")
     void obtenerAuditoriaPorId_Exito() {
         Usuario autor = new Estudiante();
         autor.setIdUsuario(1);
@@ -95,6 +99,7 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    @DisplayName("Obtener auditoría por ID - No encontrada (404)")
     void obtenerAuditoriaPorId_LanzaNotFound() {
         when(auditoriaRepository.findById(99)).thenReturn(Optional.empty());
 
@@ -104,6 +109,7 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    @DisplayName("Listar auditorías paginadas con filtros - Éxito")
     @SuppressWarnings("unchecked")
     void listarAuditorias_Exito() {
         Usuario autor = new Estudiante();
@@ -130,6 +136,7 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    @DisplayName("Listar auditorías sin filtros - Éxito")
     void listarAuditorias_SinFiltros_Exito() {
         Page<Auditoria> pageMock = new PageImpl<>(List.of());
         when(auditoriaRepository.findAll(any(Specification.class), any(Pageable.class)))
@@ -141,6 +148,7 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    @DisplayName("Listar auditorías - Cobertura de Specification")
     @SuppressWarnings({"unchecked", "rawtypes"})
     void listarAuditorias_Specification_Cobertura() {
         // Arrange

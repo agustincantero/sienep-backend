@@ -24,9 +24,6 @@ public class InstanciaComunRequestDTO {
     @NotNull(message = "Por favor seleccioná el estudiante asociado")
     private Integer idEstudiante;
 
-    @NotNull(message = "Por favor seleccioná el funcionario responsable")
-    private Integer idFuncionario;
-
     @Size(max = 50, message = "El canal no puede superar los 50 caracteres")
     private String canal;
 
