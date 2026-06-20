@@ -15,7 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
+import com.fides.sienep.mapper.RolMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -37,6 +40,10 @@ class RolServiceTest {
 
     @Mock
     private EntityManager entityManager;
+
+    @SuppressWarnings("unused")
+    @Spy
+    private RolMapper mapper = Mappers.getMapper(RolMapper.class);
 
     @InjectMocks
     private RolService rolService;

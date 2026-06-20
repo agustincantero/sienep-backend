@@ -13,7 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
+import com.fides.sienep.mapper.CategoriaInstanciaMapper;
+
 import java.util.List;
 
 @Service
@@ -21,28 +22,14 @@ import java.util.List;
 public class CategoriaInstanciaService {
 
     private final CategoriaInstanciaRepository categoriaRepository;
-
-    // --- Mapeos Manuales ---
-    private CategoriaInstanciaResponseDTO toResponseDTO(CategoriaInstancia categoria) {
-        CategoriaInstanciaResponseDTO dto = new CategoriaInstanciaResponseDTO();
-        dto.setIdCategoria(categoria.getIdCategoria());
-        dto.setNomCategoria(categoria.getNomCategoria());
-        dto.setDescripcion(categoria.getDescripcion());
-        dto.setEstado(categoria.getEstado());
-        return dto;
-    }
+    private final CategoriaInstanciaMapper mapper;
 
     // --- Métodos CRUD ---
     @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
     @Transactional(readOnly = true)
     public List<CategoriaInstanciaResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
         List<CategoriaInstancia> categorias = categoriaRepository.buscarConFiltros(nombre, estado);
-        
-        List<CategoriaInstanciaResponseDTO> dtoList = new ArrayList<>();
-        for (CategoriaInstancia cat : categorias) {
-            dtoList.add(toResponseDTO(cat));
-        }
-        return dtoList;
+        return mapper.toDtoList(categorias);
     }
 
     @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
@@ -50,7 +37,7 @@ public class CategoriaInstanciaService {
     public CategoriaInstanciaResponseDTO obtenerPorId(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
-        return toResponseDTO(categoria);
+        return mapper.toDto(categoria);
     }
 
     @PreAuthorize("hasAuthority('CREAR_CATEGORIA_INSTANCIA')")
@@ -69,7 +56,7 @@ public class CategoriaInstanciaService {
         categoria.setEstado(EstadoLogico.ACTIVO); // Forzamos ACTIVO al crear
 
         CategoriaInstancia guardada = categoriaRepository.save(categoria);
-        return toResponseDTO(guardada);
+        return mapper.toDto(guardada);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_CATEGORIA_INSTANCIA')")
@@ -91,7 +78,7 @@ public class CategoriaInstanciaService {
         categoria.setEstado(requestDTO.getEstado());
 
         CategoriaInstancia actualizada = categoriaRepository.save(categoria);
-        return toResponseDTO(actualizada);
+        return mapper.toDto(actualizada);
     }
 
     @PreAuthorize("hasAuthority('ELIMINAR_CATEGORIA_INSTANCIA')")

@@ -10,7 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
+import com.fides.sienep.mapper.PermisoMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,6 +29,10 @@ public class PermisoServiceTest {
 
     @Mock
     private PermisoRepository permisoRepository;
+
+    @SuppressWarnings("unused")
+    @Spy
+    private PermisoMapper mapper = Mappers.getMapper(PermisoMapper.class);
 
     @InjectMocks
     private PermisoService permisoService;

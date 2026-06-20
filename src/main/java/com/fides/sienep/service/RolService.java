@@ -1,6 +1,5 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.PermisoResumenDTO;
 import com.fides.sienep.dto.RolCreateDTO;
 import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.dto.RolResponseDTO;
@@ -18,7 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
+import com.fides.sienep.mapper.RolMapper;
+
 import java.util.List;
 
 @Service
@@ -28,32 +28,7 @@ public class RolService {
     private final RolRepository rolRepository;
     private final PermisoRepository permisoRepository;
     private final EntityManager entityManager;
-
-    // --- Mapeos Manuales ---
-    public RolResponseDTO toResponseDTO(Rol rol) {
-        RolResponseDTO dto = new RolResponseDTO();
-        dto.setIdRol(rol.getIdRol());
-        dto.setNombre(rol.getNombre());
-        dto.setDescripcion(rol.getDescripcion());
-        dto.setEstado(rol.getEstado());
-
-        // Mapear solo los permisos activos a DTOs de resumen
-        if (rol.getRolPermisos() != null) {
-            List<PermisoResumenDTO> permisosResumen = new ArrayList<>();
-            for (RolPermiso rp : rol.getRolPermisos()) {
-                if (rp.getEstado() == EstadoLogico.ACTIVO) {
-                    PermisoResumenDTO permisoDTO = new PermisoResumenDTO();
-                    permisoDTO.setIdPermiso(rp.getPermiso().getIdPermiso());
-                    permisoDTO.setNombre(rp.getPermiso().getNombre());
-                    permisosResumen.add(permisoDTO);
-                }
-            }
-            dto.setPermisos(permisosResumen);
-        } else {
-            dto.setPermisos(new ArrayList<>());
-        }
-        return dto;
-    }
+    private final RolMapper mapper;
 
     // --- Validaciones Internas ---
     private void validarRolProtegido(Rol rol) {
@@ -67,11 +42,7 @@ public class RolService {
     @Transactional(readOnly = true)
     public List<RolResponseDTO> obtenerTodos() {
         List<Rol> roles = rolRepository.findAll();
-        List<RolResponseDTO> rolesDTO = new ArrayList<>();
-        for (Rol rol : roles) {
-            rolesDTO.add(toResponseDTO(rol));
-        }
-        return rolesDTO;
+        return mapper.toDtoList(roles);
     }
 
     @PreAuthorize("hasAuthority('VER_ROLES')")
@@ -79,7 +50,7 @@ public class RolService {
     public RolResponseDTO obtenerPorId(int id) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
-        return toResponseDTO(rol);
+        return mapper.toDto(rol);
     }
 
     @PreAuthorize("hasAuthority('CREAR_ROL')")
@@ -115,7 +86,7 @@ public class RolService {
         }
 
         Rol rolGuardado = rolRepository.save(rol);
-        return toResponseDTO(rolGuardado);
+        return mapper.toDto(rolGuardado);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_ROL')")
@@ -180,7 +151,7 @@ public class RolService {
         }
 
         Rol rolActualizado = rolRepository.save(rol);
-        return toResponseDTO(rolActualizado);
+        return mapper.toDto(rolActualizado);
     }
 
     @PreAuthorize("hasAuthority('ELIMINAR_ROL')")

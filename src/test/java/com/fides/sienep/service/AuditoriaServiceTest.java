@@ -17,7 +17,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
+import com.fides.sienep.mapper.AuditoriaMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -42,6 +45,10 @@ public class AuditoriaServiceTest {
 
     @Mock
     private UsuarioRepository usuarioRepository;
+
+    @SuppressWarnings("unused")
+    @Spy
+    private AuditoriaMapper mapper = Mappers.getMapper(AuditoriaMapper.class);
 
     @InjectMocks
     private AuditoriaService auditoriaService;
