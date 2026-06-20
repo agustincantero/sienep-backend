@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,4 +29,15 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
     @Query("SELECT ic FROM InstanciaComun ic WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
     List<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
                                                   @Param("estado") EstadoLogico estado);
+
+    // ── Queries para Reportes ─────────────────────────────────
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "WHERE ic.estudiante.idUsuario = :idEstudiante " +
+            "AND ic.estado = :estado " +
+            "AND ic.fechaHora BETWEEN :desde AND :hasta")
+    List<InstanciaComun> findByEstudianteYPeriodo(
+            @Param("idEstudiante") Integer idEstudiante,
+            @Param("estado") EstadoLogico estado,
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta);
 }
