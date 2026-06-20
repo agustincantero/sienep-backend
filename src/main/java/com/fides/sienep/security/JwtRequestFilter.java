@@ -1,6 +1,7 @@
 package com.fides.sienep.security;
 
 import com.fides.sienep.utils.JwtTokenUtil;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -38,7 +40,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             jwt = authHeader.substring(7);
             try {
                 username = jwtTokenUtil.extractUsername(jwt);
-            } catch (Exception e) {
+            } catch (JwtException | IllegalArgumentException e) {
                 log.warn("Token JWT inválido o vencido: {}", e.getMessage());
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido");
                 return;
@@ -50,7 +52,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             UserDetails userDetails;
             try {
                 userDetails = userDetailsService.loadUserByUsername(username);
-            } catch (Exception e) {
+            } catch (UsernameNotFoundException e) {
                 log.warn("Usuario no encontrado para el token: {}", e.getMessage());
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
                 return;
