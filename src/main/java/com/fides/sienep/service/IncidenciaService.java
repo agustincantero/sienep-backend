@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.IncidenciaRequestDTO;
 import com.fides.sienep.dto.IncidenciaResponseDTO;
+import com.fides.sienep.mapper.IncidenciaMapper;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Funcionario;
@@ -11,8 +12,7 @@ import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.IncidenciaRepository;
 import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -21,20 +21,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IncidenciaService {
-
-    private static final Logger log = LoggerFactory.getLogger(IncidenciaService.class);
 
     private final IncidenciaRepository incidenciaRepository;
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final InstanciaIdGenerator instanciaIdGenerator;
-
+    private final IncidenciaMapper incidenciaMapper;
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -49,9 +47,21 @@ public class IncidenciaService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El estudiante con id " + dto.getIdEstudiante() + " no está activo");
+        }
+
         Funcionario funcionario = funcionarioRepository.findById(getIdUsuarioAutenticado())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
+
+        if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El funcionario autenticado no está activo");
+        }
 
         Incidencia incidencia = new Incidencia(
                 dto.getTitulo(),
@@ -67,61 +77,42 @@ public class IncidenciaService {
 
         Incidencia guardada = incidenciaRepository.save(incidencia);
         log.info("Incidencia creada: {} con ID negocio: {}", guardada.getCodInstancia(), idNeg);
-        return toResponseDTO(guardada);
+        return incidenciaMapper.toDto(guardada);
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
     public List<IncidenciaResponseDTO> listarActivas() {
-        List<Incidencia> incidencias = incidenciaRepository.findByEstado(EstadoLogico.ACTIVO);
-        List<IncidenciaResponseDTO> resultado = new ArrayList<>();
-        for (Incidencia incidencia : incidencias) {
-            resultado.add(toResponseDTO(incidencia));
-        }
-        return resultado;
+        return incidenciaMapper.toDtoList(
+                incidenciaRepository.findByEstado(EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
     public IncidenciaResponseDTO buscarPorId(int id) {
-        return toResponseDTO(buscarActivaOFallar(id));
+        return incidenciaMapper.toDto(buscarActivaOFallar(id));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
     public List<IncidenciaResponseDTO> listarPorEstudiante(int idEstudiante) {
-        List<Incidencia> incidencias = incidenciaRepository
-                .findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO);
-        List<IncidenciaResponseDTO> resultado = new ArrayList<>();
-        for (Incidencia incidencia : incidencias) {
-            resultado.add(toResponseDTO(incidencia));
-        }
-        return resultado;
+        return incidenciaMapper.toDtoList(
+                incidenciaRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
     public List<IncidenciaResponseDTO> listarPorFuncionario(int idFuncionario) {
-        List<Incidencia> incidencias = incidenciaRepository
-                .findByFuncionarioAndEstado(idFuncionario, EstadoLogico.ACTIVO);
-        List<IncidenciaResponseDTO> resultado = new ArrayList<>();
-        for (Incidencia incidencia : incidencias) {
-            resultado.add(toResponseDTO(incidencia));
-        }
-        return resultado;
+        return incidenciaMapper.toDtoList(
+                incidenciaRepository.findByFuncionarioAndEstado(idFuncionario, EstadoLogico.ACTIVO));
     }
 
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
     public List<IncidenciaResponseDTO> listarMisIncidencias() {
         Integer idEstudiante = getIdUsuarioAutenticado();
-        List<Incidencia> incidencias = incidenciaRepository
-                .findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO);
-        List<IncidenciaResponseDTO> resultado = new ArrayList<>();
-        for (Incidencia incidencia : incidencias) {
-            resultado.add(toResponseDTO(incidencia));
-        }
-        return resultado;
+        return incidenciaMapper.toDtoList(
+                incidenciaRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
     }
 
     @Transactional
@@ -141,7 +132,7 @@ public class IncidenciaService {
         incidencia.setLugar(dto.getLugar());
 
         log.info("Incidencia actualizada: {}", id);
-        return toResponseDTO(incidenciaRepository.save(incidencia));
+        return incidenciaMapper.toDto(incidenciaRepository.save(incidencia));
     }
 
     @Transactional
@@ -162,25 +153,5 @@ public class IncidenciaService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró una incidencia activa con el id " + id));
-    }
-
-    private IncidenciaResponseDTO toResponseDTO(Incidencia incidencia) {
-        IncidenciaResponseDTO dto = new IncidenciaResponseDTO();
-        dto.setCodInstancia(incidencia.getCodInstancia());
-        dto.setTitulo(incidencia.getTitulo());
-        dto.setFechaHora(incidencia.getFechaHora());
-        dto.setIdEstudiante(incidencia.getEstudiante().getIdUsuario());
-        dto.setNombreEstudiante(incidencia.getEstudiante().getNombre() + " "
-                + incidencia.getEstudiante().getApellido());
-        dto.setIdFuncionario(incidencia.getFuncionario().getIdUsuario());
-        dto.setNombreFuncionario(incidencia.getFuncionario().getNombre() + " "
-                + incidencia.getFuncionario().getApellido());
-        dto.setCanal(incidencia.getCanal());
-        dto.setIdNegInstancia(incidencia.getIdNegInstancia());
-        dto.setLugar(incidencia.getLugar());
-        dto.setEstado(incidencia.getEstado());
-        dto.setCreatedAt(incidencia.getCreatedAt());
-        dto.setUpdatedAt(incidencia.getUpdatedAt());
-        return dto;
     }
 }

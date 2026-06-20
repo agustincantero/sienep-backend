@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.mapper.RecordatorioMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,6 +23,7 @@ public class RecordatorioService {
     private final CategoriaRecordatorioRepository categoriaRecordatorioRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final FrecuenciaRepository frecuenciaRepository;
+    private final RecordatorioMapper recordatorioMapper;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
@@ -62,46 +63,34 @@ public class RecordatorioService {
         recordatorio.setFechaFin(dto.getFechaFin());
         recordatorio.setNroOcurrencias(dto.getNroOcurrencias());
 
-        return toResponseDTO(recordatorioRepository.save(recordatorio));
+        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarActivos() {
-        List<Recordatorio> recordatorios = recordatorioRepository.findByEstado(EstadoLogico.ACTIVO);
-        List<RecordatorioResponseDTO> resultado = new ArrayList<>();
-        for (Recordatorio recordatorio : recordatorios) {
-            resultado.add(toResponseDTO(recordatorio));
-        }
-        return resultado;
+        return recordatorioMapper.toDtoList(
+                recordatorioRepository.findByEstado(EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public RecordatorioResponseDTO buscarPorId(int id) {
-        return toResponseDTO(buscarActivoOFallar(id));
+        return recordatorioMapper.toDto(buscarActivoOFallar(id));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarPorInstancia(int codInstancia) {
-        List<Recordatorio> recordatorios = recordatorioRepository.findByInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO);
-        List<RecordatorioResponseDTO> resultado = new ArrayList<>();
-        for (Recordatorio recordatorio : recordatorios) {
-            resultado.add(toResponseDTO(recordatorio));
-        }
-        return resultado;
+        return recordatorioMapper.toDtoList(
+                recordatorioRepository.findByInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarPorResponsable(int idResponsable) {
-        List<Recordatorio> recordatorios = recordatorioRepository.findByResponsableAndEstado(idResponsable, EstadoLogico.ACTIVO);
-        List<RecordatorioResponseDTO> resultado = new ArrayList<>();
-        for (Recordatorio recordatorio : recordatorios) {
-            resultado.add(toResponseDTO(recordatorio));
-        }
-        return resultado;
+        return recordatorioMapper.toDtoList(
+                recordatorioRepository.findByResponsableAndEstado(idResponsable, EstadoLogico.ACTIVO));
     }
 
     @Transactional
@@ -143,7 +132,7 @@ public class RecordatorioService {
             recordatorio.setFrecuencia(null);
         }
 
-        return toResponseDTO(recordatorioRepository.save(recordatorio));
+        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
     }
 
     @Transactional
@@ -159,31 +148,5 @@ public class RecordatorioService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un recordatorio activo con el id " + id));
-    }
-
-    private RecordatorioResponseDTO toResponseDTO(Recordatorio r) {
-        RecordatorioResponseDTO dto = new RecordatorioResponseDTO();
-        dto.setCodRecordatorio(r.getCodRecordatorio());
-        dto.setIdNegRecordatorio(r.getIdNegRecordatorio());
-        dto.setTitulo(r.getTitulo());
-        dto.setTipo(r.getTipo());
-        dto.setFechaHora(r.getFechaHora());
-        dto.setCodInstancia(r.getInstancia().getCodInstancia());
-        dto.setTituloInstancia(r.getInstancia().getTitulo());
-        dto.setIdCategoria(r.getCategoria().getIdCategoria());
-        dto.setNombreCategoria(r.getCategoria().getNomCategoria());
-        dto.setIdResponsable(r.getResponsable().getIdUsuario());
-        dto.setNombreResponsable(r.getResponsable().getNombre() + " " + r.getResponsable().getApellido());
-        if (r.getFrecuencia() != null) {
-            dto.setIdFrecuencia(r.getFrecuencia().getIdFrecuencia());
-            dto.setDescripcionFrecuencia(r.getFrecuencia().getDescripcion());
-        }
-        dto.setFechaFin(r.getFechaFin());
-        dto.setNroOcurrencias(r.getNroOcurrencias());
-        dto.setEstadoOperativo(r.getEstadoOperativo());
-        dto.setEstado(r.getEstado());
-        dto.setCreatedAt(r.getCreatedAt());
-        dto.setUpdatedAt(r.getUpdatedAt());
-        return dto;
     }
 }

@@ -2,17 +2,17 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.FrecuenciaRequestDTO;
 import com.fides.sienep.dto.FrecuenciaResponseDTO;
+import com.fides.sienep.mapper.FrecuenciaMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Frecuencia;
 import com.fides.sienep.repository.FrecuenciaRepository;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -20,8 +20,10 @@ import java.util.List;
 public class FrecuenciaService {
 
     private final FrecuenciaRepository frecuenciaRepository;
+    private final FrecuenciaMapper frecuenciaMapper;
 
     @Transactional
+    @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
     public FrecuenciaResponseDTO crear(FrecuenciaRequestDTO dto) {
         validarCoherenciaFrecuencia(dto);
         Frecuencia frecuencia = new Frecuencia(
@@ -30,25 +32,24 @@ public class FrecuenciaService {
                 dto.getIntDias(),
                 dto.getDiaSemana()
         );
-        return toResponseDTO(frecuenciaRepository.save(frecuencia));
+        return frecuenciaMapper.toDto(frecuenciaRepository.save(frecuencia));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<FrecuenciaResponseDTO> listarActivas() {
-        List<Frecuencia> frecuencias = frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO);
-        List<FrecuenciaResponseDTO> resultado = new ArrayList<>();
-        for (Frecuencia frecuencia : frecuencias) {
-            resultado.add(toResponseDTO(frecuencia));
-        }
-        return resultado;
+        return frecuenciaMapper.toDtoList(
+                frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public FrecuenciaResponseDTO buscarPorId(int id) {
-        return toResponseDTO(buscarActivaOFallar(id));
+        return frecuenciaMapper.toDto(buscarActivaOFallar(id));
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
     public FrecuenciaResponseDTO actualizar(int id, FrecuenciaRequestDTO dto) {
         validarCoherenciaFrecuencia(dto);
         Frecuencia frecuencia = buscarActivaOFallar(id);
@@ -56,15 +57,18 @@ public class FrecuenciaService {
         frecuencia.setTipo(dto.getTipo());
         frecuencia.setIntDias(dto.getIntDias());
         frecuencia.setDiaSemana(dto.getDiaSemana());
-        return toResponseDTO(frecuenciaRepository.save(frecuencia));
+        return frecuenciaMapper.toDto(frecuenciaRepository.save(frecuencia));
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('BAJA_RECORDATORIO')")
     public void darDeBaja(int id) {
         Frecuencia frecuencia = buscarActivaOFallar(id);
         frecuencia.setEstado(EstadoLogico.INACTIVO);
         frecuenciaRepository.save(frecuencia);
     }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
 
     private Frecuencia buscarActivaOFallar(int id) {
         return frecuenciaRepository.findByIdFrecuenciaAndEstado(id, EstadoLogico.ACTIVO)
@@ -87,21 +91,8 @@ public class FrecuenciaService {
             case MENSUAL -> {
                 if (dto.getIntDias() == null)
                     throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST,"Por favor indicá el intervalo de días para la frecuencia mensual");
+                            HttpStatus.BAD_REQUEST, "Por favor indicá el intervalo de días para la frecuencia mensual");
             }
         }
-    }
-
-    private FrecuenciaResponseDTO toResponseDTO(Frecuencia f) {
-        return FrecuenciaResponseDTO.builder()
-                .idFrecuencia(f.getIdFrecuencia())
-                .descripcion(f.getDescripcion())
-                .tipo(f.getTipo())
-                .intDias(f.getIntDias())
-                .diaSemana(f.getDiaSemana())
-                .estado(f.getEstado())
-                .createdAt(f.getCreatedAt())
-                .updatedAt(f.getUpdatedAt())
-                .build();
     }
 }

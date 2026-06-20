@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.InvolucradoRequestDTO;
 import com.fides.sienep.dto.InvolucradoResponseDTO;
+import com.fides.sienep.mapper.InvolucradoMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Incidencia;
 import com.fides.sienep.model.Involucrado;
@@ -15,8 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -25,13 +26,14 @@ public class InvolucradoService {
 
     private final InvolucradoRepository involucradoRepository;
     private final IncidenciaRepository incidenciaRepository;
+    private final InvolucradoMapper involucradoMapper;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
     public InvolucradoResponseDTO agregar(int codInstancia, InvolucradoRequestDTO dto) {
         buscarIncidenciaOFallar(codInstancia);
 
-        java.util.Optional<Involucrado> existente = involucradoRepository
+        Optional<Involucrado> existente = involucradoRepository
                 .findByIdCodInstanciaAndIdNomInvolucrado(codInstancia, dto.getNomInvolucrado());
 
         if (existente.isPresent()) {
@@ -42,27 +44,21 @@ public class InvolucradoService {
             }
             inv.setEstado(EstadoLogico.ACTIVO);
             log.info("Involucrado reactivado: {} en incidencia {}", dto.getNomInvolucrado(), codInstancia);
-            return toResponseDTO(involucradoRepository.save(inv));
+            return involucradoMapper.toDto(involucradoRepository.save(inv));
         }
 
         Involucrado involucrado = new Involucrado(
                 incidenciaRepository.findById(codInstancia).get(), dto.getNomInvolucrado());
         log.info("Involucrado agregado: {} en incidencia {}", dto.getNomInvolucrado(), codInstancia);
-        return toResponseDTO(involucradoRepository.save(involucrado));
+        return involucradoMapper.toDto(involucradoRepository.save(involucrado));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InvolucradoResponseDTO> listar(int codInstancia) {
         buscarIncidenciaOFallar(codInstancia);
-        List<Involucrado> involucrados =
-                involucradoRepository.findByIdCodInstanciaAndEstado(
-                        codInstancia, EstadoLogico.ACTIVO);
-        List<InvolucradoResponseDTO> resultado = new ArrayList<>();
-        for (Involucrado inv : involucrados) {
-            resultado.add(toResponseDTO(inv));
-        }
-        return resultado;
+        return involucradoMapper.toDtoList(
+                involucradoRepository.findByIdCodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
     @Transactional
@@ -91,15 +87,5 @@ public class InvolucradoService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Involucrado no encontrado: " + nomInvolucrado));
-    }
-
-    private InvolucradoResponseDTO toResponseDTO(Involucrado inv) {
-        return InvolucradoResponseDTO.builder()
-                .codInstancia(inv.getId().getCodInstancia())
-                .nomInvolucrado(inv.getId().getNomInvolucrado())
-                .estado(inv.getEstado())
-                .createdAt(inv.getCreatedAt())
-                .updatedAt(inv.getUpdatedAt())
-                .build();
     }
 }

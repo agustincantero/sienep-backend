@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ComentarioNormalInstanciaRequestDTO;
 import com.fides.sienep.dto.ComentarioNormalInstanciaResponseDTO;
+import com.fides.sienep.mapper.ComentarioNormalInstanciaMapper;
 import com.fides.sienep.model.ComentarioNormalInstancia;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Funcionario;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,6 +28,7 @@ public class ComentarioNormalInstanciaService {
     private final ComentarioNormalInstanciaRepository comentarioRepository;
     private final InstanciaRepository instanciaRepository;
     private final FuncionarioRepository funcionarioRepository;
+    private final ComentarioNormalInstanciaMapper comentarioMapper;
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -49,20 +50,15 @@ public class ComentarioNormalInstanciaService {
         comentario.setInstancia(instancia);
         comentario.setAutor(autor);
 
-        return toResponseDTO(comentarioRepository.save(comentario));
+        return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_INSTANCIA')")
     public List<ComentarioNormalInstanciaResponseDTO> listarPorInstancia(int codInstancia) {
         buscarInstanciaOFallar(codInstancia);
-        List<ComentarioNormalInstancia> comentarios = comentarioRepository
-                .findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO);
-        List<ComentarioNormalInstanciaResponseDTO> resultado = new ArrayList<>();
-        for (ComentarioNormalInstancia comentario : comentarios) {
-            resultado.add(toResponseDTO(comentario));
-        }
-        return resultado;
+        return comentarioMapper.toDtoList(
+                comentarioRepository.findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
     @Transactional
@@ -71,7 +67,7 @@ public class ComentarioNormalInstanciaService {
                                                            ComentarioNormalInstanciaRequestDTO dto) {
         ComentarioNormalInstancia comentario = buscarActivoOFallar(idComentario);
         comentario.setContenido(dto.getContenido());
-        return toResponseDTO(comentarioRepository.save(comentario));
+        return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
     @Transactional
@@ -96,18 +92,5 @@ public class ComentarioNormalInstanciaService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un comentario activo con el id " + idComentario));
-    }
-
-    private ComentarioNormalInstanciaResponseDTO toResponseDTO(ComentarioNormalInstancia c) {
-        ComentarioNormalInstanciaResponseDTO dto = new ComentarioNormalInstanciaResponseDTO();
-        dto.setIdComentario(c.getIdComentario());
-        dto.setCodInstancia(c.getInstancia().getCodInstancia());
-        dto.setContenido(c.getContenido());
-        dto.setIdAutor(c.getAutor().getIdUsuario());
-        dto.setNombreAutor(c.getAutor().getNombre() + " " + c.getAutor().getApellido());
-        dto.setEstado(c.getEstado());
-        dto.setCreatedAt(c.getCreatedAt());
-        dto.setUpdatedAt(c.getUpdatedAt());
-        return dto;
     }
 }

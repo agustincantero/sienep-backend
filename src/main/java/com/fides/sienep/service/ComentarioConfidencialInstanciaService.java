@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ComentarioConfidencialInstanciaRequestDTO;
 import com.fides.sienep.dto.ComentarioConfidencialInstanciaResponseDTO;
+import com.fides.sienep.mapper.ComentarioConfidencialInstanciaMapper;
 import com.fides.sienep.model.ComentarioConfidencialInstancia;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Funcionario;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,6 +28,7 @@ public class ComentarioConfidencialInstanciaService {
     private final ComentarioConfidencialInstanciaRepository comentarioRepository;
     private final InstanciaRepository instanciaRepository;
     private final FuncionarioRepository funcionarioRepository;
+    private final ComentarioConfidencialInstanciaMapper comentarioMapper;
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -50,20 +51,15 @@ public class ComentarioConfidencialInstanciaService {
         comentario.setContenido(dto.getContenido());
         comentario.setAutor(autor);
 
-        return toResponseDTO(comentarioRepository.save(comentario));
+        return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
     public List<ComentarioConfidencialInstanciaResponseDTO> listarPorInstancia(int codInstancia) {
         buscarInstanciaOFallar(codInstancia);
-        List<ComentarioConfidencialInstancia> comentarios = comentarioRepository
-                .findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO);
-        List<ComentarioConfidencialInstanciaResponseDTO> resultado = new ArrayList<>();
-        for (ComentarioConfidencialInstancia comentario : comentarios) {
-            resultado.add(toResponseDTO(comentario));
-        }
-        return resultado;
+        return comentarioMapper.toDtoList(
+                comentarioRepository.findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
     @Transactional
@@ -72,7 +68,7 @@ public class ComentarioConfidencialInstanciaService {
                                                                  ComentarioConfidencialInstanciaRequestDTO dto) {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
         comentario.setContenido(dto.getContenido());
-        return toResponseDTO(comentarioRepository.save(comentario));
+        return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
     @Transactional
@@ -97,18 +93,5 @@ public class ComentarioConfidencialInstanciaService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un comentario confidencial activo con el id " + idComConfidencial));
-    }
-
-    private ComentarioConfidencialInstanciaResponseDTO toResponseDTO(ComentarioConfidencialInstancia c) {
-        ComentarioConfidencialInstanciaResponseDTO dto = new ComentarioConfidencialInstanciaResponseDTO();
-        dto.setIdComConfidencial(c.getId().getIdComConfidencial());
-        dto.setCodInstancia(c.getId().getCodInstancia());
-        dto.setContenido(c.getContenido());
-        dto.setIdAutor(c.getAutor().getIdUsuario());
-        dto.setNombreAutor(c.getAutor().getNombre() + " " + c.getAutor().getApellido());
-        dto.setEstado(c.getEstado());
-        dto.setCreatedAt(c.getCreatedAt());
-        dto.setUpdatedAt(c.getUpdatedAt());
-        return dto;
     }
 }
