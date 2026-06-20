@@ -49,10 +49,9 @@ public class IncidenciaService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
-        Funcionario funcionario = funcionarioRepository.findById(dto.getIdFuncionario())
+        Funcionario funcionario = funcionarioRepository.findById(getIdUsuarioAutenticado())
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "No se encontró un funcionario con el id " + dto.getIdFuncionario()));
+                        HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
 
         Incidencia incidencia = new Incidencia(
                 dto.getTitulo(),
@@ -63,7 +62,6 @@ public class IncidenciaService {
                 dto.getLugar()
         );
 
-        // RF14 — generación automática del identificador de instancia: INST-{año}-{6 dígitos}
         String idNeg = instanciaIdGenerator.generarIdNeg();
         incidencia.setIdNegInstancia(idNeg);
 
@@ -136,15 +134,9 @@ public class IncidenciaService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
-        Funcionario funcionario = funcionarioRepository.findById(dto.getIdFuncionario())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "No se encontró un funcionario con el id " + dto.getIdFuncionario()));
-
         incidencia.setTitulo(dto.getTitulo());
         incidencia.setFechaHora(dto.getFechaHora());
         incidencia.setEstudiante(estudiante);
-        incidencia.setFuncionario(funcionario);
         incidencia.setCanal(dto.getCanal());
         incidencia.setLugar(dto.getLugar());
 

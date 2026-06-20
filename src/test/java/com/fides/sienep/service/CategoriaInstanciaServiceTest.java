@@ -6,11 +6,15 @@ import com.fides.sienep.dto.CategoriaInstanciaUpdateDTO;
 import com.fides.sienep.model.CategoriaInstancia;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaInstanciaRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
+import com.fides.sienep.mapper.CategoriaInstanciaMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -27,10 +31,15 @@ public class CategoriaInstanciaServiceTest {
     @Mock
     private CategoriaInstanciaRepository categoriaRepository;
 
+    @SuppressWarnings("unused")
+    @Spy
+    private CategoriaInstanciaMapper mapper = Mappers.getMapper(CategoriaInstanciaMapper.class);
+
     @InjectMocks
     private CategoriaInstanciaService categoriaService;
 
     @Test
+    @DisplayName("Listar categorías de instancia - Éxito")
     void obtenerTodas_DebeRetornarListaDeCategorias() {
         CategoriaInstancia cat = new CategoriaInstancia();
         cat.setIdCategoria(1);
@@ -47,6 +56,7 @@ public class CategoriaInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Obtener categoría por ID - Éxito")
     void obtenerPorId_Exito() {
         CategoriaInstancia cat = new CategoriaInstancia();
         cat.setIdCategoria(1);
@@ -61,6 +71,7 @@ public class CategoriaInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Obtener categoría por ID - No encontrada (404)")
     void obtenerPorId_LanzaNotFound() {
         when(categoriaRepository.findById(99)).thenReturn(Optional.empty());
 
@@ -68,6 +79,7 @@ public class CategoriaInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Crear categoría - Éxito")
     void crearCategoria_Exito() {
         CategoriaInstanciaCreateDTO dto = new CategoriaInstanciaCreateDTO();
         dto.setNomCategoria("  Categoria Nueva  ");
@@ -89,6 +101,7 @@ public class CategoriaInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Crear categoría - Conflicto si nombre ya existe (409)")
     void crearCategoria_LanzaConflict_CuandoNombreYaExiste() {
         CategoriaInstanciaCreateDTO dto = new CategoriaInstanciaCreateDTO();
         dto.setNomCategoria("Existente");
@@ -100,6 +113,7 @@ public class CategoriaInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar categoría - Éxito")
     void actualizarCategoria_Exito() {
         CategoriaInstancia cat = new CategoriaInstancia();
         cat.setIdCategoria(1);
@@ -120,6 +134,7 @@ public class CategoriaInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar categoría - Conflicto si el nuevo nombre ya existe (409)")
     void actualizarCategoria_LanzaConflict_CuandoNombreYaExiste() {
         CategoriaInstancia cat = new CategoriaInstancia();
         cat.setIdCategoria(1);
@@ -135,6 +150,7 @@ public class CategoriaInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Dar de baja categoría - Éxito (Baja lógica)")
     void darDeBajaCategoria_Exito() {
         CategoriaInstancia cat = new CategoriaInstancia();
         cat.setIdCategoria(5);
@@ -149,6 +165,7 @@ public class CategoriaInstanciaServiceTest {
     }
     
     @Test
+    @DisplayName("Dar de baja categoría - No encontrada (404)")
     void darDeBajaCategoria_LanzaNotFound() {
         when(categoriaRepository.findById(99)).thenReturn(Optional.empty());
         assertThrows(ResponseStatusException.class, () -> categoriaService.darDeBajaCategoria(99));

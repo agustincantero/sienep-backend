@@ -5,11 +5,15 @@ import com.fides.sienep.dto.PermisoUpdateDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Permiso;
 import com.fides.sienep.repository.PermisoRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
+import com.fides.sienep.mapper.PermisoMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,10 +30,15 @@ public class PermisoServiceTest {
     @Mock
     private PermisoRepository permisoRepository;
 
+    @SuppressWarnings("unused")
+    @Spy
+    private PermisoMapper mapper = Mappers.getMapper(PermisoMapper.class);
+
     @InjectMocks
     private PermisoService permisoService;
 
     @Test
+    @DisplayName("Obtener todos los permisos - Éxito")
     void obtenerTodos_DebeRetornarListaDePermisos() {
         // Arrange
         Permiso p1 = new Permiso("PERMISO_1", 1, "desc 1", EstadoLogico.ACTIVO);
@@ -47,6 +56,7 @@ public class PermisoServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar descripción del permiso - Éxito")
     void actualizarDescripcion_Exito() {
         // Arrange
         int permisoId = 1;
@@ -69,6 +79,7 @@ public class PermisoServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar descripción - Permiso no encontrado (404)")
     void actualizarDescripcion_LanzaNotFound_CuandoPermisoNoExiste() {
         // Arrange
         int permisoId = 99;

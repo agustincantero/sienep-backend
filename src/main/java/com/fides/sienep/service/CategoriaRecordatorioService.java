@@ -13,7 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
+import com.fides.sienep.mapper.CategoriaRecordatorioMapper;
+
 import java.util.List;
 
 @Service
@@ -21,25 +22,13 @@ import java.util.List;
 public class CategoriaRecordatorioService {
 
     private final CategoriaRecordatorioRepository categoriaRepository;
-
-    private CategoriaRecordatorioResponseDTO toResponseDTO(CategoriaRecordatorio categoria) {
-        CategoriaRecordatorioResponseDTO dto = new CategoriaRecordatorioResponseDTO();
-        dto.setIdCategoria(categoria.getIdCategoria());
-        dto.setNomCategoria(categoria.getNomCategoria());
-        dto.setDescripcion(categoria.getDescripcion());
-        dto.setEstado(categoria.getEstado());
-        return dto;
-    }
+    private final CategoriaRecordatorioMapper mapper;
 
     @PreAuthorize("hasAuthority('VER_CATEGORIA_RECORDATORIO')")
     @Transactional(readOnly = true)
     public List<CategoriaRecordatorioResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
         List<CategoriaRecordatorio> categorias = categoriaRepository.buscarConFiltros(nombre, estado);
-        List<CategoriaRecordatorioResponseDTO> dtoList = new ArrayList<>();
-        for (CategoriaRecordatorio cat : categorias) {
-            dtoList.add(toResponseDTO(cat));
-        }
-        return dtoList;
+        return mapper.toDtoList(categorias);
     }
 
     @PreAuthorize("hasAuthority('VER_CATEGORIA_RECORDATORIO')")
@@ -47,7 +36,7 @@ public class CategoriaRecordatorioService {
     public CategoriaRecordatorioResponseDTO obtenerPorId(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
-        return toResponseDTO(categoria);
+        return mapper.toDto(categoria);
     }
 
     @PreAuthorize("hasAuthority('CREAR_CATEGORIA_RECORDATORIO')")
@@ -65,7 +54,7 @@ public class CategoriaRecordatorioService {
         categoria.setEstado(EstadoLogico.ACTIVO); // Forzamos ACTIVO
 
         CategoriaRecordatorio guardada = categoriaRepository.save(categoria);
-        return toResponseDTO(guardada);
+        return mapper.toDto(guardada);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_CATEGORIA_RECORDATORIO')")
@@ -85,7 +74,7 @@ public class CategoriaRecordatorioService {
         categoria.setEstado(requestDTO.getEstado());
 
         CategoriaRecordatorio actualizada = categoriaRepository.save(categoria);
-        return toResponseDTO(actualizada);
+        return mapper.toDto(actualizada);
     }
 
     @PreAuthorize("hasAuthority('ELIMINAR_CATEGORIA_RECORDATORIO')")

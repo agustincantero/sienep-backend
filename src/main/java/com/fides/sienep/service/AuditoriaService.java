@@ -6,6 +6,7 @@ import com.fides.sienep.model.Usuario;
 import com.fides.sienep.repository.AuditoriaRepository;
 import com.fides.sienep.repository.UsuarioRepository;
 import com.fides.sienep.dto.AuditoriaResponseDTO;
+import com.fides.sienep.mapper.AuditoriaMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class AuditoriaService {
 
     private final AuditoriaRepository auditoriaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AuditoriaMapper mapper;
 
     @Transactional
     public void registrarEventoManual(String entidad, TipoAccion accion, Integer idUsuario, String ip) {
@@ -39,13 +41,12 @@ public class AuditoriaService {
             return;
         }
 
-        Auditoria auditoria = new Auditoria();
-        auditoria.setEntidad(entidad.toUpperCase());
-        auditoria.setAccion(accion);
-        auditoria.setAutor(autor);
-        auditoria.setIp(ip);
-        auditoria.setValorAnterior(null);
-        auditoria.setValorNuevo(null);
+        Auditoria auditoria = Auditoria.builder()
+                .entidad(entidad.toUpperCase())
+                .accion(accion)
+                .autor(autor)
+                .ip(ip)
+                .build();
 
         auditoriaRepository.save(auditoria);
     }
@@ -71,11 +72,7 @@ public class AuditoriaService {
 
         Page<Auditoria> auditoriasPage = auditoriaRepository.findAll(spec, pageable);
         
-        List<AuditoriaResponseDTO> respuestas = new ArrayList<>();
-
-        for (Auditoria auditoria : auditoriasPage.getContent()) {
-            respuestas.add(mapToResponseDTO(auditoria));
-        }
+        List<AuditoriaResponseDTO> respuestas = mapper.toDtoList(auditoriasPage.getContent());
 
         return new PageImpl<>(respuestas, pageable, auditoriasPage.getTotalElements());
     }
@@ -86,29 +83,6 @@ public class AuditoriaService {
         Auditoria auditoria = auditoriaRepository.findById(id)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Registro de auditoría no encontrado"));
-        return mapToResponseDTO(auditoria);
-    }
-
-    private AuditoriaResponseDTO mapToResponseDTO(Auditoria auditoria) {
-        String nombreAutor = null;
-        Integer idAutor = null;
-
-        if (auditoria.getAutor() != null) {
-            idAutor = auditoria.getAutor().getIdUsuario();
-            nombreAutor = auditoria.getAutor().getNombre() + " " + auditoria.getAutor().getApellido();
-        }
-
-        return AuditoriaResponseDTO.builder()
-                .idAuditoria(auditoria.getId())
-                .entidad(auditoria.getEntidad())
-                .accion(auditoria.getAccion())
-                .idAutor(idAutor)
-                .nombreAutor(nombreAutor)
-                .usuarioBd(auditoria.getUsuarioBd())
-                .fechaHora(auditoria.getFechaHora())
-                .ip(auditoria.getIp())
-                .valorAnterior(auditoria.getValorAnterior() != null ? auditoria.getValorAnterior().toString() : null)
-                .valorNuevo(auditoria.getValorNuevo() != null ? auditoria.getValorNuevo().toString() : null)
-                .build();
+        return mapper.toDto(auditoria);
     }
 }
