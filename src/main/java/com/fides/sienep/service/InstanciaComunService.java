@@ -142,6 +142,12 @@ public class InstanciaComunService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
+        if (categoria.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La categoría con id " + dto.getIdCategoria() + " no está activa");
+        }
+
         instancia.setTitulo(dto.getTitulo());
         instancia.setFechaHora(dto.getFechaHora());
         instancia.setCanal(dto.getCanal());

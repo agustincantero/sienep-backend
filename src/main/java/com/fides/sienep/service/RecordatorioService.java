@@ -5,6 +5,7 @@ import com.fides.sienep.dto.RecordatorioResponseDTO;
 import com.fides.sienep.mapper.RecordatorioMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
+import com.fides.sienep.utils.RecordatorioIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +25,7 @@ public class RecordatorioService {
     private final FuncionarioRepository funcionarioRepository;
     private final FrecuenciaRepository frecuenciaRepository;
     private final RecordatorioMapper recordatorioMapper;
+    private final RecordatorioIdGenerator recordatorioIdGenerator;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
@@ -33,15 +35,33 @@ public class RecordatorioService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró una instancia con el id " + dto.getCodInstancia()));
 
+        if (instancia.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La instancia con id " + dto.getCodInstancia() + " no está activa");
+        }
+
         CategoriaRecordatorio categoria = categoriaRecordatorioRepository.findById(dto.getIdCategoria())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
+        if (categoria.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La categoría con id " + dto.getIdCategoria() + " no está activa");
+        }
+
         Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un funcionario con el id " + dto.getIdResponsable()));
+
+        if (responsable.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El funcionario con id " + dto.getIdResponsable() + " no está activo");
+        }
 
         Recordatorio recordatorio = new Recordatorio(
                 dto.getTitulo(),
@@ -52,11 +72,19 @@ public class RecordatorioService {
                 responsable
         );
 
+        recordatorio.setIdNegRecordatorio(recordatorioIdGenerator.generarIdNeg());
+
         if (dto.getIdFrecuencia() != null) {
             Frecuencia frecuencia = frecuenciaRepository.findById(dto.getIdFrecuencia())
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             "No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
+
+            if (frecuencia.getEstado() != EstadoLogico.ACTIVO) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "La frecuencia con id " + dto.getIdFrecuencia() + " no está activa");
+            }
             recordatorio.setFrecuencia(frecuencia);
         }
 
@@ -103,15 +131,33 @@ public class RecordatorioService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró una instancia con el id " + dto.getCodInstancia()));
 
+        if (instancia.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La instancia con id " + dto.getCodInstancia() + " no está activa");
+        }
+
         CategoriaRecordatorio categoria = categoriaRecordatorioRepository.findById(dto.getIdCategoria())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
+        if (categoria.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La categoría con id " + dto.getIdCategoria() + " no está activa");
+        }
+
         Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un funcionario con el id " + dto.getIdResponsable()));
+
+        if (responsable.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El funcionario con id " + dto.getIdResponsable() + " no está activo");
+        }
 
         recordatorio.setTitulo(dto.getTitulo());
         recordatorio.setTipo(dto.getTipo());
@@ -127,6 +173,12 @@ public class RecordatorioService {
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             "No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
+
+            if (frecuencia.getEstado() != EstadoLogico.ACTIVO) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "La frecuencia con id " + dto.getIdFrecuencia() + " no está activa");
+            }
             recordatorio.setFrecuencia(frecuencia);
         } else {
             recordatorio.setFrecuencia(null);

@@ -252,4 +252,125 @@ class InstanciaComunServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
+
+    @Test
+    @DisplayName("Crear instancia común - Funcionario no encontrado (404)")
+    void crear_LanzaNotFound_FuncionarioNoExiste() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Categoría no encontrada (404)")
+    void crear_LanzaNotFound_CategoriaNoExiste() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Actualizar instancia común - Categoría no encontrada (404)")
+    void actualizar_LanzaNotFound_CategoriaNoExiste() {
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now());
+        updateDTO.setIdCategoria(99);
+
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.actualizar(1, updateDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Actualizar instancia común - Categoría inactiva (422)")
+    void actualizar_LanzaUnprocessable_CategoriaInactiva() {
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now());
+        updateDTO.setIdCategoria(1);
+
+        categoria.setEstado(EstadoLogico.INACTIVO);
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.actualizar(1, updateDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Listar por estudiante - Éxito")
+    void listarPorEstudiante_Exito() {
+        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(List.of(instancia));
+        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
+
+        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorEstudiante(1);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    @DisplayName("Listar por funcionario - Éxito")
+    void listarPorFuncionario_Exito() {
+        when(instanciaComunRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO))
+                .thenReturn(List.of(instancia));
+        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
+
+        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorFuncionario(2);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    @DisplayName("Listar por categoría - Éxito")
+    void listarPorCategoria_Exito() {
+        when(instanciaComunRepository.findByCategoriaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(List.of(instancia));
+        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
+
+        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorCategoria(1);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    @DisplayName("Listar mis instancias - Éxito")
+    void listarMisInstancias_Exito() {
+        mockSecurityContext(1);
+        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(List.of(instancia));
+        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
+
+        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarMisInstancias();
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
 }

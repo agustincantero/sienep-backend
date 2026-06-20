@@ -236,4 +236,87 @@ class IncidenciaServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
+
+    @Test
+    @DisplayName("Crear incidencia - Funcionario no encontrado (404)")
+    void crear_LanzaNotFound_FuncionarioNoExiste() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> incidenciaService.crear(requestDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(incidenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Actualizar incidencia - Estudiante no encontrado (404)")
+    void actualizar_LanzaNotFound_EstudianteNoExiste() {
+        when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(incidencia));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> incidenciaService.actualizar(1, requestDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(incidenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Actualizar incidencia - Estudiante inactivo (422)")
+    void actualizar_LanzaUnprocessable_EstudianteInactivo() {
+        estudiante.setEstado(EstadoLogico.INACTIVO);
+        when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(incidencia));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> incidenciaService.actualizar(1, requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        verify(incidenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Listar por estudiante - Éxito")
+    void listarPorEstudiante_Exito() {
+        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(List.of(incidencia));
+        when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
+
+        List<IncidenciaResponseDTO> resultado = incidenciaService.listarPorEstudiante(1);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    @DisplayName("Listar por funcionario - Éxito")
+    void listarPorFuncionario_Exito() {
+        when(incidenciaRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO))
+                .thenReturn(List.of(incidencia));
+        when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
+
+        List<IncidenciaResponseDTO> resultado = incidenciaService.listarPorFuncionario(2);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    @DisplayName("Listar mis incidencias - Éxito")
+    void listarMisIncidencias_Exito() {
+        mockSecurityContext(1);
+        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(List.of(incidencia));
+        when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
+
+        List<IncidenciaResponseDTO> resultado = incidenciaService.listarMisIncidencias();
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
 }

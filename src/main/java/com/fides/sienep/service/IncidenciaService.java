@@ -125,6 +125,12 @@ public class IncidenciaService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El estudiante con id " + dto.getIdEstudiante() + " no está activo");
+        }
+
         incidencia.setTitulo(dto.getTitulo());
         incidencia.setFechaHora(dto.getFechaHora());
         incidencia.setEstudiante(estudiante);
