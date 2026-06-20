@@ -2,8 +2,10 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.mapper.RecordatorioMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
+import com.fides.sienep.utils.RecordatorioIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,6 +24,8 @@ public class RecordatorioService {
     private final CategoriaRecordatorioRepository categoriaRecordatorioRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final FrecuenciaRepository frecuenciaRepository;
+    private final RecordatorioMapper recordatorioMapper;
+    private final RecordatorioIdGenerator recordatorioIdGenerator;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
@@ -32,15 +35,33 @@ public class RecordatorioService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró una instancia con el id " + dto.getCodInstancia()));
 
+        if (instancia.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La instancia con id " + dto.getCodInstancia() + " no está activa");
+        }
+
         CategoriaRecordatorio categoria = categoriaRecordatorioRepository.findById(dto.getIdCategoria())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
+        if (categoria.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La categoría con id " + dto.getIdCategoria() + " no está activa");
+        }
+
         Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un funcionario con el id " + dto.getIdResponsable()));
+
+        if (responsable.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El funcionario con id " + dto.getIdResponsable() + " no está activo");
+        }
 
         Recordatorio recordatorio = new Recordatorio(
                 dto.getTitulo(),
@@ -51,57 +72,53 @@ public class RecordatorioService {
                 responsable
         );
 
+        recordatorio.setIdNegRecordatorio(recordatorioIdGenerator.generarIdNeg());
+
         if (dto.getIdFrecuencia() != null) {
             Frecuencia frecuencia = frecuenciaRepository.findById(dto.getIdFrecuencia())
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             "No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
+
+            if (frecuencia.getEstado() != EstadoLogico.ACTIVO) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "La frecuencia con id " + dto.getIdFrecuencia() + " no está activa");
+            }
             recordatorio.setFrecuencia(frecuencia);
         }
 
         recordatorio.setFechaFin(dto.getFechaFin());
         recordatorio.setNroOcurrencias(dto.getNroOcurrencias());
 
-        return toResponseDTO(recordatorioRepository.save(recordatorio));
+        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarActivos() {
-        List<Recordatorio> recordatorios = recordatorioRepository.findByEstado(EstadoLogico.ACTIVO);
-        List<RecordatorioResponseDTO> resultado = new ArrayList<>();
-        for (Recordatorio recordatorio : recordatorios) {
-            resultado.add(toResponseDTO(recordatorio));
-        }
-        return resultado;
+        return recordatorioMapper.toDtoList(
+                recordatorioRepository.findByEstado(EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public RecordatorioResponseDTO buscarPorId(int id) {
-        return toResponseDTO(buscarActivoOFallar(id));
+        return recordatorioMapper.toDto(buscarActivoOFallar(id));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarPorInstancia(int codInstancia) {
-        List<Recordatorio> recordatorios = recordatorioRepository.findByInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO);
-        List<RecordatorioResponseDTO> resultado = new ArrayList<>();
-        for (Recordatorio recordatorio : recordatorios) {
-            resultado.add(toResponseDTO(recordatorio));
-        }
-        return resultado;
+        return recordatorioMapper.toDtoList(
+                recordatorioRepository.findByInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<RecordatorioResponseDTO> listarPorResponsable(int idResponsable) {
-        List<Recordatorio> recordatorios = recordatorioRepository.findByResponsableAndEstado(idResponsable, EstadoLogico.ACTIVO);
-        List<RecordatorioResponseDTO> resultado = new ArrayList<>();
-        for (Recordatorio recordatorio : recordatorios) {
-            resultado.add(toResponseDTO(recordatorio));
-        }
-        return resultado;
+        return recordatorioMapper.toDtoList(
+                recordatorioRepository.findByResponsableAndEstado(idResponsable, EstadoLogico.ACTIVO));
     }
 
     @Transactional
@@ -114,15 +131,33 @@ public class RecordatorioService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró una instancia con el id " + dto.getCodInstancia()));
 
+        if (instancia.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La instancia con id " + dto.getCodInstancia() + " no está activa");
+        }
+
         CategoriaRecordatorio categoria = categoriaRecordatorioRepository.findById(dto.getIdCategoria())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
+        if (categoria.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La categoría con id " + dto.getIdCategoria() + " no está activa");
+        }
+
         Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un funcionario con el id " + dto.getIdResponsable()));
+
+        if (responsable.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El funcionario con id " + dto.getIdResponsable() + " no está activo");
+        }
 
         recordatorio.setTitulo(dto.getTitulo());
         recordatorio.setTipo(dto.getTipo());
@@ -138,12 +173,18 @@ public class RecordatorioService {
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             "No se encontró una frecuencia con el id " + dto.getIdFrecuencia()));
+
+            if (frecuencia.getEstado() != EstadoLogico.ACTIVO) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "La frecuencia con id " + dto.getIdFrecuencia() + " no está activa");
+            }
             recordatorio.setFrecuencia(frecuencia);
         } else {
             recordatorio.setFrecuencia(null);
         }
 
-        return toResponseDTO(recordatorioRepository.save(recordatorio));
+        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
     }
 
     @Transactional
@@ -159,31 +200,5 @@ public class RecordatorioService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un recordatorio activo con el id " + id));
-    }
-
-    private RecordatorioResponseDTO toResponseDTO(Recordatorio r) {
-        RecordatorioResponseDTO dto = new RecordatorioResponseDTO();
-        dto.setCodRecordatorio(r.getCodRecordatorio());
-        dto.setIdNegRecordatorio(r.getIdNegRecordatorio());
-        dto.setTitulo(r.getTitulo());
-        dto.setTipo(r.getTipo());
-        dto.setFechaHora(r.getFechaHora());
-        dto.setCodInstancia(r.getInstancia().getCodInstancia());
-        dto.setTituloInstancia(r.getInstancia().getTitulo());
-        dto.setIdCategoria(r.getCategoria().getIdCategoria());
-        dto.setNombreCategoria(r.getCategoria().getNomCategoria());
-        dto.setIdResponsable(r.getResponsable().getIdUsuario());
-        dto.setNombreResponsable(r.getResponsable().getNombre() + " " + r.getResponsable().getApellido());
-        if (r.getFrecuencia() != null) {
-            dto.setIdFrecuencia(r.getFrecuencia().getIdFrecuencia());
-            dto.setDescripcionFrecuencia(r.getFrecuencia().getDescripcion());
-        }
-        dto.setFechaFin(r.getFechaFin());
-        dto.setNroOcurrencias(r.getNroOcurrencias());
-        dto.setEstadoOperativo(r.getEstadoOperativo());
-        dto.setEstado(r.getEstado());
-        dto.setCreatedAt(r.getCreatedAt());
-        dto.setUpdatedAt(r.getUpdatedAt());
-        return dto;
     }
 }

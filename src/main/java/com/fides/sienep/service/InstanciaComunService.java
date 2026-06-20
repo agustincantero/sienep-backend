@@ -3,6 +3,7 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.InstanciaComunRequestDTO;
 import com.fides.sienep.dto.InstanciaComunResponseDTO;
 import com.fides.sienep.dto.InstanciaComunUpdateDTO;
+import com.fides.sienep.mapper.InstanciaComunMapper;
 import com.fides.sienep.model.CategoriaInstancia;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -34,6 +34,7 @@ public class InstanciaComunService {
     private final FuncionarioRepository funcionarioRepository;
     private final CategoriaInstanciaRepository categoriaInstanciaRepository;
     private final InstanciaIdGenerator instanciaIdGenerator;
+    private final InstanciaComunMapper instanciaComunMapper;
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -86,73 +87,49 @@ public class InstanciaComunService {
 
         instancia.setIdNegInstancia(instanciaIdGenerator.generarIdNeg());
 
-        return toResponseDTO(instanciaComunRepository.save(instancia));
+        return instanciaComunMapper.toDto(instanciaComunRepository.save(instancia));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InstanciaComunResponseDTO> listarActivas() {
-        List<InstanciaComun> instancias = instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO);
-        List<InstanciaComunResponseDTO> resultado = new ArrayList<>();
-        for (InstanciaComun instancia : instancias) {
-            resultado.add(toResponseDTO(instancia));
-        }
-        return resultado;
+        return instanciaComunMapper.toDtoList(
+                instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public InstanciaComunResponseDTO buscarPorId(int codInstancia) {
-        return toResponseDTO(buscarActivaOFallar(codInstancia));
+        return instanciaComunMapper.toDto(buscarActivaOFallar(codInstancia));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InstanciaComunResponseDTO> listarPorEstudiante(int idEstudiante) {
-        List<InstanciaComun> instancias = instanciaComunRepository
-                .findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO);
-        List<InstanciaComunResponseDTO> resultado = new ArrayList<>();
-        for (InstanciaComun instancia : instancias) {
-            resultado.add(toResponseDTO(instancia));
-        }
-        return resultado;
+        return instanciaComunMapper.toDtoList(
+                instanciaComunRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InstanciaComunResponseDTO> listarPorFuncionario(int idFuncionario) {
-        List<InstanciaComun> instancias = instanciaComunRepository
-                .findByFuncionarioAndEstado(idFuncionario, EstadoLogico.ACTIVO);
-        List<InstanciaComunResponseDTO> resultado = new ArrayList<>();
-        for (InstanciaComun instancia : instancias) {
-            resultado.add(toResponseDTO(instancia));
-        }
-        return resultado;
+        return instanciaComunMapper.toDtoList(
+                instanciaComunRepository.findByFuncionarioAndEstado(idFuncionario, EstadoLogico.ACTIVO));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public List<InstanciaComunResponseDTO> listarPorCategoria(int idCategoria) {
-        List<InstanciaComun> instancias = instanciaComunRepository
-                .findByCategoriaAndEstado(idCategoria, EstadoLogico.ACTIVO);
-        List<InstanciaComunResponseDTO> resultado = new ArrayList<>();
-        for (InstanciaComun instancia : instancias) {
-            resultado.add(toResponseDTO(instancia));
-        }
-        return resultado;
+        return instanciaComunMapper.toDtoList(
+                instanciaComunRepository.findByCategoriaAndEstado(idCategoria, EstadoLogico.ACTIVO));
     }
 
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
     public List<InstanciaComunResponseDTO> listarMisInstancias() {
         Integer idEstudiante = getIdUsuarioAutenticado();
-        List<InstanciaComun> instancias = instanciaComunRepository
-                .findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO);
-        List<InstanciaComunResponseDTO> resultado = new ArrayList<>();
-        for (InstanciaComun instancia : instancias) {
-            resultado.add(toResponseDTO(instancia));
-        }
-        return resultado;
+        return instanciaComunMapper.toDtoList(
+                instanciaComunRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
     }
 
     @Transactional
@@ -165,12 +142,18 @@ public class InstanciaComunService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró una categoría con el id " + dto.getIdCategoria()));
 
+        if (categoria.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La categoría con id " + dto.getIdCategoria() + " no está activa");
+        }
+
         instancia.setTitulo(dto.getTitulo());
         instancia.setFechaHora(dto.getFechaHora());
         instancia.setCanal(dto.getCanal());
         instancia.setCategoria(categoria);
 
-        return toResponseDTO(instanciaComunRepository.save(instancia));
+        return instanciaComunMapper.toDto(instanciaComunRepository.save(instancia));
     }
 
     @Transactional
@@ -190,24 +173,5 @@ public class InstanciaComunService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró una instancia activa con el id " + codInstancia));
-    }
-
-    private InstanciaComunResponseDTO toResponseDTO(InstanciaComun ic) {
-        InstanciaComunResponseDTO dto = new InstanciaComunResponseDTO();
-        dto.setCodInstancia(ic.getCodInstancia());
-        dto.setIdNegInstancia(ic.getIdNegInstancia());
-        dto.setTitulo(ic.getTitulo());
-        dto.setFechaHora(ic.getFechaHora());
-        dto.setCanal(ic.getCanal());
-        dto.setIdEstudiante(ic.getEstudiante().getIdUsuario());
-        dto.setNombreEstudiante(ic.getEstudiante().getNombre() + " " + ic.getEstudiante().getApellido());
-        dto.setIdFuncionario(ic.getFuncionario().getIdUsuario());
-        dto.setNombreFuncionario(ic.getFuncionario().getNombre() + " " + ic.getFuncionario().getApellido());
-        dto.setIdCategoria(ic.getCategoria().getIdCategoria());
-        dto.setNombreCategoria(ic.getCategoria().getNomCategoria());
-        dto.setEstado(ic.getEstado());
-        dto.setCreatedAt(ic.getCreatedAt());
-        dto.setUpdatedAt(ic.getUpdatedAt());
-        return dto;
     }
 }

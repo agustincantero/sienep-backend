@@ -431,6 +431,12 @@ CREATE TRIGGER trg_actualizar_incidencias
 -- =====================================================
 -- TABLA: recordatorios
 -- =====================================================
+CREATE SEQUENCE IF NOT EXISTS proyecto.seq_recordatorio
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO CYCLE;
+
 CREATE TABLE proyecto.recordatorios (
                                         cod_recordatorio    SERIAL PRIMARY KEY,
                                         id_categoria        INT                        NOT NULL,
