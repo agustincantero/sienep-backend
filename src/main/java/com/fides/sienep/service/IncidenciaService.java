@@ -49,9 +49,21 @@ public class IncidenciaService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró un estudiante con el id " + dto.getIdEstudiante()));
 
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El estudiante con id " + dto.getIdEstudiante() + " no está activo");
+        }
+
         Funcionario funcionario = funcionarioRepository.findById(getIdUsuarioAutenticado())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
+
+        if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "El funcionario autenticado no está activo");
+        }
 
         Incidencia incidencia = new Incidencia(
                 dto.getTitulo(),
