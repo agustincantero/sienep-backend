@@ -112,7 +112,7 @@ public class AuditoriaServiceTest {
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> auditoriaService.obtenerAuditoriaPorId(99));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        assertEquals("Registro de auditoría no encontrado", ex.getReason());
+        assertEquals("Auditoria no encontrada con el ID: 99", ex.getReason());
     }
 
     @Test
