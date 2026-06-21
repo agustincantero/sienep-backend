@@ -55,18 +55,10 @@ public class ItrService {
         }
 
         Itr itr = new Itr(dto.getNomItr());
-
-        // Si no hay carreras a asociar, se guarda una sola vez y listo.
-        if (dto.getCarrerasIds() == null || dto.getCarrerasIds().isEmpty()) {
-            return itrMapper.toDto(itrRepository.save(itr));
-        }
-
-        // Si hay carreras, guardamos primero para generar el ID de ITR en BD
         itr = itrRepository.save(itr); 
 
         asociarCarreras(itr, dto.getCarrerasIds());
 
-        // Guardamos por segunda vez con las relaciones
         return itrMapper.toDto(itrRepository.save(itr)); 
     }
 
@@ -137,10 +129,6 @@ public class ItrService {
     }
 
     private void asociarCarreras(Itr itr, List<Integer> nuevasCarrerasIds) {
-        if (nuevasCarrerasIds == null) {
-            nuevasCarrerasIds = java.util.Collections.emptyList();
-        }
-
         for (ItrCarrera itrCarrera : itr.getCarreras()) {
             if (itrCarrera.getEstado() == EstadoLogico.ACTIVO && 
                 !nuevasCarrerasIds.contains(itrCarrera.getCarrera().getIdCarrera())) {

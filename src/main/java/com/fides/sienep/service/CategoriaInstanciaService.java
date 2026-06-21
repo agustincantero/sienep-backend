@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import com.fides.sienep.mapper.CategoriaInstanciaMapper;
 
@@ -27,6 +29,7 @@ public class CategoriaInstanciaService {
     // --- Métodos CRUD ---
     @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
     @Transactional(readOnly = true)
+    @Cacheable("categoriasInstancia")
     public List<CategoriaInstanciaResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
         List<CategoriaInstancia> categorias = categoriaRepository.buscarConFiltros(nombre, estado);
         return mapper.toDtoList(categorias);
@@ -34,6 +37,7 @@ public class CategoriaInstanciaService {
 
     @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
     @Transactional(readOnly = true)
+    @Cacheable(value = "categoriasInstancia", key = "#id")
     public CategoriaInstanciaResponseDTO obtenerPorId(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
@@ -42,6 +46,7 @@ public class CategoriaInstanciaService {
 
     @PreAuthorize("hasAuthority('CREAR_CATEGORIA_INSTANCIA')")
     @Transactional
+    @CacheEvict(value = "categoriasInstancia", allEntries = true)
     public CategoriaInstanciaResponseDTO crearCategoria(CategoriaInstanciaCreateDTO requestDTO) {
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
@@ -61,9 +66,14 @@ public class CategoriaInstanciaService {
 
     @PreAuthorize("hasAuthority('EDITAR_CATEGORIA_INSTANCIA')")
     @Transactional
+    @CacheEvict(value = "categoriasInstancia", allEntries = true)
     public CategoriaInstanciaResponseDTO actualizarCategoria(int id, CategoriaInstanciaUpdateDTO requestDTO) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
+
+        if (categoria.getEstado() == EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede editar una categoría inactiva. Por favor, reactívela primero.");
+        }
 
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
@@ -75,7 +85,6 @@ public class CategoriaInstanciaService {
 
         categoria.setNomCategoria(nombreNormalizado);
         categoria.setDescripcion(requestDTO.getDescripcion());
-        categoria.setEstado(requestDTO.getEstado());
 
         CategoriaInstancia actualizada = categoriaRepository.save(categoria);
         return mapper.toDto(actualizada);
@@ -83,11 +92,31 @@ public class CategoriaInstanciaService {
 
     @PreAuthorize("hasAuthority('ELIMINAR_CATEGORIA_INSTANCIA')")
     @Transactional
+    @CacheEvict(value = "categoriasInstancia", allEntries = true)
     public void darDeBajaCategoria(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
         
+        if (categoria.getEstado() == EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La categoría ya se encuentra inactiva");
+        }
+        
         categoria.setEstado(EstadoLogico.INACTIVO);
         categoriaRepository.save(categoria);
+    }
+
+    @PreAuthorize("hasAuthority('REACTIVAR_CATEGORIA_INSTANCIA')")
+    @Transactional
+    @CacheEvict(value = "categoriasInstancia", allEntries = true)
+    public CategoriaInstanciaResponseDTO reactivarCategoria(int id) {
+        CategoriaInstancia categoria = categoriaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
+
+        if (categoria.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La categoría ya se encuentra activa");
+        }
+
+        categoria.setEstado(EstadoLogico.ACTIVO);
+        return mapper.toDto(categoriaRepository.save(categoria));
     }
 }

@@ -855,6 +855,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('CREAR_ROL',               'Permite crear nuevos roles'),
     ('EDITAR_ROL',              'Permite editar la información de un rol'),
     ('ELIMINAR_ROL',            'Permite eliminar un rol existente'),
+    ('REACTIVAR_ROL',           'Permite reactivar un rol dado de baja'),
     ('ASIGNAR_PERMISOS',        'Permite asignar o revocar permisos a roles'),
     -- Estudiantes
     ('VER_ESTUDIANTE',              'Permite visualizar los datos de los estudiantes'),
@@ -900,10 +901,12 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('CREAR_CATEGORIA_INSTANCIA',  'Permite crear categorías de instancias'),
     ('EDITAR_CATEGORIA_INSTANCIA', 'Permite editar categorías de instancias'),
     ('ELIMINAR_CATEGORIA_INSTANCIA','Permite dar de baja categorías de instancias'),
+    ('REACTIVAR_CATEGORIA_INSTANCIA','Permite reactivar categorías de instancias dadas de baja'),
     ('VER_CATEGORIA_RECORDATORIO', 'Permite visualizar categorías de recordatorios'),
     ('CREAR_CATEGORIA_RECORDATORIO','Permite crear categorías de recordatorios'),
     ('EDITAR_CATEGORIA_RECORDATORIO','Permite editar categorías de recordatorios'),
     ('ELIMINAR_CATEGORIA_RECORDATORIO','Permite dar de baja categorías de recordatorios'),
+    ('REACTIVAR_CATEGORIA_RECORDATORIO','Permite reactivar categorías de recordatorios dadas de baja'),
     -- Permisos y perfil
     ('VER_PERMISOS',               'Permite visualizar la lista de permisos del sistema'),
     ('EDITAR_PERMISO',             'Permite editar la descripción de los permisos'),
