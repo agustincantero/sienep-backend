@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -138,7 +139,7 @@ public class ItrService {
 
     private void asociarCarreras(Itr itr, List<Integer> nuevasCarrerasIds) {
         if (nuevasCarrerasIds == null) {
-            nuevasCarrerasIds = java.util.Collections.emptyList();
+            nuevasCarrerasIds = Collections.emptyList();
         }
 
         for (ItrCarrera itrCarrera : itr.getCarreras()) {
