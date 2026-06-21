@@ -6,6 +6,7 @@ import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.EstudianteUpdateDTO;
 import com.fides.sienep.dto.MisDatosRequestDTO;
+import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
@@ -37,6 +38,7 @@ public class EstudianteService {
     private final EstudianteRepository estudianteRepository;
     private final GrupoRepository grupoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EstudianteMapper estudianteMapper;
 
     // =========================================================
     // CREAR
@@ -46,42 +48,19 @@ public class EstudianteService {
     @Transactional
     public EstudianteResponseDTO crear(EstudianteRequestDTO dto) {
 
-        // ── Validación 1: documento único ─────────────────────
-        // Verificamos antes de ir a la BD con un SELECT COUNT rápido.
-        // Si no lo hiciéramos, la BD lanzaría una excepción de
-        // violación de constraint único, que llegaría al cliente
-        // como un error 500 incomprensible en lugar de un 409 claro.
         if (estudianteRepository.existsByDocumento(dto.getDocumento())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un estudiante con ese documento.");
         }
 
-        // ── Validación 2: email único ─────────────────────────
         if (estudianteRepository.existsByEmail(dto.getEmail())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
         }
 
-        // ── Validación 3: CI uruguaya ─────────────────────────
-        // Solo aplica cuando el país del documento es Uruguay (URY).
-        // Si el estudiante viene de otro país, su documento no tiene
-        // dígito verificador uruguayo — no tiene sentido validarlo.
-        //
-        // ValidadorDeCedulasUy.esCedulaValida() implementa el
-        // algoritmo oficial del BPS/DGI para verificar el dígito
-        // verificador de la cédula de identidad uruguaya.
         if (dto.getPaisDocumento() == PaisDocumento.URY
                 && !ValidadorDeCedulasUy.esCedulaValida(dto.getDocumento())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cédula de identidad uruguaya ingresada no es válida.");
         }
 
-        // ── Validación 4: edad mínima 18 años ────────────────
-        // Period.between calcula la diferencia exacta entre dos fechas
-        // considerando años bisiestos y meses de distinta duración.
-        // Es más correcto que restar timestamps en milisegundos.
-        //
-        // ¿Por qué validar acá si el modelo ya lo hace?
-        // El constructor de Estudiante lanza IllegalArgumentException,
-        // que Spring no convierte automáticamente en 400 — llega como
-        // 500. Aquí controlamos el código de error y el mensaje.
         validarEdad(dto.getFechaNacimiento());
 
         Estudiante estudiante = new Estudiante(
@@ -96,7 +75,7 @@ public class EstudianteService {
         asignarTelefonos(estudiante, dto.getTelefonos());
         asignarGrupos(estudiante, dto.getIdGrupos());
 
-        return toResponseDTO(estudianteRepository.save(estudiante));
+        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
     }
 
     // =========================================================
@@ -106,24 +85,15 @@ public class EstudianteService {
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public EstudianteResponseDTO obtenerPorId(Integer id) {
-        return toResponseDTO(buscarOFallar(id));
+        return estudianteMapper.toDto(buscarOFallar(id));
     }
 
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
     public EstudianteResumenDTO obtenerResumenPorId(Integer id) {
-        return toResumenDTO(buscarOFallar(id));
+        return estudianteMapper.toResumenDto(buscarOFallar(id));
     }
 
-    /**
-     * Método unificado para listar, buscar y filtrar.
-     * Corresponde al endpoint GET /estudiantes con query params opcionales.
-     *
-     * Lógica de permisos:
-     *   - Si hay texto, grupo, carrera o itr → requiere BUSCAR_ESTUDIANTE (verificado dentro).
-     *   - Roles sin VER_ESTUDIANTE siempre ven solo ACTIVO, aunque pasen ?estado=INACTIVO.
-     *   - Siempre devuelve resumido — los datos completos son por GET /{id}.
-     */
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
     public Page<EstudianteResumenDTO> listar(String texto, Integer idGrupo, Integer idCarrera, Integer idItr, EstadoLogico estado, Pageable pageable) {
@@ -157,7 +127,7 @@ public class EstudianteService {
                     : estudianteRepository.findAll(pageable);
         }
 
-        return resultado.map(this::toResumenDTO);
+        return resultado.map(estudianteMapper::toResumenDto);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_ESTUDIANTE')")
@@ -165,14 +135,9 @@ public class EstudianteService {
     public EstudianteResponseDTO actualizar(Integer id, EstudianteUpdateDTO dto) {
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambios(estudiante, dto);
-        return toResponseDTO(estudianteRepository.save(estudiante));
+        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
     }
 
-    /**
-     * Autoservicio del estudiante. Gateado por ROLE_ESTUDIANTE (authority
-     * sintética asignada en autenticación, no por el RBAC de funcionarios).
-     * Solo edita datos de contacto y solo sobre la cuenta propia.
-     */
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional
     public EstudianteResponseDTO editarMisDatos(Integer id, MisDatosRequestDTO dto) {
@@ -181,18 +146,18 @@ public class EstudianteService {
         }
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambiosContacto(estudiante, dto);
-        return toResponseDTO(estudianteRepository.save(estudiante));
+        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
     }
 
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
     public EstudianteResumenDTO verMiPerfil() {
         Integer id = getIdUsuarioAutenticado();
-        return toResumenDTO(buscarOFallar(id));
+        return estudianteMapper.toResumenDto(buscarOFallar(id));
     }
 
     // =========================================================
-    // CAMBIAR CONTRASEÑA — dispara activación
+    // CAMBIAR CONTRASEÑA
     // =========================================================
 
     @Transactional
@@ -248,7 +213,6 @@ public class EstudianteService {
         }
     }
 
-    // Recibe EstudianteUpdateDTO — sin documento ni paisDocumento
     private void aplicarCambios(Estudiante estudiante, EstudianteUpdateDTO dto) {
         validarEdad(dto.getFechaNacimiento());
         estudiante.setNombre(dto.getNombre());
@@ -293,60 +257,6 @@ public class EstudianteService {
             grupos.add(grupo);
         }
         estudiante.setGrupos(grupos);
-    }
-
-    private EstudianteResponseDTO toResponseDTO(Estudiante e) {
-        List<String> telefonos = new ArrayList<>();
-        for (Telefono t : e.getTelefonos()) {
-            telefonos.add(t.getId().getNumero());
-        }
-        List<String> grupos = new ArrayList<>();
-        for (Grupo g : e.getGrupos()) {
-            grupos.add(g.getNomGrupo());
-        }
-        return EstudianteResponseDTO.builder()
-                .idUsuario(e.getIdUsuario())
-                .nombre(e.getNombre())
-                .apellido(e.getApellido())
-                .documento(e.getDocumento())
-                .paisDocumento(e.getPaisDocumento())
-                .email(e.getEmail())
-                .estado(e.getEstado())
-                .fechaNacimiento(e.getFechaNacimiento())
-                .ciudad(e.getCiudad())
-                .departamento(e.getDepartamento())
-                .calle(e.getCalle())
-                .nroPuerta(e.getNroPuerta())
-                .informacionSalud(e.getInformacionSalud())
-                .sistemaSalud(e.getSistemaSalud())
-                .motivoDerivacion(e.getMotivoDerivacion())
-                .foto(e.getFoto())
-                .telefonos(telefonos)
-                .grupos(grupos)
-                .createdAt(e.getEstudianteCreatedAt())
-                .updatedAt(e.getEstudianteUpdatedAt())
-                .build();
-    }
-
-    private EstudianteResumenDTO toResumenDTO(Estudiante e) {
-        List<String> telefonos = new ArrayList<>();
-        for (Telefono t : e.getTelefonos()) {
-            telefonos.add(t.getId().getNumero());
-        }
-        List<String> grupos = new ArrayList<>();
-        for (Grupo g : e.getGrupos()) {
-            grupos.add(g.getNomGrupo());
-        }
-        return EstudianteResumenDTO.builder()
-                .idUsuario(e.getIdUsuario())
-                .nombre(e.getNombre())
-                .apellido(e.getApellido())
-                .documento(e.getDocumento())
-                .email(e.getEmail())
-                .estado(e.getEstado())
-                .grupos(grupos)
-                .telefonos(telefonos)
-                .build();
     }
 
     private boolean tienePermiso(String permiso) {

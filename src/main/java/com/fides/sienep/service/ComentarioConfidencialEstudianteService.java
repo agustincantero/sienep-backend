@@ -3,6 +3,7 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteResponseDTO;
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteUpdateDTO;
+import com.fides.sienep.mapper.ComentarioConfidencialEstudianteMapper;
 import com.fides.sienep.model.ComentarioConfidencialEstudiante;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
@@ -26,22 +27,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ComentarioConfidencialEstudianteService {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(ComentarioConfidencialEstudianteService.class);
+    private static final Logger log = LoggerFactory.getLogger(ComentarioConfidencialEstudianteService.class);
 
     private final ComentarioConfidencialEstudianteRepository comentarioRepository;
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
+    private final ComentarioConfidencialEstudianteMapper comentarioMapper;
 
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
-    public List<ComentarioConfidencialEstudianteResponseDTO> listarPorEstudiante(
-            Integer idEstudiante) {
+    public List<ComentarioConfidencialEstudianteResponseDTO> listarPorEstudiante(Integer idEstudiante) {
         List<ComentarioConfidencialEstudiante> comentarios = comentarioRepository
                 .findByEstudianteIdUsuarioAndEstado(idEstudiante, EstadoLogico.ACTIVO);
         List<ComentarioConfidencialEstudianteResponseDTO> resultado = new ArrayList<>();
         for (ComentarioConfidencialEstudiante c : comentarios) {
-            resultado.add(toDTO(c));
+            resultado.add(comentarioMapper.toDto(c));
         }
         return resultado;
     }
@@ -49,13 +49,12 @@ public class ComentarioConfidencialEstudianteService {
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public ComentarioConfidencialEstudianteResponseDTO obtenerPorId(Integer id) {
-        return toDTO(buscarOFallar(id));
+        return comentarioMapper.toDto(buscarOFallar(id));
     }
 
     @PreAuthorize("hasAuthority('CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
     @Transactional
-    public ComentarioConfidencialEstudianteResponseDTO crear(
-            ComentarioConfidencialEstudianteRequestDTO dto) {
+    public ComentarioConfidencialEstudianteResponseDTO crear(ComentarioConfidencialEstudianteRequestDTO dto) {
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
@@ -67,19 +66,17 @@ public class ComentarioConfidencialEstudianteService {
                 new ComentarioConfidencialEstudiante(dto.getContenido(), autor, estudiante);
 
         comentarioRepository.save(comentario);
-        log.info("Observación confidencial creada para estudiante {}", dto.getIdEstudiante());
-        return toDTO(comentario);
+        log.info("[AUDIT] Observación confidencial creada para estudiante {}", dto.getIdEstudiante());
+        return comentarioMapper.toDto(comentario);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
     @Transactional
-    public ComentarioConfidencialEstudianteResponseDTO editar(
-            Integer id, ComentarioConfidencialEstudianteUpdateDTO dto) {
-
+    public ComentarioConfidencialEstudianteResponseDTO editar(Integer id, ComentarioConfidencialEstudianteUpdateDTO dto) {
         ComentarioConfidencialEstudiante comentario = buscarOFallar(id);
         comentario.setContenido(dto.getContenido());
-        log.info("Observación confidencial {} editada", id);
-        return toDTO(comentarioRepository.save(comentario));
+        log.info("[AUDIT] Observación confidencial {} editada", id);
+        return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
@@ -88,27 +85,11 @@ public class ComentarioConfidencialEstudianteService {
         ComentarioConfidencialEstudiante comentario = buscarOFallar(id);
         comentario.setEstado(EstadoLogico.ELIMINADO);
         comentarioRepository.save(comentario);
-        log.info("Observación confidencial {} dada de baja lógica", id);
+        log.info("[AUDIT] Observación confidencial {} dada de baja lógica", id);
     }
-
-    // Helpers
 
     private ComentarioConfidencialEstudiante buscarOFallar(Integer id) {
         return comentarioRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Observación confidencial no encontrada: " + id));
-    }
-
-    private ComentarioConfidencialEstudianteResponseDTO toDTO(
-            ComentarioConfidencialEstudiante c) {
-        return ComentarioConfidencialEstudianteResponseDTO.builder()
-                .id(c.getId())
-                .contenido(c.getContenido())
-                .estado(c.getEstado())
-                .idEstudiante(c.getEstudiante().getIdUsuario())
-                .idAutor(c.getAutor().getIdUsuario())
-                .nombreAutor(c.getAutor().getNombre() + " " + c.getAutor().getApellido())
-                .createdAt(c.getCreatedAt())
-                .updatedAt(c.getUpdatedAt())
-                .build();
     }
 }

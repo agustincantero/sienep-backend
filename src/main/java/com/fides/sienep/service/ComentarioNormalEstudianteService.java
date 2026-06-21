@@ -3,6 +3,7 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.ComentarioNormalEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioNormalEstudianteResponseDTO;
 import com.fides.sienep.dto.ComentarioNormalEstudianteUpdateDTO;
+import com.fides.sienep.mapper.ComentarioNormalEstudianteMapper;
 import com.fides.sienep.model.ComentarioNormalEstudiante;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
@@ -28,33 +29,27 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ComentarioNormalEstudianteService {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(ComentarioNormalEstudianteService.class);
+    private static final Logger log = LoggerFactory.getLogger(ComentarioNormalEstudianteService.class);
 
     private final ComentarioNormalEstudianteRepository comentarioRepository;
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
+    private final ComentarioNormalEstudianteMapper comentarioMapper;
 
-    /**
-     * Si quien llama es ESTUDIANTE → ignora idEstudiante y usa el ID del token (sus propios comentarios).
-     * Si quien llama es un funcionario → usa el idEstudiante del parámetro.
-     * En ambos casos requiere VER_COMENTARIO_NORMAL_ESTUDIANTE.
-     */
     @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public List<ComentarioNormalEstudianteResponseDTO> listarPorEstudiante(Integer idEstudiante) {
         Integer idEfectivo = esEstudiante() ? getIdUsuarioAutenticado() : idEstudiante;
 
         if (idEfectivo == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Debe indicar el idEstudiante");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe indicar el idEstudiante");
         }
 
         List<ComentarioNormalEstudiante> comentarios = comentarioRepository
                 .findByEstudianteIdUsuarioAndEstado(idEfectivo, EstadoLogico.ACTIVO);
         List<ComentarioNormalEstudianteResponseDTO> resultado = new ArrayList<>();
         for (ComentarioNormalEstudiante c : comentarios) {
-            resultado.add(toDTO(c));
+            resultado.add(comentarioMapper.toDto(c));
         }
         return resultado;
     }
@@ -64,45 +59,38 @@ public class ComentarioNormalEstudianteService {
     public ComentarioNormalEstudianteResponseDTO obtenerPorId(Integer id) {
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
 
-        // Si es estudiante, solo puede ver sus propios comentarios
-        if (esEstudiante() && comentario.getEstudiante().getIdUsuario() != getIdUsuarioAutenticado())  {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Solo podés ver tus propios comentarios");
+        if (esEstudiante() && comentario.getEstudiante().getIdUsuario() != getIdUsuarioAutenticado()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo podés ver tus propios comentarios");
         }
 
-        return toDTO(comentario);
+        return comentarioMapper.toDto(comentario);
     }
 
     @PreAuthorize("hasAuthority('CREAR_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional
-    public ComentarioNormalEstudianteResponseDTO crear(
-            ComentarioNormalEstudianteRequestDTO dto) {
+    public ComentarioNormalEstudianteResponseDTO crear(ComentarioNormalEstudianteRequestDTO dto) {
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Estudiante no encontrado: " + dto.getIdEstudiante()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
 
         Funcionario autor = funcionarioRepository.findById(dto.getIdAutor())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Funcionario no encontrado: " + dto.getIdAutor()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + dto.getIdAutor()));
 
         ComentarioNormalEstudiante comentario =
                 new ComentarioNormalEstudiante(dto.getContenido(), autor, estudiante);
 
         comentarioRepository.save(comentario);
-        log.info("Comentario normal creado para estudiante {}", dto.getIdEstudiante());
-        return toDTO(comentario);
+        log.info("[AUDIT] Comentario normal creado para estudiante {}", dto.getIdEstudiante());
+        return comentarioMapper.toDto(comentario);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional
-    public ComentarioNormalEstudianteResponseDTO editar(
-            Integer id, ComentarioNormalEstudianteUpdateDTO dto) {
-
+    public ComentarioNormalEstudianteResponseDTO editar(Integer id, ComentarioNormalEstudianteUpdateDTO dto) {
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
         comentario.setContenido(dto.getContenido());
-        log.info("Comentario {} editado", id);
-        return toDTO(comentarioRepository.save(comentario));
+        log.info("[AUDIT] Comentario {} editado", id);
+        return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE')")
@@ -111,43 +99,24 @@ public class ComentarioNormalEstudianteService {
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
         comentario.setEstado(EstadoLogico.ELIMINADO);
         comentarioRepository.save(comentario);
-        log.info("Comentario {} dado de baja lógica", id);
+        log.info("[AUDIT] Comentario {} dado de baja lógica", id);
     }
-
-    // ----------------------------------------------------------------
-    // Helpers privados
-    // ----------------------------------------------------------------
 
     private ComentarioNormalEstudiante buscarOFallar(Integer id) {
         return comentarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Comentario no encontrado: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario no encontrado: " + id));
     }
-        private boolean esEstudiante() {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            for (var authority : auth.getAuthorities()) {
-                if (authority.getAuthority().equals("ROLE_ESTUDIANTE")) {
-                    return true;
-                }
-            }
-            return false;
+
+    private boolean esEstudiante() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        for (var authority : auth.getAuthorities()) {
+            if (authority.getAuthority().equals("ROLE_ESTUDIANTE")) return true;
         }
+        return false;
+    }
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return Integer.parseInt(auth.getName());
-    }
-
-    private ComentarioNormalEstudianteResponseDTO toDTO(ComentarioNormalEstudiante c) {
-        return ComentarioNormalEstudianteResponseDTO.builder()
-                .id(c.getId())
-                .contenido(c.getContenido())
-                .estado(c.getEstado())
-                .idEstudiante(c.getEstudiante().getIdUsuario())
-                .idAutor(c.getAutor().getIdUsuario())
-                .nombreAutor(c.getAutor().getNombre() + " " + c.getAutor().getApellido())
-                .createdAt(c.getCreatedAt())
-                .updatedAt(c.getUpdatedAt())
-                .build();
     }
 }
