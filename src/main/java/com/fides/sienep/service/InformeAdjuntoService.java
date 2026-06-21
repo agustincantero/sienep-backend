@@ -2,6 +2,7 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.InformeAdjuntoRequestDTO;
 import com.fides.sienep.dto.InformeAdjuntoResponseDTO;
+import com.fides.sienep.mapper.InformeAdjuntoMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.InformeAdjunto;
@@ -27,6 +28,7 @@ public class InformeAdjuntoService {
 
     private final InformeAdjuntoRepository informeRepository;
     private final EstudianteRepository estudianteRepository;
+    private final InformeAdjuntoMapper informeMapper;
 
     @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
@@ -34,7 +36,7 @@ public class InformeAdjuntoService {
         List<InformeAdjunto> informes = informeRepository.findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO);
         List<InformeAdjuntoResponseDTO> resultado = new ArrayList<>();
         for (InformeAdjunto i : informes) {
-            resultado.add(toDTO(i));
+            resultado.add(informeMapper.toDto(i));
         }
         return resultado;
     }
@@ -42,7 +44,7 @@ public class InformeAdjuntoService {
     @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
     public InformeAdjuntoResponseDTO obtenerPorId(Integer id) {
-        return toDTO(buscarOFallar(id));
+        return informeMapper.toDto(buscarOFallar(id));
     }
 
     @PreAuthorize("hasAuthority('ADJUNTAR_INFORME')")
@@ -52,8 +54,7 @@ public class InformeAdjuntoService {
         Estudiante estudiante = estudianteRepository.findById(dto.getIdUsuario())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdUsuario()));
 
-        if (informeRepository.existsByEstudianteIdUsuarioAndNombre(
-                dto.getIdUsuario(), dto.getNombre())) {
+        if (informeRepository.existsByEstudianteIdUsuarioAndNombre(dto.getIdUsuario(), dto.getNombre())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un informe con ese nombre para este estudiante");
         }
 
@@ -71,41 +72,21 @@ public class InformeAdjuntoService {
                 .build();
 
         informeRepository.save(informe);
-        log.info("Informe adjuntado al estudiante {}", dto.getIdUsuario());
-        return toDTO(informe);
+        log.info("[AUDIT] Informe adjuntado al estudiante {}", dto.getIdUsuario());
+        return informeMapper.toDto(informe);
     }
 
-    // ── ¿Por qué hasRole('ADMINISTRADOR') y no hasAuthority? ─────────────────
-    // No existe un permiso ELIMINAR_ADJUNTO en el schema SQL.
-    // Restringirlo al rol ADMINISTRADOR es la decisión más segura
-    // hasta que el equipo defina si ese permiso debe existir.
-    // hasRole('ADMINISTRADOR') equivale a hasAuthority('ROLE_ADMINISTRADOR').
     @PreAuthorize("hasAuthority('ELIMINAR_INFORME')")
     @Transactional
     public void eliminar(Integer id) {
         InformeAdjunto informe = buscarOFallar(id);
         informe.setEstado(EstadoLogico.ELIMINADO);
         informeRepository.save(informe);
-        log.info("Informe {} dado de baja lógica", id);
+        log.info("[AUDIT] Informe {} dado de baja lógica", id);
     }
-
-    // Helpers
 
     private InformeAdjunto buscarOFallar(Integer id) {
         return informeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
-    }
-
-    private InformeAdjuntoResponseDTO toDTO(InformeAdjunto i) {
-        return InformeAdjuntoResponseDTO.builder()
-                .idInforme(i.getIdInforme())
-                .idUsuario(i.getEstudiante().getIdUsuario())
-                .urlArchivo(i.getUrlArchivo())
-                .ruta(i.getRuta())
-                .nombre(i.getNombre())
-                .estado(i.getEstado())
-                .createdAt(i.getCreatedAt())
-                .updatedAt(i.getUpdatedAt())
-                .build();
     }
 }

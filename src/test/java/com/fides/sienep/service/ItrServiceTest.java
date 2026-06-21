@@ -88,6 +88,27 @@ class ItrServiceTest {
     }
 
     @Test
+    @DisplayName("crear: Éxito sin carreras asociadas")
+    void crear_Exito_SinCarreras() {
+        ItrRequestDTO dto = new ItrRequestDTO();
+        dto.setNomItr("Norte");
+        // sin setCarrerasIds
+
+        Itr itrGuardado = new Itr("Norte");
+        itrGuardado.setIdItr(1);
+        ItrResponseDTO responseDTO = ItrResponseDTO.builder().idItr(1).nomItr("Norte").build();
+
+        when(itrRepository.existsByNomItr("Norte")).thenReturn(false);
+        when(itrRepository.save(any(Itr.class))).thenReturn(itrGuardado);
+        when(itrMapper.toDto(any(Itr.class))).thenReturn(responseDTO);
+
+        ItrResponseDTO result = itrService.crear(dto);
+
+        assertNotNull(result);
+        verify(itrRepository, times(1)).save(any(Itr.class)); // solo 1 save, sin asociaciones
+    }
+
+    @Test
     @DisplayName("listar: Retorna lista de ITRs mapeados")
     void listar_Exito() {
         List<Itr> itrs = List.of(new Itr("Norte"));

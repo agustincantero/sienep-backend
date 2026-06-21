@@ -964,26 +964,27 @@ ON CONFLICT DO NOTHING;
 INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM proyecto.roles r
-JOIN proyecto.permisos p ON p.nom_permiso IN (
-    'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
-    'CREAR_ESTUDIANTE', 'EDITAR_ESTUDIANTE', 'REACTIVAR_ESTUDIANTE',
-    'VER_ADJUNTOS', 'ADJUNTAR_INFORME',
-    'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
-    'CATEGORIZAR_INSTANCIA', 'VER_BLOQUE_CONFIDENCIAL',
-    'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
-    'BAJA_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
-    'REGISTRAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
-    'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
-    'EDITAR_COMENTARIO_NORMAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',
-    'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
-    'EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
-    'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA',
-    'EDITAR_COMENTARIO_NORMAL_INSTANCIA', 'ELIMINAR_COMENTARIO_NORMAL_INSTANCIA',
-    'VER_COMENTARIO_CONFIDENCIAL_INSTANCIA', 'CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',
-    'EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA', 'ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA'
-)
+         JOIN proyecto.permisos p ON p.nom_permiso IN (
+                                                       'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
+                                                       'CREAR_ESTUDIANTE', 'EDITAR_ESTUDIANTE', 'REACTIVAR_ESTUDIANTE',
+                                                       'VER_ADJUNTOS', 'ADJUNTAR_INFORME',
+                                                       'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
+                                                       'CATEGORIZAR_INSTANCIA', 'VER_BLOQUE_CONFIDENCIAL',
+                                                       'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
+                                                       'BAJA_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
+                                                       'REGISTRAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
+                                                       'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
+                                                       'EDITAR_COMENTARIO_NORMAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',
+                                                       'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
+                                                       'EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
+                                                       'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA',
+                                                       'EDITAR_COMENTARIO_NORMAL_INSTANCIA', 'ELIMINAR_COMENTARIO_NORMAL_INSTANCIA',
+                                                       'VER_COMENTARIO_CONFIDENCIAL_INSTANCIA', 'CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',
+                                                       'EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA', 'ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',
+                                                       'VER_REPORTES', 'EXPORTAR_REPORTES'
+    )
 WHERE r.nom_rol = 'PSICOPEDAGOGO'
-ON CONFLICT DO NOTHING;
+    ON CONFLICT DO NOTHING;
 
 -- TUTOR
 INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
@@ -1018,15 +1019,16 @@ ON CONFLICT DO NOTHING;
 INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM proyecto.roles r
-JOIN proyecto.permisos p ON p.nom_permiso IN (
-    'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
-    'VER_ADJUNTOS',
-    'VER_INSTANCIAS', 'VER_BLOQUE_CONFIDENCIAL',
-    'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
-    'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
-    'VER_COMENTARIO_CONFIDENCIAL_INSTANCIA',
-    'VER_COMENTARIO_NORMAL_ESTUDIANTE',
-    'VER_COMENTARIO_NORMAL_INSTANCIA'
-)
+         JOIN proyecto.permisos p ON p.nom_permiso IN (
+                                                       'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
+                                                       'VER_ADJUNTOS',
+                                                       'VER_INSTANCIAS', 'VER_BLOQUE_CONFIDENCIAL',
+                                                       'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
+                                                       'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
+                                                       'VER_COMENTARIO_CONFIDENCIAL_INSTANCIA',
+                                                       'VER_COMENTARIO_NORMAL_ESTUDIANTE',
+                                                       'VER_COMENTARIO_NORMAL_INSTANCIA',
+                                                       'VER_REPORTES', 'EXPORTAR_REPORTES'
+    )
 WHERE r.nom_rol = 'LEGALES'
-ON CONFLICT DO NOTHING;
+    ON CONFLICT DO NOTHING;

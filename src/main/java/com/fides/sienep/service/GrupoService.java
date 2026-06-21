@@ -3,6 +3,7 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.GrupoRequestDTO;
 import com.fides.sienep.dto.GrupoResponseDTO;
 import com.fides.sienep.dto.GrupoUpdateDTO;
+import com.fides.sienep.mapper.GrupoMapper;
 import com.fides.sienep.model.Carrera;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Grupo;
@@ -16,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,6 +25,7 @@ public class GrupoService {
 
     private final GrupoRepository grupoRepository;
     private final CarreraRepository carreraRepository;
+    private final GrupoMapper grupoMapper;
 
     @PreAuthorize("hasAuthority('CREAR_GRUPO')")
     @Transactional
@@ -50,13 +51,13 @@ public class GrupoService {
                 .generacion(dto.getGeneracion())
                 .build();
 
-        return toResponseDTO(grupoRepository.save(grupo));
+        return grupoMapper.toDto(grupoRepository.save(grupo));
     }
 
     @PreAuthorize("hasAuthority('VER_GRUPOS')")
     @Transactional(readOnly = true)
     public GrupoResponseDTO obtenerPorId(Integer id) {
-        return toResponseDTO(buscarOFallar(id));
+        return grupoMapper.toDto(buscarOFallar(id));
     }
 
     @PreAuthorize("hasAuthority('VER_GRUPOS')")
@@ -75,11 +76,7 @@ public class GrupoService {
             grupos = grupoRepository.findByEstado(EstadoLogico.ACTIVO);
         }
 
-        List<GrupoResponseDTO> dtos = new ArrayList<>();
-        for (Grupo grupo : grupos) {
-            dtos.add(toResponseDTO(grupo));
-        }
-        return dtos;
+        return grupoMapper.toDtoList(grupos);
     }
 
     @PreAuthorize("hasAuthority('EDITAR_GRUPOS')")
@@ -100,7 +97,7 @@ public class GrupoService {
 
         grupo.setNomGrupo(dto.getNomGrupo());
         grupo.setGeneracion(dto.getGeneracion());
-        return toResponseDTO(grupoRepository.save(grupo));
+        return grupoMapper.toDto(grupoRepository.save(grupo));
     }
 
     @PreAuthorize("hasAuthority('ELIMINAR_GRUPOS')")
@@ -110,8 +107,6 @@ public class GrupoService {
         grupo.setEstado(EstadoLogico.INACTIVO);
         grupoRepository.save(grupo);
     }
-
-    // Helpers
 
     private void validarGeneracion(Integer generacion) {
         int anioActual = LocalDate.now().getYear();
@@ -124,18 +119,5 @@ public class GrupoService {
     private Grupo buscarOFallar(Integer id) {
         return grupoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado."));
-    }
-
-    private GrupoResponseDTO toResponseDTO(Grupo grupo) {
-        return GrupoResponseDTO.builder()
-                .idGrupo(grupo.getIdGrupo())
-                .nomGrupo(grupo.getNomGrupo())
-                .generacion(grupo.getGeneracion())
-                .estado(grupo.getEstado())
-                .idCarrera(grupo.getCarrera().getIdCarrera())
-                .nomCarrera(grupo.getCarrera().getNomCarrera())
-                .createdAt(grupo.getCreatedAt())
-                .updatedAt(grupo.getUpdatedAt())
-                .build();
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -84,4 +85,18 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Integer>
     // Validaciones de unicidad
     boolean existsByDocumento(String documento);
     boolean existsByEmail(String email);
+
+
+    // ── Queries para Reportes — sin paginación ────────────────
+    @Query("SELECT e FROM Estudiante e JOIN e.grupos g WHERE g.idGrupo = :idGrupo AND e.estado = :estado")
+    List<Estudiante> findByGrupoAndEstadoList(@Param("idGrupo") Integer idGrupo,
+                                              @Param("estado") EstadoLogico estado);
+
+    @Query("""
+        SELECT DISTINCT e FROM Estudiante e
+        JOIN e.grupos g JOIN g.carrera c
+        WHERE c.idCarrera = :idCarrera AND e.estado = :estado
+        """)
+    List<Estudiante> findByCarreraAndEstadoList(@Param("idCarrera") Integer idCarrera,
+                                                @Param("estado") EstadoLogico estado);
 }
