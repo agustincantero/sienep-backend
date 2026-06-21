@@ -38,15 +38,4 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
 
-    @Query("SELECT r FROM Recordatorio r " +
-            "WHERE r.instancia.estudiante.idUsuario = :idEstudiante " +
-            "AND r.estado = :estado " +
-            "AND r.estadoOperativo = :estadoOperativo " +
-            "AND r.fechaHora BETWEEN :desde AND :hasta")
-    List<Recordatorio> findByEstudianteYEstadoOperativo(
-            @Param("idEstudiante") Integer idEstudiante,
-            @Param("estado") EstadoLogico estado,
-            @Param("estadoOperativo") EstadoRecordatorio estadoOperativo,
-            @Param("desde") LocalDateTime desde,
-            @Param("hasta") LocalDateTime hasta);
 }

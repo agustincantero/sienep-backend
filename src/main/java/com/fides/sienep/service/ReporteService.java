@@ -19,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,6 +46,12 @@ public class ReporteService {
             LocalDate desde,
             LocalDate hasta) {
 
+        // ── Validación de fechas ──────────────────────────────
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
+        }
+
         // ── Normalizar período ────────────────────────────────
         LocalDate fechaDesde = desde != null ? desde : LocalDate.now().minusMonths(3);
         LocalDate fechaHasta = hasta != null ? hasta : LocalDate.now();
@@ -66,12 +74,12 @@ public class ReporteService {
 
         // ── Agregar métricas por estudiante ───────────────────
         List<ReporteEstudianteDTO> detalle = new ArrayList<>();
-        int totalInstancias = 0;
-        int totalIncidencias = 0;
+        int totalInstancias    = 0;
+        int totalIncidencias   = 0;
         int totalRecordatorios = 0;
-        int totalVencidos = 0;
-        int totalHoy = 0;
-        int totalFuturos = 0;
+        int totalVencidos      = 0;
+        int totalHoy           = 0;
+        int totalFuturos       = 0;
 
         for (Estudiante e : estudiantes) {
             Integer id = e.getIdUsuario();
@@ -82,27 +90,26 @@ public class ReporteService {
             List<Incidencia> incidencias = incidenciaRepository
                     .findByEstudianteYPeriodo(id, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime);
 
+            // ── Una sola query para todos los recordatorios ───
             List<Recordatorio> recordatorios = recordatorioRepository
                     .findByEstudianteYPeriodo(id, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime);
 
-            List<Recordatorio> vencidos = recordatorioRepository
-                    .findByEstudianteYEstadoOperativo(id, EstadoLogico.ACTIVO,
-                            EstadoRecordatorio.VENCIDO, desdeDateTime, hastaDateTime);
-
-            List<Recordatorio> hoy = recordatorioRepository
-                    .findByEstudianteYEstadoOperativo(id, EstadoLogico.ACTIVO,
-                            EstadoRecordatorio.HOY, desdeDateTime, hastaDateTime);
-
-            List<Recordatorio> futuros = recordatorioRepository
-                    .findByEstudianteYEstadoOperativo(id, EstadoLogico.ACTIVO,
-                            EstadoRecordatorio.FUTURO, desdeDateTime, hastaDateTime);
+            // ── Conteo en memoria por estado operativo ────────
+            int vencidos = 0;
+            int hoy      = 0;
+            int futuros  = 0;
+            for (Recordatorio r : recordatorios) {
+                if (EstadoRecordatorio.VENCIDO.equals(r.getEstadoOperativo())) vencidos++;
+                else if (EstadoRecordatorio.HOY.equals(r.getEstadoOperativo()))    hoy++;
+                else if (EstadoRecordatorio.FUTURO.equals(r.getEstadoOperativo())) futuros++;
+            }
 
             totalInstancias    += instancias.size();
             totalIncidencias   += incidencias.size();
             totalRecordatorios += recordatorios.size();
-            totalVencidos      += vencidos.size();
-            totalHoy           += hoy.size();
-            totalFuturos       += futuros.size();
+            totalVencidos      += vencidos;
+            totalHoy           += hoy;
+            totalFuturos       += futuros;
 
             detalle.add(ReporteEstudianteDTO.builder()
                     .idEstudiante(id)

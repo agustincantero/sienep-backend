@@ -234,4 +234,48 @@ class ComentarioNormalEstudianteServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("Listar por estudiante - Éxito (funcionario consulta cualquier estudiante)")
+    void listarPorEstudiante_Exito() {
+        List<ComentarioNormalEstudiante> comentarios = List.of(comentarioMock);
+
+        when(comentarioRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(comentarios);
+        when(comentarioMapper.toDto(comentarioMock)).thenReturn(responseDTO);
+
+        // Simulamos un usuario autenticado que NO es estudiante
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getAuthorities()).thenReturn(List.of());
+        org.springframework.security.core.context.SecurityContextHolder
+                .getContext().setAuthentication(auth);
+
+        List<ComentarioNormalEstudianteResponseDTO> result =
+                comentarioService.listarPorEstudiante(1);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(comentarioRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO);
+    }
+
+    @Test
+    @DisplayName("Listar por estudiante - Falta idEstudiante → 400")
+    void listarPorEstudiante_LanzaExcepcion_SinIdEstudiante() {
+
+        // Simulamos un usuario autenticado que NO es estudiante
+        // y no pasa idEstudiante → el service lanza 400
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getAuthorities()).thenReturn(List.of());
+        org.springframework.security.core.context.SecurityContextHolder
+                .getContext().setAuthentication(auth);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> comentarioService.listarPorEstudiante(null));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(comentarioRepository, never()).findByEstudianteIdUsuarioAndEstado(any(), any());
+    }
 }

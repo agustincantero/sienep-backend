@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -214,5 +215,22 @@ class InformeAdjuntoServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(informeRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Listar por estudiante - Éxito")
+    void listarPorEstudiante_Exito() {
+        List<InformeAdjunto> informes = List.of(informeMock);
+
+        when(informeRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(informes);
+        when(informeMapper.toDto(informeMock)).thenReturn(responseDTO);
+
+        List<InformeAdjuntoResponseDTO> result = informeService.listarPorEstudiante(1);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(informeRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO);
+        
     }
 }

@@ -25,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -232,5 +233,24 @@ class ComentarioConfidencialEstudianteServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
+    }
+
+
+    @Test
+    @DisplayName("Listar por estudiante - Éxito")
+    void listarPorEstudiante_Exito() {
+        List<ComentarioConfidencialEstudiante> comentarios = List.of(comentarioMock);
+        List<ComentarioConfidencialEstudianteResponseDTO> dtos = List.of(responseDTO);
+
+        when(comentarioRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(comentarios);
+        when(comentarioMapper.toDto(comentarioMock)).thenReturn(responseDTO);
+
+        List<ComentarioConfidencialEstudianteResponseDTO> result =
+                comentarioService.listarPorEstudiante(1);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(comentarioRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO);
     }
 }

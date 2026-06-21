@@ -290,4 +290,33 @@ class FuncionarioServiceTest {
         verify(funcionarioRepository).save(funcionarioMock);
         verify(funcionarioRepository, never()).deleteById(any());
     }
+
+
+    @Test
+    @DisplayName("Obtener por documento - Éxito")
+    void obtenerPorDocumento_Exito() {
+        when(funcionarioRepository.findByDocumentoAndEstado("12345678", EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(funcionarioMock));
+        when(funcionarioMapper.toDto(funcionarioMock)).thenReturn(responseDTO);
+
+        FuncionarioResponseDTO result = funcionarioService.obtenerPorDocumento("12345678");
+
+        assertNotNull(result);
+        assertEquals("12345678", result.getDocumento());
+        verify(funcionarioMapper).toDto(funcionarioMock);
+    }
+
+    @Test
+    @DisplayName("Obtener por documento - No encontrado → 404")
+    void obtenerPorDocumento_LanzaExcepcion_NoEncontrado() {
+        when(funcionarioRepository.findByDocumentoAndEstado("99999999", EstadoLogico.ACTIVO))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.obtenerPorDocumento("99999999"));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(funcionarioMapper, never()).toDto(any());
+    }
 }
