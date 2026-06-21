@@ -200,7 +200,6 @@ class RolServiceTest {
         RolUpdateDTO updateDTO = new RolUpdateDTO();
         updateDTO.setNombre("TUTOR_MODIFICADO");
         updateDTO.setDescripcion("Nueva desc");
-        updateDTO.setEstado(EstadoLogico.ACTIVO);
         updateDTO.setPermisosIds(List.of(2)); // Le mandamos solo el permiso 2 (quitando el 1 que tenía)
 
         // Simulamos que el rol ya tenía el permiso 1 activo
