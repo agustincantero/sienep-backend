@@ -23,6 +23,19 @@ import com.fides.sienep.mapper.RolMapper;
 
 import java.util.List;
 
+/**
+ * Servicio encargado de la gestión completa de los Roles.
+ * 
+ * <p><b>Mecanismo de Caché:</b></p>
+ * <ul>
+ *   <li>{@code @Cacheable("roles")}: Guarda el resultado de la consulta en la memoria RAM del servidor.
+ *       Las siguientes peticiones se responden de forma instantánea sin ir a PostgreSQL.</li>
+ *   <li>{@code @CacheEvict(value = "roles", allEntries = true)}: Actúa como la "destructora". 
+ *       Cuando ocurre un alta, baja o modificación, esta anotación vacía la caja "roles" de la memoria RAM.
+ *       Esto obliga al sistema a volver a consultar la base de datos la próxima vez, garantizando 
+ *       que nunca se le muestren datos viejos a los usuarios.</li>
+ * </ul>
+ */
 @Service
 @RequiredArgsConstructor
 public class RolService {
