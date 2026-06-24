@@ -131,6 +131,7 @@ public class AuthService {
         String contraseniaPlana = passwordGeneratorService.generar();
 
         usuario.setContrasenia(passwordEncoder.encode(contraseniaPlana));
+        usuario.setBloqueado(false);
         usuarioRepository.save(usuario);
 
         emailService.enviarContraseniaRestablecida(usuario.getEmail(), usuario.getNombre(), contraseniaPlana);
