@@ -49,12 +49,6 @@ public class FuncionarioRequestDTO {
     @Schema(description = "País emisor del documento", example = "URY")
     private PaisDocumento paisDocumento;
 
-    @NotBlank
-    @Size(min = 8, max = 100)
-    @Schema(
-            description = "Contraseña inicial",
-            example = "Temp1234!"
-    )
-    private String contrasenia;
+
     // ========================================================
 }

@@ -37,10 +37,6 @@ public class FuncionarioUpdateDTO {
 
 
     @Size(min = 8, max = 100)
-    @Schema(
-            description = "Contraseña inicial",
-            example = "Temp1234!"
-    )
-    private String contrasenia;
+
 
 }
