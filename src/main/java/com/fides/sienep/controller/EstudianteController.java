@@ -179,4 +179,15 @@ public class EstudianteController {
         estudianteService.reactivar(id);
         return ResponseEntity.noContent().build();
     }
+
+
+    @Operation(summary = "Resetear contraseña de un estudiante",
+            description = "Requiere EDITAR_ESTUDIANTE. Genera una nueva contraseña y la envía por email.")
+    @ApiResponse(responseCode = "204", description = "Contraseña reseteada y email enviado")
+    @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
+    @PatchMapping("/{id}/reset-contrasenia")
+    public ResponseEntity<Void> resetContrasenia(@PathVariable Integer id) {
+        estudianteService.resetContrasenia(id);
+        return ResponseEntity.noContent().build();
+    }
 }

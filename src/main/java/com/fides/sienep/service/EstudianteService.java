@@ -14,6 +14,8 @@ import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
 import com.fides.sienep.utils.ValidadorDeCedulasUy;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -39,7 +41,9 @@ public class EstudianteService {
     private final GrupoRepository grupoRepository;
     private final PasswordEncoder passwordEncoder;
     private final EstudianteMapper estudianteMapper;
-
+    private final EmailService emailService;
+    private final PasswordGeneratorService passwordGeneratorService;
+    private static final Logger log = LoggerFactory.getLogger(EstudianteService.class);
     // =========================================================
     // CREAR
     // =========================================================
@@ -63,9 +67,11 @@ public class EstudianteService {
 
         validarEdad(dto.getFechaNacimiento());
 
+        String contraseniaPlana = passwordGeneratorService.generar();
+
         Estudiante estudiante = new Estudiante(
                 dto.getNombre(), dto.getApellido(), dto.getDocumento(),
-                dto.getPaisDocumento(), passwordEncoder.encode(dto.getContrasenia()),
+                dto.getPaisDocumento(), passwordEncoder.encode(contraseniaPlana),
                 dto.getEmail(), dto.getCiudad(), dto.getDepartamento(),
                 dto.getCalle(), dto.getNroPuerta(), dto.getInformacionSalud(),
                 dto.getSistemaSalud(), dto.getFechaNacimiento(),
@@ -75,7 +81,10 @@ public class EstudianteService {
         asignarTelefonos(estudiante, dto.getTelefonos());
         asignarGrupos(estudiante, dto.getIdGrupos());
 
-        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
+        Estudiante guardado = estudianteRepository.save(estudiante);
+        emailService.enviarContraseniaTemporal(guardado.getEmail(), guardado.getNombre(), contraseniaPlana);
+
+        return estudianteMapper.toDto(guardado);
     }
 
     // =========================================================
@@ -170,9 +179,24 @@ public class EstudianteService {
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(estudiante.getEstado())) {
             estudiante.setEstado(EstadoLogico.ACTIVO);
         }
+        estudiante.setBloqueado(false);
         estudianteRepository.save(estudiante);
+        log.info("[AUDIT] Estudiante id={} cambió su contraseña", id);
     }
 
+
+    @PreAuthorize("hasAuthority('EDITAR_ESTUDIANTE')")
+    @Transactional
+    public void resetContrasenia(Integer id) {
+        Estudiante estudiante = buscarOFallar(id);
+
+        String contraseniaPlana = passwordGeneratorService.generar();
+        estudiante.setContrasenia(passwordEncoder.encode(contraseniaPlana));
+        estudianteRepository.save(estudiante);
+
+        emailService.enviarContraseniaRestablecida(estudiante.getEmail(), estudiante.getNombre(), contraseniaPlana);
+        log.info("[AUDIT] Admin reseteó contraseña del estudiante id={}", id);
+    }
     // =========================================================
     // BAJA Y REACTIVACIÓN
     // =========================================================

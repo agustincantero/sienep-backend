@@ -52,6 +52,10 @@ public abstract class Usuario {
     @Column(name = "updated_at", nullable = false, insertable = false)
     protected LocalDateTime updatedAt;
 
+    @Column(name = "bloqueado", nullable = false)
+    private boolean bloqueado = false;
+
+
     public Usuario(String nombre, String apellido, String documento, PaisDocumento paisDocumento, String contrasenia, String email) {
         this.nombre = nombre;
         this.apellido = apellido;

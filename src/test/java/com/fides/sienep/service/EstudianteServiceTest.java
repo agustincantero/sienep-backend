@@ -269,7 +269,6 @@ class EstudianteServiceTest {
         dto.setDocumento("47520642");
         dto.setPaisDocumento(PaisDocumento.URY);
         dto.setEmail("ana.garcia@utec.edu.uy");
-        dto.setContrasenia("Temp1234!");
         dto.setFechaNacimiento(LocalDate.of(1998, 7, 20));
 
         when(estudianteRepository.existsByDocumento("47520642")).thenReturn(false);
@@ -458,6 +457,7 @@ class EstudianteServiceTest {
         verify(estudianteRepository).save(estudianteExistente);
     }
 
+
     // =========================================================
     // BAJA Y REACTIVACIÓN
     // =========================================================
@@ -514,7 +514,6 @@ class EstudianteServiceTest {
         dto.setDocumento("12345678");
         dto.setPaisDocumento(PaisDocumento.ARG);
         dto.setEmail("ana.garcia@utec.edu.uy");
-        dto.setContrasenia("Temp1234!");
         dto.setFechaNacimiento(LocalDate.of(1998, 7, 20));
         return dto;
     }

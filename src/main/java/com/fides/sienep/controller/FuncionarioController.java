@@ -1,5 +1,6 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
 import com.fides.sienep.dto.FuncionarioUpdateDTO;
@@ -87,6 +88,31 @@ public class FuncionarioController {
     @PatchMapping("/{id}/reactivar")
     public ResponseEntity<FuncionarioResponseDTO> reactivar(@PathVariable Integer id) {
         return ResponseEntity.ok(funcionarioService.reactivar(id));
+    }
+
+
+
+    @Operation(summary = "Resetear contraseña de un funcionario",
+            description = "Requiere EDITAR_FUNCIONARIO. Genera una nueva contraseña y la envía por email.")
+    @ApiResponse(responseCode = "204", description = "Contraseña reseteada y email enviado")
+    @ApiResponse(responseCode = "404", description = "Funcionario no encontrado")
+    @PatchMapping("/{id}/reset-contrasenia")
+    public ResponseEntity<Void> resetContrasenia(@PathVariable Integer id) {
+        funcionarioService.resetContrasenia(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Cambiar contraseña propia",
+            description = "El funcionario autenticado cambia su propia contraseña. " +
+                    "Si estaba PENDIENTE_DE_ACTIVACION pasa a ACTIVO.")
+    @ApiResponse(responseCode = "204", description = "Contraseña actualizada")
+    @ApiResponse(responseCode = "403", description = "Intento de cambiar contraseña de otro usuario")
+    @PatchMapping("/{id}/contrasenia")
+    public ResponseEntity<Void> cambiarContrasenia(
+            @PathVariable Integer id,
+            @Valid @RequestBody CambiarContraseniaDTO dto) {
+        funcionarioService.cambiarContrasenia(id, dto);
+        return ResponseEntity.noContent().build();
     }
 
     // ========================================================

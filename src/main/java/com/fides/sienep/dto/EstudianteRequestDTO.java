@@ -54,10 +54,7 @@ public class EstudianteRequestDTO {
     @Email
     @Schema(description = "Email institucional", example = "maria.gonzalez@utec.edu.uy")
     private String email;
-
-    @Size(min = 8, max = 100)
-    @Schema(description = "Contraseña inicial — solo requerida en el alta", example = "Temp1234!")
-    private String contrasenia;
+    
 
     @Size(max = 50)
     @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
