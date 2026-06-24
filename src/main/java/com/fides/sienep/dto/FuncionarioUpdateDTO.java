@@ -8,9 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-// me parece que corresponde NoArgsConstructor
 @NoArgsConstructor
-//
 @Schema(description = "Datos para actualizar un funcionario")
 public class FuncionarioUpdateDTO {
 
@@ -34,9 +32,4 @@ public class FuncionarioUpdateDTO {
     @NotNull(message = "El ID de rol es obligatorio")
     @Schema(description = "ID del rol asignado", example = "1")
     private Integer idRol;
-
-
-    @Size(min = 8, max = 100)
-
-
 }

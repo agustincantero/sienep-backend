@@ -9,9 +9,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-// me parece que corresponde NoArgsConstructor
 @NoArgsConstructor
-//
 @Schema(description = "Datos para registrar un funcionario")
 public class FuncionarioRequestDTO {
 
@@ -42,13 +40,7 @@ public class FuncionarioRequestDTO {
     @Schema(description = "ID del rol asignado", example = "1")
     private Integer idRol;
 
-
-    // ========================================================
-    // SOLE
     @NotNull
     @Schema(description = "País emisor del documento", example = "URY")
     private PaisDocumento paisDocumento;
-
-
-    // ========================================================
 }
