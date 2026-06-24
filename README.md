@@ -76,6 +76,10 @@ $env:JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
 $env:DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 $env:DB_USER="sienep"
 $env:DB_PASSWORD="sienep"
+$env:MAIL_HOST="smtp.gmail.com"
+$env:MAIL_PORT="587"
+$env:MAIL_USERNAME="tu_correo@gmail.com"
+$env:MAIL_PASSWORD="tu_password_de_aplicacion"
 ```
 
 *Windows - Opción 2: Símbolo del sistema (CMD)*
@@ -84,6 +88,10 @@ set JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura
 set DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto
 set DB_USER=sienep
 set DB_PASSWORD=sienep
+set MAIL_HOST=smtp.gmail.com
+set MAIL_PORT=587
+set MAIL_USERNAME=tu_correo@gmail.com
+set MAIL_PASSWORD=tu_password_de_aplicacion
 ```
 
 *macOS & Linux (bash/zsh)*
@@ -92,6 +100,10 @@ export JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
 export DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 export DB_USER="sienep"
 export DB_PASSWORD="sienep"
+export MAIL_HOST="smtp.gmail.com"
+export MAIL_PORT="587"
+export MAIL_USERNAME="tu_correo@gmail.com"
+export MAIL_PASSWORD="tu_password_de_aplicacion"
 ```
 
 **Paso 2: Ejecutar el proyecto**
@@ -109,7 +121,7 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
 5. En el campo de **Environment variables**, agregá lo siguiente:
    ```text
-   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep
+   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion
    ```
    *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 7. Aplicá los cambios (**Apply → OK**).
