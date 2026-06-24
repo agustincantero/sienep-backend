@@ -38,7 +38,7 @@ public class LoginUsuarioDetailsService implements UserDetailsService {
         Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByEmail(email);
         if (funcionarioOpt.isPresent()) {
             Funcionario funcionario = funcionarioOpt.get();
-            if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
+            if (funcionario.getEstado() != EstadoLogico.ACTIVO && funcionario.getEstado() != EstadoLogico.PENDIENTE_DE_ACTIVACION) {
                 throw new UsernameNotFoundException("Funcionario inactivo: " + email);
             }
 
@@ -61,7 +61,7 @@ public class LoginUsuarioDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "Usuario no encontrado: " + email));
 
-        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO && estudiante.getEstado() != EstadoLogico.PENDIENTE_DE_ACTIVACION) {
             throw new UsernameNotFoundException("Estudiante inactivo: " + email);
         }
 

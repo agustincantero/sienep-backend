@@ -56,7 +56,7 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
     }
 
     private UserDetails buildFuncionarioDetails(Funcionario funcionario) {
-        if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
+        if (funcionario.getEstado() != EstadoLogico.ACTIVO && funcionario.getEstado() != EstadoLogico.PENDIENTE_DE_ACTIVACION) {
             throw new UsernameNotFoundException("Funcionario inactivo: " + funcionario.getIdUsuario());
         }
 
@@ -76,7 +76,7 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
     }
 
     private UserDetails buildEstudianteDetails(Estudiante estudiante) {
-        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO && estudiante.getEstado() != EstadoLogico.PENDIENTE_DE_ACTIVACION) {
             throw new UsernameNotFoundException("Estudiante inactivo: " + estudiante.getIdUsuario());
         }
 
