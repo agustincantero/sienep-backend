@@ -170,19 +170,12 @@ public class EstudianteController {
      * PATCH sobre el sub-recurso /estado — modifica parcialmente el estado del recurso.
      * El DTO debe traer estado = ACTIVO. Si trae otro valor, se rechaza con 400.
      */
-    @PatchMapping("/{id}/estado")
+    @PatchMapping("/{id}/reactivar")
     @Operation(summary = "Reactivar un estudiante dado de baja",
-            description = "Requiere REACTIVAR_ESTUDIANTE. El body debe indicar estado = ACTIVO.")
+            description = "Requiere REACTIVAR_ESTUDIANTE. Sin body — la URL define la acción.")
     @ApiResponse(responseCode = "204", description = "Estudiante reactivado")
-    @ApiResponse(responseCode = "400", description = "Estado inválido — solo se acepta ACTIVO")
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
-    public ResponseEntity<Void> reactivar(
-            @PathVariable Integer id,
-            @Valid @RequestBody CambiarEstadoDTO dto) {
-        if (dto.getEstado() != EstadoLogico.ACTIVO) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Este endpoint solo acepta estado = ACTIVO. Para dar de baja use DELETE /estudiantes/{id}.");
-        }
+    public ResponseEntity<Void> reactivar(@PathVariable Integer id) {
         estudianteService.reactivar(id);
         return ResponseEntity.noContent().build();
     }

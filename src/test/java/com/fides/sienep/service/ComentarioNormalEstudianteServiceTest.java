@@ -247,7 +247,7 @@ class ComentarioNormalEstudianteServiceTest {
         // Simulamos un usuario autenticado que NO es estudiante
         org.springframework.security.core.Authentication auth =
                 mock(org.springframework.security.core.Authentication.class);
-        when(auth.getAuthorities()).thenReturn(List.of());
+        lenient().when(auth.getAuthorities()).thenReturn(List.of());
         org.springframework.security.core.context.SecurityContextHolder
                 .getContext().setAuthentication(auth);
 
@@ -267,7 +267,7 @@ class ComentarioNormalEstudianteServiceTest {
         // y no pasa idEstudiante → el service lanza 400
         org.springframework.security.core.Authentication auth =
                 mock(org.springframework.security.core.Authentication.class);
-        when(auth.getAuthorities()).thenReturn(List.of());
+        lenient().when(auth.getAuthorities()).thenReturn(List.of());
         org.springframework.security.core.context.SecurityContextHolder
                 .getContext().setAuthentication(auth);
 

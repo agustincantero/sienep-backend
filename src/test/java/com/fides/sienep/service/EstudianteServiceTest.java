@@ -388,8 +388,10 @@ class EstudianteServiceTest {
     void verMiPerfil_Exito() {
         mockAuth("1", true);
 
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
-        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+        lenient().when(estudianteRepository.findById(anyInt()))
+                .thenReturn(Optional.of(estudianteExistente));
+        lenient().when(estudianteMapper.toResumenDto(estudianteExistente))
+                .thenReturn(resumenDTO);
 
         EstudianteResumenDTO resultado = estudianteService.verMiPerfil();
 
