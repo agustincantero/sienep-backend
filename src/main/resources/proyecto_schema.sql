@@ -83,6 +83,7 @@ CREATE TABLE proyecto.usuarios (
                                    email       proyecto.dom_email       NOT NULL,
                                    contrasenia VARCHAR(255)             NOT NULL,
                                    estado      proyecto.estado_logico   NOT NULL DEFAULT 'PENDIENTE_DE_ACTIVACION',
+                                   bloqueado   BOOLEAN                  NOT NULL DEFAULT FALSE,
                                    created_at  TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                    updated_at  TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

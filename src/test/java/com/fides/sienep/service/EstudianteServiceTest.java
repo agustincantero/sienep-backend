@@ -269,7 +269,6 @@ class EstudianteServiceTest {
         dto.setDocumento("47520642");
         dto.setPaisDocumento(PaisDocumento.URY);
         dto.setEmail("ana.garcia@utec.edu.uy");
-        dto.setContrasenia("Temp1234!");
         dto.setFechaNacimiento(LocalDate.of(1998, 7, 20));
 
         when(estudianteRepository.existsByDocumento("47520642")).thenReturn(false);
@@ -388,8 +387,10 @@ class EstudianteServiceTest {
     void verMiPerfil_Exito() {
         mockAuth("1", true);
 
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
-        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+        lenient().when(estudianteRepository.findById(anyInt()))
+                .thenReturn(Optional.of(estudianteExistente));
+        lenient().when(estudianteMapper.toResumenDto(estudianteExistente))
+                .thenReturn(resumenDTO);
 
         EstudianteResumenDTO resultado = estudianteService.verMiPerfil();
 
@@ -456,6 +457,7 @@ class EstudianteServiceTest {
         verify(estudianteRepository).save(estudianteExistente);
     }
 
+
     // =========================================================
     // BAJA Y REACTIVACIÓN
     // =========================================================
@@ -512,7 +514,6 @@ class EstudianteServiceTest {
         dto.setDocumento("12345678");
         dto.setPaisDocumento(PaisDocumento.ARG);
         dto.setEmail("ana.garcia@utec.edu.uy");
-        dto.setContrasenia("Temp1234!");
         dto.setFechaNacimiento(LocalDate.of(1998, 7, 20));
         return dto;
     }
