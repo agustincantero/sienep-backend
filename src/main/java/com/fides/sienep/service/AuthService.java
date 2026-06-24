@@ -125,11 +125,13 @@ public class AuthService {
         logIntentoRepository.save(new LogIntento(idUsuario, exitoso));
     }
 
-    private void verificarYBloquearSiCorresponde(Integer idUsuario, Usuario usuario) {
+    private long contarIntentosFallidos(Integer idUsuario) {
         LocalDateTime desde = LocalDateTime.now().minusMinutes(VENTANA_MINUTOS);
-        long fallidosRecientes = logIntentoRepository
-                .contarIntentosFallidosDesde(idUsuario, desde);
+        return logIntentoRepository.contarIntentosFallidosDesde(idUsuario, desde);
+    }
 
+    private void verificarYBloquearSiCorresponde(Integer idUsuario, Usuario usuario) {
+        long fallidosRecientes = contarIntentosFallidos(idUsuario);
         if (fallidosRecientes >= MAX_INTENTOS_FALLIDOS) {
             usuario.setBloqueado(true);
             usuarioRepository.save(usuario);

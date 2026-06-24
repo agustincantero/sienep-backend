@@ -5,6 +5,8 @@ import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,7 @@ public class DataSeeder {
     private final FuncionarioRepository funcionarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
+    private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     @PostConstruct
     @Transactional
@@ -34,7 +37,10 @@ public class DataSeeder {
         if (funcionarioRepository.findByEmail(email).isPresent()) return;
 
         Rol rol = rolRepository.findByNombre(nomRol)
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + nomRol));
+                .orElseThrow(() -> {
+                    log.error("[AUDIT] DataSeeder: rol no encontrado al inicializar usuarios: {}", nomRol);
+                    return new IllegalStateException("Rol no encontrado durante inicialización: " + nomRol);
+                });
 
         Funcionario funcionario = new Funcionario();
         funcionario.setNombre(nombre);

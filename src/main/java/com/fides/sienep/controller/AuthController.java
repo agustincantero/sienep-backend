@@ -68,7 +68,8 @@ public class AuthController {
     @Operation(summary = "Olvidé mi contraseña",
             description = "Genera una nueva contraseña temporal y la envía al email registrado.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Si el email existe, se envió la contraseña")
+            @ApiResponse(responseCode = "200", description = "Si el email existe, se envió la contraseña"),
+            @ApiResponse(responseCode = "400", description = "Body malformado o email con formato inválido")
     })
     public ResponseEntity<Void> olvideMiContrasenia(
             @RequestBody @Valid OlvideContraseniaDTO dto) {

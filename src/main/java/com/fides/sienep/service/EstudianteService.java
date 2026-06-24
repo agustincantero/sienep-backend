@@ -168,12 +168,9 @@ public class EstudianteService {
     // =========================================================
     // CAMBIAR CONTRASEÑA
     // =========================================================
-
+    @PreAuthorize("authentication.name == #id.toString() or hasAuthority('EDITAR_ESTUDIANTE')")
     @Transactional
     public void cambiarContrasenia(Integer id, CambiarContraseniaDTO dto) {
-        if (!getIdUsuarioAutenticado().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No podés cambiar la contraseña de otro usuario.");
-        }
         Estudiante estudiante = buscarOFallar(id);
         estudiante.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(estudiante.getEstado())) {

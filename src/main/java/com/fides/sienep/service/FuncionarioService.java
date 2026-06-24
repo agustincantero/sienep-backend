@@ -24,9 +24,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-
 
 @Service
 @RequiredArgsConstructor
@@ -170,16 +167,9 @@ public class FuncionarioService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cédula uruguaya es inválida.");
         }
     }
-
+    @PreAuthorize("authentication.name == #id.toString() or hasAuthority('EDITAR_FUNCIONARIO')")
     @Transactional
     public void cambiarContrasenia(Integer id, CambiarContraseniaDTO dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer idAutenticado = Integer.parseInt(auth.getName());
-
-        if (!idAutenticado.equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No podés cambiar la contraseña de otro usuario.");
-        }
-
         Funcionario funcionario = buscarOFallar(id);
         funcionario.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
 
