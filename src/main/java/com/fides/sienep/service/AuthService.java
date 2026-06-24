@@ -47,7 +47,7 @@ public class AuthService {
     // LOGIN
     // =========================================================
 
-    @Transactional
+    @Transactional(noRollbackFor = ResponseStatusException.class)
     public LoginResponseDTO login(LoginRequestDTO dto, String ip) {
 
         // 1. Resolver quién es
@@ -73,8 +73,7 @@ public class AuthService {
 
         if (usuario.isBloqueado()) {
             log.warn("Login denegado — usuario bloqueado id={}", idUsuario);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Tu cuenta está bloqueada. Revisá tu email para obtener una nueva contraseña.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tu cuenta ha sido bloqueada por demasiados intentos fallidos. Utilizá la opción 'Olvidé mi contraseña' para desbloquearla.");
         }
 
         // 3. Validar contraseña
