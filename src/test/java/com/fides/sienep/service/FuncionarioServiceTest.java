@@ -71,7 +71,6 @@ class FuncionarioServiceTest {
         requestDTO.setDocumento("12345678");
         requestDTO.setPaisDocumento(PaisDocumento.ARG);
         requestDTO.setEmail("carlos.perez@utec.edu.uy");
-        requestDTO.setContrasenia("Temp1234!");
         requestDTO.setIdRol(1);
 
         responseDTO = FuncionarioResponseDTO.builder()

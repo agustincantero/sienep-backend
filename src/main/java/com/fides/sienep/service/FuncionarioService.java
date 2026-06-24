@@ -156,9 +156,6 @@ public class FuncionarioService {
         funcionario.setApellido(dto.getApellido());
         funcionario.setEmail(dto.getEmail());
         funcionario.setRol(rol);
-        if (dto.getContrasenia() != null && !dto.getContrasenia().isBlank()) {
-            funcionario.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
-        }
     }
 
     private void validarDocumento(FuncionarioRequestDTO dto) {
