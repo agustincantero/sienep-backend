@@ -10,8 +10,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import com.fides.sienep.mapper.PermisoMapper;
+import com.fides.sienep.model.EstadoLogico;
 
 import java.util.List;
 
@@ -24,6 +27,7 @@ public class PermisoService {
 
     @PreAuthorize("hasAuthority('VER_PERMISOS')")
     @Transactional(readOnly = true)
+    @Cacheable("permisos")
     public List<PermisoResponseDTO> obtenerTodos() {
         List<Permiso> permisos = permisoRepository.findAll();
         return mapper.toDtoList(permisos);
@@ -31,9 +35,14 @@ public class PermisoService {
 
     @PreAuthorize("hasAuthority('EDITAR_PERMISO')")
     @Transactional
+    @CacheEvict(value = "permisos", allEntries = true)
     public PermisoResponseDTO actualizarDescripcion(int id, PermisoUpdateDTO requestDTO) {
         Permiso permiso = permisoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permiso no encontrado"));
+
+        if (permiso.getEstado() == EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede editar un permiso inactivo");
+        }
 
         permiso.setDescripcion(requestDTO.getDescripcion());
         

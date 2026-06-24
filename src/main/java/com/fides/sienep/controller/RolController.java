@@ -79,4 +79,16 @@ public class RolController {
         rolService.darDeBajaRol(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Reactivar un rol", description = "Vuelve a poner en estado ACTIVO a un rol inactivo.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Rol reactivado exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Rol no encontrado"),
+            @ApiResponse(responseCode = "409", description = "El rol ya está activo")
+    })
+    @PatchMapping("/{id}/reactivar")
+    public ResponseEntity<RolResponseDTO> reactivarRol(
+            @Parameter(description = "ID del rol a reactivar", required = true) @PathVariable int id) {
+        return ResponseEntity.ok(rolService.reactivarRol(id));
+    }
 }

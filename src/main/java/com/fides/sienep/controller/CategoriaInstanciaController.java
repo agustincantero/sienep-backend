@@ -88,4 +88,15 @@ public class CategoriaInstanciaController {
         categoriaService.darDeBajaCategoria(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Reactivar una categoría", description = "Vuelve a poner en estado ACTIVO a una categoría inactiva.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Categoría reactivada exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Categoría no encontrada"),
+            @ApiResponse(responseCode = "409", description = "La categoría ya está activa")
+    })
+    @PatchMapping("/{id}/reactivar")
+    public ResponseEntity<CategoriaInstanciaResponseDTO> reactivarCategoria(@Parameter(description = "ID de la categoría a reactivar", required = true) @PathVariable int id) {
+        return ResponseEntity.ok(categoriaService.reactivarCategoria(id));
+    }
 }

@@ -6,6 +6,7 @@ import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Permiso;
 import com.fides.sienep.model.Rol;
+import com.fides.sienep.model.RolPermiso;
 import com.fides.sienep.repository.PermisoRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.persistence.EntityManager;
@@ -199,13 +200,12 @@ class RolServiceTest {
         RolUpdateDTO updateDTO = new RolUpdateDTO();
         updateDTO.setNombre("TUTOR_MODIFICADO");
         updateDTO.setDescripcion("Nueva desc");
-        updateDTO.setEstado(EstadoLogico.ACTIVO);
         updateDTO.setPermisosIds(List.of(2)); // Le mandamos solo el permiso 2 (quitando el 1 que tenía)
 
         // Simulamos que el rol ya tenía el permiso 1 activo
         Permiso permiso1 = new Permiso("PERMISO_1", "Desc");
         permiso1.setIdPermiso(1);
-        com.fides.sienep.model.RolPermiso rpExistente = new com.fides.sienep.model.RolPermiso(rolExistente, permiso1, EstadoLogico.ACTIVO);
+        RolPermiso rpExistente = new RolPermiso(rolExistente, permiso1, EstadoLogico.ACTIVO);
         rolExistente.getRolPermisos().add(rpExistente);
 
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));

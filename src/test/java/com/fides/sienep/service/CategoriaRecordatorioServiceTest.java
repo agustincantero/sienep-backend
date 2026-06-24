@@ -121,7 +121,6 @@ public class CategoriaRecordatorioServiceTest {
         
         CategoriaRecordatorioUpdateDTO dto = new CategoriaRecordatorioUpdateDTO();
         dto.setNomCategoria("NUEVA");
-        dto.setEstado(EstadoLogico.ACTIVO);
 
         when(categoriaRepository.findById(1)).thenReturn(Optional.of(cat));
         when(categoriaRepository.existsByNomCategoria("NUEVA")).thenReturn(false);
