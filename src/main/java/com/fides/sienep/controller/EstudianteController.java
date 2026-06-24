@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -67,7 +68,7 @@ public class EstudianteController {
             @RequestParam(required = false) Integer carrera,
             @RequestParam(required = false) Integer itr,
             @RequestParam(required = false) EstadoLogico estado,
-            @PageableDefault(size = 20, sort = "apellido") Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "apellido") Pageable pageable) {
         return ResponseEntity.ok(estudianteService.listar(texto, grupo, carrera, itr, estado, pageable));
     }
 
