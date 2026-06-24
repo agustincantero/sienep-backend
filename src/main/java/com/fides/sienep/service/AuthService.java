@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,13 +41,14 @@ public class AuthService {
     private final PasswordEncoder          passwordEncoder;
     private final EmailService             emailService;
     private final PasswordGeneratorService passwordGeneratorService;
+    private final AuditoriaService         auditoriaService;
 
     // =========================================================
     // LOGIN
     // =========================================================
 
     @Transactional
-    public LoginResponseDTO login(LoginRequestDTO dto) {
+    public LoginResponseDTO login(LoginRequestDTO dto, String ip) {
 
         // 1. Resolver quién es
         int idUsuario;
@@ -90,8 +92,26 @@ public class AuthService {
         registrarIntento(idUsuario, true);
         String token = jwtTokenUtil.generateToken(idUsuario, rol);
         log.info("[AUDIT] Login exitoso: id={} rol={}", idUsuario, rol);
+        auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGIN, idUsuario, ip);
 
         return new LoginResponseDTO(token);
+    }
+
+    // =========================================================
+    // LOGOUT
+    // =========================================================
+
+    public void logout(Authentication auth, String ip) {
+        if (auth != null && auth.isAuthenticated()
+                && !auth.getPrincipal().equals("anonymousUser")) {
+            try {
+                int idUsuario = Integer.parseInt(auth.getName());
+                auditoriaService.registrarEventoManual(
+                        "SISTEMA", TipoAccion.LOGOUT, idUsuario, ip);
+            } catch (Exception e) {
+                log.warn("No se pudo auditar el logout: {}", e.getMessage());
+            }
+        }
     }
 
     // =========================================================
