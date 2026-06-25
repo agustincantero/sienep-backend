@@ -31,14 +31,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class InformeAdjuntoServiceTest {
 
-    @Mock
-    private InformeAdjuntoRepository informeRepository;
-
-    @Mock
-    private EstudianteRepository estudianteRepository;
-
-    @Mock
-    private InformeAdjuntoMapper informeMapper;
+    @Mock private InformeAdjuntoRepository informeRepository;
+    @Mock private EstudianteRepository estudianteRepository;
+    @Mock private InformeAdjuntoMapper informeMapper;
 
     @InjectMocks
     private InformeAdjuntoService informeService;
@@ -77,12 +72,10 @@ class InformeAdjuntoServiceTest {
                 .build();
     }
 
-    // =========================================================
-    // ADJUNTAR
-    // =========================================================
+    // ── Adjuntar ──────────────────────────────────────────────
 
     @Test
-    @DisplayName("Adjuntar informe - Éxito")
+    @DisplayName("Adjuntar informe - Éxito con PDF")
     void adjuntar_Exito() {
         InformeAdjuntoRequestDTO dto = new InformeAdjuntoRequestDTO();
         dto.setIdUsuario(1);
@@ -102,7 +95,26 @@ class InformeAdjuntoServiceTest {
     }
 
     @Test
-    @DisplayName("Adjuntar informe - Estudiante no encontrado → 404")
+    @DisplayName("Adjuntar informe - Éxito con extensión JPG en mayúsculas")
+    void adjuntar_Exito_ExtensionMayuscula() {
+        InformeAdjuntoRequestDTO dto = new InformeAdjuntoRequestDTO();
+        dto.setIdUsuario(1);
+        dto.setUrlArchivo("https://storage.example.com/imagen.JPG");
+        dto.setNombre("imagen_2024");
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "imagen_2024")).thenReturn(false);
+        when(informeRepository.save(any(InformeAdjunto.class))).thenReturn(informeMock);
+        when(informeMapper.toDto(any(InformeAdjunto.class))).thenReturn(responseDTO);
+
+        InformeAdjuntoResponseDTO result = informeService.adjuntar(dto);
+
+        assertNotNull(result);
+        verify(informeRepository).save(any(InformeAdjunto.class));
+    }
+
+    @Test
+    @DisplayName("Adjuntar informe - Estudiante no encontrado (404)")
     void adjuntar_LanzaExcepcion_EstudianteNoEncontrado() {
         InformeAdjuntoRequestDTO dto = new InformeAdjuntoRequestDTO();
         dto.setIdUsuario(99);
@@ -111,8 +123,7 @@ class InformeAdjuntoServiceTest {
 
         when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.adjuntar(dto));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
@@ -120,7 +131,7 @@ class InformeAdjuntoServiceTest {
     }
 
     @Test
-    @DisplayName("Adjuntar informe - Nombre duplicado → 409")
+    @DisplayName("Adjuntar informe - Nombre duplicado (409)")
     void adjuntar_LanzaExcepcion_NombreDuplicado() {
         InformeAdjuntoRequestDTO dto = new InformeAdjuntoRequestDTO();
         dto.setIdUsuario(1);
@@ -130,8 +141,7 @@ class InformeAdjuntoServiceTest {
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
         when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(true);
 
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.adjuntar(dto));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
@@ -139,7 +149,7 @@ class InformeAdjuntoServiceTest {
     }
 
     @Test
-    @DisplayName("Adjuntar informe - Extensión inválida → 400")
+    @DisplayName("Adjuntar informe - Extensión inválida (400)")
     void adjuntar_LanzaExcepcion_ExtensionInvalida() {
         InformeAdjuntoRequestDTO dto = new InformeAdjuntoRequestDTO();
         dto.setIdUsuario(1);
@@ -149,17 +159,32 @@ class InformeAdjuntoServiceTest {
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
         when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
 
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.adjuntar(dto));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         verify(informeRepository, never()).save(any());
     }
 
-    // =========================================================
-    // OBTENER POR ID
-    // =========================================================
+    @Test
+    @DisplayName("Adjuntar informe - URL demasiado larga (400)")
+    void adjuntar_LanzaExcepcion_UrlDemasiadoLarga() {
+        InformeAdjuntoRequestDTO dto = new InformeAdjuntoRequestDTO();
+        dto.setIdUsuario(1);
+        dto.setUrlArchivo("https://storage.example.com/" + "a".repeat(480) + ".pdf");
+        dto.setNombre("informe_2024");
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> informeService.adjuntar(dto));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(informeRepository, never()).save(any());
+    }
+
+    // ── Obtener por ID ────────────────────────────────────────
 
     @Test
     @DisplayName("Obtener por ID - Éxito")
@@ -175,21 +200,18 @@ class InformeAdjuntoServiceTest {
     }
 
     @Test
-    @DisplayName("Obtener por ID - No encontrado → 404")
+    @DisplayName("Obtener por ID - No encontrado (404)")
     void obtenerPorId_LanzaExcepcion_NoEncontrado() {
         when(informeRepository.findById(99)).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.obtenerPorId(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(informeMapper, never()).toDto(any());
     }
 
-    // =========================================================
-    // ELIMINAR (BAJA LÓGICA)
-    // =========================================================
+    // ── Eliminar ──────────────────────────────────────────────
 
     @Test
     @DisplayName("Eliminar informe - Estado pasa a ELIMINADO")
@@ -205,23 +227,23 @@ class InformeAdjuntoServiceTest {
     }
 
     @Test
-    @DisplayName("Eliminar informe - No encontrado → 404")
+    @DisplayName("Eliminar informe - No encontrado (404)")
     void eliminar_LanzaExcepcion_NoEncontrado() {
         when(informeRepository.findById(99)).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.eliminar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(informeRepository, never()).save(any());
     }
 
+    // ── Listar ────────────────────────────────────────────────
+
     @Test
     @DisplayName("Listar por estudiante - Éxito")
     void listarPorEstudiante_Exito() {
         List<InformeAdjunto> informes = List.of(informeMock);
-
         when(informeRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(informes);
         when(informeMapper.toDto(informeMock)).thenReturn(responseDTO);
@@ -231,6 +253,5 @@ class InformeAdjuntoServiceTest {
         assertNotNull(result);
         assertEquals(1, result.size());
         verify(informeRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO);
-        
     }
 }

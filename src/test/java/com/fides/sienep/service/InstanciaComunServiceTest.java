@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +38,7 @@ class InstanciaComunServiceTest {
     @Mock private CategoriaInstanciaRepository categoriaInstanciaRepository;
     @Mock private InstanciaIdGenerator instanciaIdGenerator;
     @Mock private InstanciaComunMapper instanciaComunMapper;
+    @Mock private EmailService emailService;
 
     @InjectMocks
     private InstanciaComunService instanciaComunService;
@@ -60,6 +62,7 @@ class InstanciaComunServiceTest {
         funcionario.setIdUsuario(2);
         funcionario.setNombre("Juan");
         funcionario.setApellido("García");
+        funcionario.setEmail("juan.garcia@utec.edu.uy");
         funcionario.setEstado(EstadoLogico.ACTIVO);
 
         categoria = new CategoriaInstancia();
@@ -85,6 +88,7 @@ class InstanciaComunServiceTest {
         responseDTO = new InstanciaComunResponseDTO();
         responseDTO.setCodInstancia(1);
         responseDTO.setTitulo("Reunión de seguimiento");
+        responseDTO.setIdNegInstancia("INST-2026-000001");
         responseDTO.setEstado(EstadoLogico.ACTIVO);
     }
 
@@ -95,6 +99,8 @@ class InstanciaComunServiceTest {
         lenient().when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
     }
+
+    // ── Crear ─────────────────────────────────────────────────
 
     @Test
     @DisplayName("Crear instancia común - Éxito")
@@ -111,6 +117,47 @@ class InstanciaComunServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodInstancia());
+        verify(instanciaComunRepository).save(any(InstanciaComun.class));
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Notificación enviada al funcionario creador (RF15)")
+    void crear_EnviaNotificacionAlFuncionario() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        instanciaComunService.crear(requestDTO);
+
+        verify(emailService).enviarNotificacionInstancia(
+                eq("juan.garcia@utec.edu.uy"),
+                eq("Juan"),
+                eq("INST-2026-000001"),
+                eq("Reunión de seguimiento")
+        );
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Fallo de email no revierte la transacción (RF15)")
+    void crear_FalloDeEmail_NoRollback() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+        doThrow(new RuntimeException("SMTP no disponible"))
+                .when(emailService).enviarNotificacionInstancia(any(), any(), any(), any());
+
+        InstanciaComunResponseDTO resultado = assertDoesNotThrow(
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertNotNull(resultado);
         verify(instanciaComunRepository).save(any(InstanciaComun.class));
     }
 
@@ -142,6 +189,20 @@ class InstanciaComunServiceTest {
     }
 
     @Test
+    @DisplayName("Crear instancia común - Funcionario no encontrado (404)")
+    void crear_LanzaNotFound_FuncionarioNoExiste() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Crear instancia común - Funcionario inactivo (422)")
     void crear_LanzaUnprocessable_FuncionarioInactivo() {
         mockSecurityContext(2);
@@ -153,117 +214,6 @@ class InstanciaComunServiceTest {
                 () -> instanciaComunService.crear(requestDTO));
 
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
-        verify(instanciaComunRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Crear instancia común - Categoría inactiva (422)")
-    void crear_LanzaUnprocessable_CategoriaInactiva() {
-        mockSecurityContext(2);
-        categoria.setEstado(EstadoLogico.INACTIVO);
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
-        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.crear(requestDTO));
-
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
-        verify(instanciaComunRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Listar activas - Éxito")
-    void listarActivas_Exito() {
-        when(instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(instancia));
-        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
-
-        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarActivas();
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.size());
-    }
-
-    @Test
-    @DisplayName("Buscar por ID - Éxito")
-    void buscarPorId_Exito() {
-        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.of(instancia));
-        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
-
-        InstanciaComunResponseDTO resultado = instanciaComunService.buscarPorId(1);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getCodInstancia());
-    }
-
-    @Test
-    @DisplayName("Buscar por ID - No encontrada (404)")
-    void buscarPorId_LanzaNotFound() {
-        when(instanciaComunRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.buscarPorId(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-    }
-
-    @Test
-    @DisplayName("Actualizar instancia común - Éxito")
-    void actualizar_Exito() {
-        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
-        updateDTO.setTitulo("Nuevo título");
-        updateDTO.setFechaHora(LocalDateTime.now());
-        updateDTO.setIdCategoria(1);
-
-        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.of(instancia));
-        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
-        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
-
-        InstanciaComunResponseDTO resultado = instanciaComunService.actualizar(1, updateDTO);
-
-        assertNotNull(resultado);
-        verify(instanciaComunRepository).save(instancia);
-    }
-
-    @Test
-    @DisplayName("Dar de baja - Éxito")
-    void darDeBaja_Exito() {
-        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.of(instancia));
-
-        instanciaComunService.darDeBaja(1);
-
-        assertEquals(EstadoLogico.INACTIVO, instancia.getEstado());
-        verify(instanciaComunRepository).save(instancia);
-    }
-
-    @Test
-    @DisplayName("Dar de baja - No encontrada (404)")
-    void darDeBaja_LanzaNotFound() {
-        when(instanciaComunRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.darDeBaja(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-    }
-
-    @Test
-    @DisplayName("Crear instancia común - Funcionario no encontrado (404)")
-    void crear_LanzaNotFound_FuncionarioNoExiste() {
-        mockSecurityContext(2);
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.crear(requestDTO));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
     }
 
@@ -283,42 +233,33 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar instancia común - Categoría no encontrada (404)")
-    void actualizar_LanzaNotFound_CategoriaNoExiste() {
-        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
-        updateDTO.setTitulo("Nuevo título");
-        updateDTO.setFechaHora(LocalDateTime.now());
-        updateDTO.setIdCategoria(99);
-
-        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.of(instancia));
-        when(categoriaInstanciaRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.actualizar(1, updateDTO));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(instanciaComunRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Actualizar instancia común - Categoría inactiva (422)")
-    void actualizar_LanzaUnprocessable_CategoriaInactiva() {
-        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
-        updateDTO.setTitulo("Nuevo título");
-        updateDTO.setFechaHora(LocalDateTime.now());
-        updateDTO.setIdCategoria(1);
-
+    @DisplayName("Crear instancia común - Categoría inactiva (422)")
+    void crear_LanzaUnprocessable_CategoriaInactiva() {
+        mockSecurityContext(2);
         categoria.setEstado(EstadoLogico.INACTIVO);
-        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.of(instancia));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
         when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.actualizar(1, updateDTO));
+                () -> instanciaComunService.crear(requestDTO));
 
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
+    }
+
+    // ── Listar ────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Listar activas - Éxito")
+    void listarActivas_Exito() {
+        when(instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(instancia));
+        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
+
+        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarActivas();
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
     }
 
     @Test
@@ -372,5 +313,119 @@ class InstanciaComunServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.size());
+    }
+
+    // ── Buscar por ID ─────────────────────────────────────────
+
+    @Test
+    @DisplayName("Buscar por ID - Éxito")
+    void buscarPorId_Exito() {
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        InstanciaComunResponseDTO resultado = instanciaComunService.buscarPorId(1);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getCodInstancia());
+    }
+
+    @Test
+    @DisplayName("Buscar por ID - No encontrada (404)")
+    void buscarPorId_LanzaNotFound() {
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.buscarPorId(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // ── Actualizar ────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Actualizar instancia común - Éxito")
+    void actualizar_Exito() {
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now());
+        updateDTO.setIdCategoria(1);
+
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        InstanciaComunResponseDTO resultado = instanciaComunService.actualizar(1, updateDTO);
+
+        assertNotNull(resultado);
+        verify(instanciaComunRepository).save(instancia);
+    }
+
+    @Test
+    @DisplayName("Actualizar instancia común - Categoría no encontrada (404)")
+    void actualizar_LanzaNotFound_CategoriaNoExiste() {
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now());
+        updateDTO.setIdCategoria(99);
+
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.actualizar(1, updateDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Actualizar instancia común - Categoría inactiva (422)")
+    void actualizar_LanzaUnprocessable_CategoriaInactiva() {
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now());
+        updateDTO.setIdCategoria(1);
+
+        categoria.setEstado(EstadoLogico.INACTIVO);
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.actualizar(1, updateDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    // ── Dar de baja ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("Dar de baja - Éxito")
+    void darDeBaja_Exito() {
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+
+        instanciaComunService.darDeBaja(1);
+
+        assertEquals(EstadoLogico.INACTIVO, instancia.getEstado());
+        verify(instanciaComunRepository).save(instancia);
+    }
+
+    @Test
+    @DisplayName("Dar de baja - No encontrada (404)")
+    void darDeBaja_LanzaNotFound() {
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.darDeBaja(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 }

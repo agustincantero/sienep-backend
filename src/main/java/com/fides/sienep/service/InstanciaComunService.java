@@ -15,6 +15,8 @@ import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.InstanciaComunRepository;
 import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -29,12 +31,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InstanciaComunService {
 
+    private static final Logger log = LoggerFactory.getLogger(InstanciaComunService.class);
+
     private final InstanciaComunRepository instanciaComunRepository;
     private final EstudianteRepository estudianteRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final CategoriaInstanciaRepository categoriaInstanciaRepository;
     private final InstanciaIdGenerator instanciaIdGenerator;
     private final InstanciaComunMapper instanciaComunMapper;
+    private final EmailService emailService;
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -87,7 +92,26 @@ public class InstanciaComunService {
 
         instancia.setIdNegInstancia(instanciaIdGenerator.generarIdNeg());
 
-        return instanciaComunMapper.toDto(instanciaComunRepository.save(instancia));
+        InstanciaComunResponseDTO response = instanciaComunMapper.toDto(
+                instanciaComunRepository.save(instancia));
+
+        // RF15 — notificar al funcionario creador con el ID de negocio generado.
+        // El try-catch externo es una segunda capa de defensa: aunque enviarNotificacionInstancia
+        // ya no relanza, esto garantiza que cualquier excepción inesperada no revierta
+        // la transacción de @Transactional.
+        try {
+            emailService.enviarNotificacionInstancia(
+                    funcionario.getEmail(),
+                    funcionario.getNombre(),
+                    response.getIdNegInstancia(),
+                    response.getTitulo()
+            );
+        } catch (Exception e) {
+            log.warn("[AUDIT] Fallo al notificar instancia {} al funcionario {}: {}",
+                    response.getIdNegInstancia(), funcionario.getIdUsuario(), e.getMessage());
+        }
+
+        return response;
     }
 
     @Transactional(readOnly = true)

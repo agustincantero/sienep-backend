@@ -54,4 +54,30 @@ public class EmailService {
             throw new RuntimeException("No se pudo enviar el email a " + destinatario);
         }
     }
+
+    // RF15 — notificación del ID de negocio al funcionario creador de la instancia.
+    // A diferencia de los flujos de contraseña, un fallo de envío NO debe interrumpir
+    // la operación principal: la instancia ya fue persistida correctamente.
+    // Por eso este método registra el error como warn y no relanza la excepción.
+    public void enviarNotificacionInstancia(String destinatario, String nombreUsuario,
+                                            String idNegInstancia, String tituloInstancia) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@sienep.app");
+            message.setTo(destinatario);
+            message.setSubject("Nueva instancia registrada - " + idNegInstancia);
+            message.setText(
+                    "¡Hola, " + nombreUsuario + "!\n\n" +
+                            "Se registró una nueva instancia en el sistema.\n\n" +
+                            "ID: " + idNegInstancia + "\n" +
+                            "Título: " + tituloInstancia + "\n\n" +
+                            "Podés consultarla en el sistema SIENEP."
+            );
+            mailSender.send(message);
+            log.info("[AUDIT] Notificación de instancia {} enviada a {}", idNegInstancia, destinatario);
+        } catch (Exception e) {
+            log.warn("[AUDIT] No se pudo enviar notificación de instancia {} a {}: {}",
+                    idNegInstancia, destinatario, e.getMessage());
+        }
+    }
 }
