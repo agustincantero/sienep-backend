@@ -201,4 +201,21 @@ public class RecordatorioService {
                         HttpStatus.NOT_FOUND,
                         "No se encontró un recordatorio activo con el id " + id));
     }
+
+
+    @Transactional
+    @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
+    public RecordatorioResponseDTO reactivar(int id) {
+        Recordatorio recordatorio = recordatorioRepository.findByCodRecordatorio(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No se encontró un recordatorio con el id " + id));
+
+        if (recordatorio.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "El recordatorio ya se encuentra activo");
+        }
+
+        recordatorio.setEstado(EstadoLogico.ACTIVO);
+        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
+    }
 }

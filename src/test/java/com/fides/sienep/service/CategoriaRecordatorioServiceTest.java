@@ -38,14 +38,30 @@ public class CategoriaRecordatorioServiceTest {
     @InjectMocks
     private CategoriaRecordatorioService categoriaService;
 
+    // ── Helpers ───────────────────────────────────────────────
+
+    private CategoriaRecordatorio categoriaActiva(int id, String nombre) {
+        CategoriaRecordatorio cat = new CategoriaRecordatorio();
+        cat.setIdCategoria(id);
+        cat.setNomCategoria(nombre);
+        cat.setEstado(EstadoLogico.ACTIVO);
+        return cat;
+    }
+
+    private CategoriaRecordatorio categoriaInactiva(int id, String nombre) {
+        CategoriaRecordatorio cat = new CategoriaRecordatorio();
+        cat.setIdCategoria(id);
+        cat.setNomCategoria(nombre);
+        cat.setEstado(EstadoLogico.INACTIVO);
+        return cat;
+    }
+
+    // ── Listar ────────────────────────────────────────────────
+
     @Test
     @DisplayName("Listar categorías de recordatorio - Éxito")
     void obtenerTodas_DebeRetornarListaDeCategorias() {
-        CategoriaRecordatorio cat = new CategoriaRecordatorio();
-        cat.setIdCategoria(1);
-        cat.setNomCategoria("CAT_REC");
-        cat.setEstado(EstadoLogico.ACTIVO);
-        
+        CategoriaRecordatorio cat = categoriaActiva(1, "CAT_REC");
         when(categoriaRepository.buscarConFiltros("CAT", EstadoLogico.ACTIVO)).thenReturn(List.of(cat));
 
         List<CategoriaRecordatorioResponseDTO> resultado = categoriaService.obtenerTodas("CAT", EstadoLogico.ACTIVO);
@@ -55,14 +71,12 @@ public class CategoriaRecordatorioServiceTest {
         assertEquals("CAT_REC", resultado.get(0).getNomCategoria());
     }
 
+    // ── Obtener por ID ────────────────────────────────────────
+
     @Test
     @DisplayName("Obtener categoría por ID - Éxito")
     void obtenerPorId_Exito() {
-        CategoriaRecordatorio cat = new CategoriaRecordatorio();
-        cat.setIdCategoria(1);
-        cat.setNomCategoria("CAT_REC");
-        
-        when(categoriaRepository.findById(1)).thenReturn(Optional.of(cat));
+        when(categoriaRepository.findById(1)).thenReturn(Optional.of(categoriaActiva(1, "CAT_REC")));
 
         CategoriaRecordatorioResponseDTO resultado = categoriaService.obtenerPorId(1);
 
@@ -78,14 +92,16 @@ public class CategoriaRecordatorioServiceTest {
         assertThrows(ResponseStatusException.class, () -> categoriaService.obtenerPorId(99));
     }
 
+    // ── Crear ─────────────────────────────────────────────────
+
     @Test
     @DisplayName("Crear categoría - Éxito")
     void crearCategoria_Exito() {
         CategoriaRecordatorioCreateDTO dto = new CategoriaRecordatorioCreateDTO();
-        dto.setNomCategoria("  Recordatorio Nuevo  ");
+        dto.setNomCategoria("  Categoria Nueva  ");
         dto.setDescripcion("Una descripcion");
 
-        when(categoriaRepository.existsByNomCategoria("RECORDATORIO_NUEVO")).thenReturn(false);
+        when(categoriaRepository.existsByNomCategoria("CATEGORIA_NUEVA")).thenReturn(false);
         when(categoriaRepository.save(any(CategoriaRecordatorio.class))).thenAnswer(invocation -> {
             CategoriaRecordatorio guardada = invocation.getArgument(0);
             guardada.setIdCategoria(1);
@@ -96,7 +112,7 @@ public class CategoriaRecordatorioServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getIdCategoria());
-        assertEquals("RECORDATORIO_NUEVO", resultado.getNomCategoria());
+        assertEquals("CATEGORIA_NUEVA", resultado.getNomCategoria());
         assertEquals(EstadoLogico.ACTIVO, resultado.getEstado());
     }
 
@@ -108,21 +124,20 @@ public class CategoriaRecordatorioServiceTest {
 
         when(categoriaRepository.existsByNomCategoria("EXISTENTE")).thenReturn(true);
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> categoriaService.crearCategoria(dto));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> categoriaService.crearCategoria(dto));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
+
+    // ── Actualizar ────────────────────────────────────────────
 
     @Test
     @DisplayName("Actualizar categoría - Éxito")
     void actualizarCategoria_Exito() {
-        CategoriaRecordatorio cat = new CategoriaRecordatorio();
-        cat.setIdCategoria(1);
-        cat.setNomCategoria("VIEJA");
-        
         CategoriaRecordatorioUpdateDTO dto = new CategoriaRecordatorioUpdateDTO();
         dto.setNomCategoria("NUEVA");
 
-        when(categoriaRepository.findById(1)).thenReturn(Optional.of(cat));
+        when(categoriaRepository.findById(1)).thenReturn(Optional.of(categoriaActiva(1, "VIEJA")));
         when(categoriaRepository.existsByNomCategoria("NUEVA")).thenReturn(false);
         when(categoriaRepository.save(any(CategoriaRecordatorio.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -135,38 +150,109 @@ public class CategoriaRecordatorioServiceTest {
     @Test
     @DisplayName("Actualizar categoría - Conflicto si el nuevo nombre ya existe (409)")
     void actualizarCategoria_LanzaConflict_CuandoNombreYaExiste() {
-        CategoriaRecordatorio cat = new CategoriaRecordatorio();
-        cat.setIdCategoria(1);
-        cat.setNomCategoria("VIEJA");
-        
         CategoriaRecordatorioUpdateDTO dto = new CategoriaRecordatorioUpdateDTO();
         dto.setNomCategoria("OTRA_EXISTENTE");
 
-        when(categoriaRepository.findById(1)).thenReturn(Optional.of(cat));
+        when(categoriaRepository.findById(1)).thenReturn(Optional.of(categoriaActiva(1, "VIEJA")));
         when(categoriaRepository.existsByNomCategoria("OTRA_EXISTENTE")).thenReturn(true);
 
-        assertThrows(ResponseStatusException.class, () -> categoriaService.actualizarCategoria(1, dto));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> categoriaService.actualizarCategoria(1, dto));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
     @Test
-    @DisplayName("Dar de baja categoría - Éxito (Baja lógica)")
-    void darDeBajaCategoria_Exito() {
-        CategoriaRecordatorio cat = new CategoriaRecordatorio();
-        cat.setIdCategoria(5);
-        cat.setEstado(EstadoLogico.ACTIVO);
+    @DisplayName("Actualizar categoría - No se puede editar una categoría inactiva (409)")
+    void actualizarCategoria_LanzaConflict_CuandoEstaInactiva() {
+        CategoriaRecordatorioUpdateDTO dto = new CategoriaRecordatorioUpdateDTO();
+        dto.setNomCategoria("CUALQUIER_NOMBRE");
 
+        when(categoriaRepository.findById(1)).thenReturn(Optional.of(categoriaInactiva(1, "VIEJA")));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> categoriaService.actualizarCategoria(1, dto));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+    }
+
+    // ── Dar de baja ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("Dar de baja categoría - Éxito (baja lógica)")
+    void darDeBajaCategoria_Exito() {
+        CategoriaRecordatorio cat = categoriaActiva(5, "SEGUIMIENTO");
         when(categoriaRepository.findById(5)).thenReturn(Optional.of(cat));
+        when(categoriaRepository.existeRecordatorioActivoConCategoria(5)).thenReturn(false);
 
         categoriaService.darDeBajaCategoria(5);
 
         assertEquals(EstadoLogico.INACTIVO, cat.getEstado());
         verify(categoriaRepository).save(cat);
     }
-    
+
     @Test
     @DisplayName("Dar de baja categoría - No encontrada (404)")
     void darDeBajaCategoria_LanzaNotFound() {
         when(categoriaRepository.findById(99)).thenReturn(Optional.empty());
+
         assertThrows(ResponseStatusException.class, () -> categoriaService.darDeBajaCategoria(99));
+        verify(categoriaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Dar de baja categoría - Ya estaba inactiva (409)")
+    void darDeBajaCategoria_LanzaConflict_CuandoYaEstaInactiva() {
+        when(categoriaRepository.findById(5)).thenReturn(Optional.of(categoriaInactiva(5, "SEGUIMIENTO")));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> categoriaService.darDeBajaCategoria(5));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(categoriaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Dar de baja categoría - Tiene recordatorios activos asociados (409)")
+    void darDeBajaCategoria_LanzaConflict_CuandoTieneRecordatoriosActivos() {
+        when(categoriaRepository.findById(5)).thenReturn(Optional.of(categoriaActiva(5, "SEGUIMIENTO")));
+        when(categoriaRepository.existeRecordatorioActivoConCategoria(5)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> categoriaService.darDeBajaCategoria(5));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(categoriaRepository, never()).save(any());
+    }
+
+    // ── Reactivar ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Reactivar categoría - Éxito")
+    void reactivarCategoria_Exito() {
+        CategoriaRecordatorio cat = categoriaInactiva(5, "SEGUIMIENTO");
+        when(categoriaRepository.findById(5)).thenReturn(Optional.of(cat));
+        when(categoriaRepository.save(any(CategoriaRecordatorio.class))).thenAnswer(i -> i.getArgument(0));
+
+        CategoriaRecordatorioResponseDTO resultado = categoriaService.reactivarCategoria(5);
+
+        assertEquals(EstadoLogico.ACTIVO, resultado.getEstado());
+        verify(categoriaRepository).save(cat);
+    }
+
+    @Test
+    @DisplayName("Reactivar categoría - No encontrada (404)")
+    void reactivarCategoria_LanzaNotFound() {
+        when(categoriaRepository.findById(99)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () -> categoriaService.reactivarCategoria(99));
+        verify(categoriaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar categoría - Ya estaba activa (409)")
+    void reactivarCategoria_LanzaConflict_CuandoYaEstaActiva() {
+        when(categoriaRepository.findById(5)).thenReturn(Optional.of(categoriaActiva(5, "SEGUIMIENTO")));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> categoriaService.reactivarCategoria(5));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(categoriaRepository, never()).save(any());
     }
 }
