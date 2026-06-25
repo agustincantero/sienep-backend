@@ -1,7 +1,6 @@
 package com.fides.sienep.repository;
 
 import com.fides.sienep.model.EstadoLogico;
-import com.fides.sienep.model.EstadoRecordatorio;
 import com.fides.sienep.model.Recordatorio;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -38,4 +37,6 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
 
+    // ── Reactivar ─────────────────────────────────────────────
+    Optional<Recordatorio> findByCodRecordatorio(int codRecordatorio);
 }

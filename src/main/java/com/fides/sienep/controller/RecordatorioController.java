@@ -77,4 +77,13 @@ public class RecordatorioController {
         recordatorioService.darDeBaja(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Reactivar un recordatorio")
+    @ApiResponse(responseCode = "200", description = "Recordatorio reactivado correctamente")
+    @ApiResponse(responseCode = "404", description = "Recordatorio no encontrado")
+    @ApiResponse(responseCode = "409", description = "El recordatorio ya está activo")
+    @PatchMapping("/{id}/reactivar")
+    public ResponseEntity<RecordatorioResponseDTO> reactivar(@PathVariable int id) {
+        return ResponseEntity.ok(recordatorioService.reactivar(id));
+    }
 }

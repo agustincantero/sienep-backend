@@ -108,12 +108,20 @@ public class CategoriaInstanciaService {
     @CacheEvict(value = "categoriasInstancia", allEntries = true)
     public void darDeBajaCategoria(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
-        
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
+
         if (categoria.getEstado() == EstadoLogico.INACTIVO) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La categoría ya se encuentra inactiva");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "La categoría ya se encuentra inactiva");
         }
-        
+
+        if (categoriaRepository.existeInstanciaActivaConCategoria(id)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "No se puede dar de baja la categoría porque tiene instancias activas asociadas");
+        }
+
         categoria.setEstado(EstadoLogico.INACTIVO);
         categoriaRepository.save(categoria);
     }

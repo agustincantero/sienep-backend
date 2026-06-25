@@ -11,13 +11,16 @@ import java.util.List;
 
 @Repository
 public interface CategoriaRecordatorioRepository extends JpaRepository<CategoriaRecordatorio, Integer> {
-    
-    // Método para validar que no existan categorías duplicadas
+
     boolean existsByNomCategoria(String nomCategoria);
 
-    // Consulta dinámica para filtrar por nombre (parcial) y/o estado
     @Query("SELECT c FROM CategoriaRecordatorio c WHERE " +
-           "(CAST(:nombre AS text) IS NULL OR UPPER(c.nomCategoria) LIKE UPPER(CONCAT('%', CAST(:nombre AS text), '%'))) AND " +
-           "(CAST(:estado AS text) IS NULL OR c.estado = :estado)")
-    List<CategoriaRecordatorio> buscarConFiltros(@Param("nombre") String nombre, @Param("estado") EstadoLogico estado);
+            "(CAST(:nombre AS text) IS NULL OR UPPER(c.nomCategoria) LIKE UPPER(CONCAT('%', CAST(:nombre AS text), '%'))) AND " +
+            "(CAST(:estado AS text) IS NULL OR c.estado = :estado)")
+    List<CategoriaRecordatorio> buscarConFiltros(@Param("nombre") String nombre,
+                                                 @Param("estado") EstadoLogico estado);
+
+    @Query("SELECT COUNT(r) > 0 FROM Recordatorio r " +
+            "WHERE r.categoria.idCategoria = :idCategoria AND r.estado = 'ACTIVO'")
+    boolean existeRecordatorioActivoConCategoria(@Param("idCategoria") int idCategoria);
 }

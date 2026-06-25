@@ -441,4 +441,45 @@ class RecordatorioServiceTest {
         assertNotNull(resultado);
         assertEquals(1, resultado.size());
     }
+
+
+    @Test
+    @DisplayName("Reactivar recordatorio - Éxito")
+    void reactivar_Exito() {
+        recordatorio.setEstado(EstadoLogico.INACTIVO);
+        when(recordatorioRepository.findByCodRecordatorio(1)).thenReturn(Optional.of(recordatorio));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+
+        RecordatorioResponseDTO resultado = recordatorioService.reactivar(1);
+
+        assertNotNull(resultado);
+        assertEquals(EstadoLogico.ACTIVO, recordatorio.getEstado());
+        verify(recordatorioRepository).save(recordatorio);
+    }
+
+    @Test
+    @DisplayName("Reactivar recordatorio - No encontrado (404)")
+    void reactivar_LanzaNotFound() {
+        when(recordatorioRepository.findByCodRecordatorio(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.reactivar(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar recordatorio - Ya estaba activo (409)")
+    void reactivar_LanzaConflict_CuandoYaEstaActivo() {
+        recordatorio.setEstado(EstadoLogico.ACTIVO);
+        when(recordatorioRepository.findByCodRecordatorio(1)).thenReturn(Optional.of(recordatorio));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
 }
