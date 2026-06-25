@@ -26,6 +26,13 @@ public class InformeAdjuntoService {
 
     private static final Logger log = LoggerFactory.getLogger(InformeAdjuntoService.class);
 
+    // RF09 — tamaño máximo de URL permitido. El sistema gestiona archivos por URL/ruta,
+    // no por carga directa (MultipartFile). La validación de tamaño real del archivo
+    // (ej: máximo 5MB) corresponde al servicio de almacenamiento externo o al cliente.
+    // Si en el futuro se migra a carga directa, agregar:
+    // if (file.getSize() > 5 * 1024 * 1024) throw new ResponseStatusException(BAD_REQUEST, ...)
+    private static final int MAX_URL_LENGTH = 500;
+
     private final InformeAdjuntoRepository informeRepository;
     private final EstudianteRepository estudianteRepository;
     private final InformeAdjuntoMapper informeMapper;
@@ -33,7 +40,8 @@ public class InformeAdjuntoService {
     @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
     public List<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario) {
-        List<InformeAdjunto> informes = informeRepository.findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO);
+        List<InformeAdjunto> informes = informeRepository
+                .findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO);
         List<InformeAdjuntoResponseDTO> resultado = new ArrayList<>();
         for (InformeAdjunto i : informes) {
             resultado.add(informeMapper.toDto(i));
@@ -52,16 +60,26 @@ public class InformeAdjuntoService {
     public InformeAdjuntoResponseDTO adjuntar(InformeAdjuntoRequestDTO dto) {
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdUsuario())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdUsuario()));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdUsuario()));
 
         if (informeRepository.existsByEstudianteIdUsuarioAndNombre(dto.getIdUsuario(), dto.getNombre())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un informe con ese nombre para este estudiante");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Ya existe un informe con ese nombre para este estudiante");
         }
 
+        // Validación de extensión (RF09)
         String url = dto.getUrlArchivo().toLowerCase();
         if (!url.endsWith(".pdf") && !url.endsWith(".jpg")
                 && !url.endsWith(".jpeg") && !url.endsWith(".png")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La extensión del archivo no está permitida. Use PDF, JPG, JPEG o PNG");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La extensión del archivo no está permitida. Use PDF, JPG, JPEG o PNG");
+        }
+
+        // Validación de longitud de URL (RF09)
+        if (dto.getUrlArchivo().length() > MAX_URL_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La URL del archivo supera el tamaño máximo permitido de " + MAX_URL_LENGTH + " caracteres");
         }
 
         InformeAdjunto informe = InformeAdjunto.builder()
@@ -87,6 +105,7 @@ public class InformeAdjuntoService {
 
     private InformeAdjunto buscarOFallar(Integer id) {
         return informeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
     }
 }
