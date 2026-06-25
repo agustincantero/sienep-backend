@@ -104,18 +104,14 @@ public class CategoriaRecordatorioService {
     @CacheEvict(value = "categoriasRecordatorio", allEntries = true)
     public void darDeBajaCategoria(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
 
         if (categoria.getEstado() == EstadoLogico.INACTIVO) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "La categoría ya se encuentra inactiva");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La categoría ya se encuentra inactiva");
         }
 
         if (categoriaRepository.existeRecordatorioActivoConCategoria(id)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "No se puede dar de baja la categoría porque tiene recordatorios activos asociados");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede dar de baja la categoría porque tiene recordatorios activos asociados");
         }
 
         categoria.setEstado(EstadoLogico.INACTIVO);
