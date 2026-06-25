@@ -74,6 +74,9 @@ public class Recordatorio {
     @Column(name = "updated_at", nullable = false, insertable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "event_id_google", length = 1024)
+    private String eventIdGoogle;
+
     public Recordatorio(String titulo, TipoRecordatorio tipo, LocalDateTime fechaHora,
                         Instancia instancia, CategoriaRecordatorio categoria, Funcionario responsable) {
         this.titulo = titulo;

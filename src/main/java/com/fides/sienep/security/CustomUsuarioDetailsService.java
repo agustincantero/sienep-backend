@@ -6,6 +6,7 @@ import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,6 +25,7 @@ import java.util.Optional;
  * Usado por JwtRequestFilter en cada request autenticado.
  * Soporta tanto Funcionarios como Estudiantes.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomUsuarioDetailsService implements UserDetailsService {
@@ -45,7 +47,9 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
 
         Optional<Funcionario> funcionarioOpt = funcionarioRepository.findById(idUsuario);
         if (funcionarioOpt.isPresent()) {
-            return buildFuncionarioDetails(funcionarioOpt.get());
+            UserDetails ud = buildFuncionarioDetails(funcionarioOpt.get());
+            log.info("[DEBUG] Authorities para {}: {}", idUsuario, ud.getAuthorities());
+            return ud;
         }
 
         Estudiante estudiante = estudianteRepository.findById(idUsuario)

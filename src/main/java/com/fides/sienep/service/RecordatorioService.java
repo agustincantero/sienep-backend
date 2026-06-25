@@ -7,6 +7,7 @@ import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
 import com.fides.sienep.utils.RecordatorioIdGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecordatorioService {
@@ -26,6 +28,8 @@ public class RecordatorioService {
     private final FrecuenciaRepository frecuenciaRepository;
     private final RecordatorioMapper recordatorioMapper;
     private final RecordatorioIdGenerator recordatorioIdGenerator;
+    private final FuncionarioGcalRepository funcionarioGcalRepository;
+    private final GoogleCalendarService     googleCalendarService;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
@@ -91,7 +95,27 @@ public class RecordatorioService {
         recordatorio.setFechaFin(dto.getFechaFin());
         recordatorio.setNroOcurrencias(dto.getNroOcurrencias());
 
-        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
+        Recordatorio guardado = recordatorioRepository.save(recordatorio);
+
+        // ── RF22: sincronizar con Google Calendar si el responsable tiene integración activa ──
+        // No es bloqueante: si Google falla, el recordatorio ya fue persistido correctamente.
+        try {
+            funcionarioGcalRepository
+                    .findByFuncionarioIdUsuario(responsable.getIdUsuario())
+                    .filter(FuncionarioGcal::isAutorizado)
+                    .ifPresent(gcal -> {
+                        String eventId = googleCalendarService.crearEvento(guardado, gcal.getRefreshToken());
+                        if (eventId != null) {
+                            guardado.setEventIdGoogle(eventId);
+                            recordatorioRepository.save(guardado);
+                        }
+                    });
+        } catch (Exception e) {
+            log.warn("[GCAL] Fallo al sincronizar recordatorio {} con Google Calendar: {}",
+                    guardado.getIdNegRecordatorio(), e.getMessage());
+        }
+
+        return recordatorioMapper.toDto(guardado);
     }
 
     @Transactional(readOnly = true)
@@ -187,10 +211,31 @@ public class RecordatorioService {
         return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
     }
 
+
     @Transactional
     @PreAuthorize("hasAuthority('BAJA_RECORDATORIO')")
     public void darDeBaja(int id) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
+
+        // ── RF22: eliminar evento de Google Calendar si existe ────────────────
+        // Igualmente no bloqueante.
+        if (recordatorio.getEventIdGoogle() != null) {
+            try {
+                funcionarioGcalRepository
+                        .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario())
+                        .filter(FuncionarioGcal::isAutorizado)
+                        .ifPresent(gcal ->
+                                googleCalendarService.eliminarEvento(
+                                        recordatorio.getEventIdGoogle(),
+                                        gcal.getRefreshToken()
+                                )
+                        );
+            } catch (Exception e) {
+                log.warn("[GCAL] No se pudo eliminar el evento {} de Google Calendar: {}",
+                        recordatorio.getEventIdGoogle(), e.getMessage());
+            }
+        }
+
         recordatorio.setEstado(EstadoLogico.INACTIVO);
         recordatorioRepository.save(recordatorio);
     }
