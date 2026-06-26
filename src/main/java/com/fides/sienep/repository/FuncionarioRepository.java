@@ -20,9 +20,7 @@ public interface FuncionarioRepository extends JpaRepository<Funcionario, Intege
 
     Optional<Funcionario> findByEmail(String email);
 
-    // ========================================================
-    //SOLE
-    // ========================================================
+
     Optional<Funcionario> findByDocumento(String documento);
 
     Optional<Funcionario> findByDocumentoAndEstado(
@@ -41,7 +39,4 @@ public interface FuncionarioRepository extends JpaRepository<Funcionario, Intege
     boolean existsByEmail(
             String email
     );
-    // ========================================================
-    //SOLE
-    // ========================================================
 }
