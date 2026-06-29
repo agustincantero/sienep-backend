@@ -136,6 +136,15 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 7. Aplicá los cambios (**Apply → OK**).
 8. Ejecutá la aplicación con el botón ▶️.
 
+### Ejecución de Pruebas (Tests)
+
+Este proyecto cuenta con una amplia suite de tests unitarios y de integración para garantizar la calidad del código. Para ejecutarlos de forma automatizada, abrí tu terminal en la raíz del proyecto y corré:
+
+*   **En Windows:** `.\mvnw clean test`
+*   **En macOS/Linux:** `./mvnw clean test`
+
+> **Nota:** Los tests utilizan una base de datos en memoria (H2) y las propiedades definidas en `application-test.properties`. No es necesario levantar Docker ni configurar las variables de entorno reales en tu computadora para que la suite se ejecute con éxito.
+
 ## Documentación de la API (Swagger)
 
 Una vez que hayas levantado la base de datos y ejecutado la aplicación, la API estará documentada de forma dinámica e interactiva.
