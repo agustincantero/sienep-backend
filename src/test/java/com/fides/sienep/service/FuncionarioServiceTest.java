@@ -42,6 +42,12 @@ class FuncionarioServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
+    private PasswordGeneratorService passwordGeneratorService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
     private FuncionarioMapper funcionarioMapper;
 
     @InjectMocks
@@ -95,6 +101,7 @@ class FuncionarioServiceTest {
         when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
         when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
+        when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
         when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
         when(funcionarioMapper.toDto(any(Funcionario.class))).thenReturn(responseDTO);
