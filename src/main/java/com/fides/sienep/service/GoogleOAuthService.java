@@ -5,7 +5,6 @@ import com.fides.sienep.model.FuncionarioGcal;
 import com.fides.sienep.repository.FuncionarioGcalRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.google.api.client.auth.oauth2.TokenResponse;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeRequestUrl;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;

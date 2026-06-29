@@ -17,7 +17,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import com.fides.sienep.service.GoogleOAuthService;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import java.net.URI;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

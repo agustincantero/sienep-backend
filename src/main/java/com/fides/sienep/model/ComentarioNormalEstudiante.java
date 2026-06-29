@@ -4,8 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 /**
  * Comentario observable (público dentro del sistema) sobre un estudiante.
  * Mapea la tabla proyecto.estu_obs_comentarios.

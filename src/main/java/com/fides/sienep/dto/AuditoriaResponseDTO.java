@@ -1,7 +1,6 @@
 package com.fides.sienep.dto;
 
 import com.fasterxml.jackson.annotation.JsonRawValue;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fides.sienep.model.TipoAccion;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
