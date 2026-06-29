@@ -8,6 +8,7 @@ import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeRequestUrl;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
+import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
@@ -58,7 +59,7 @@ public class GoogleOAuthService {
         );
         return url
                 .setAccessType("offline")   // necesario para recibir refresh_token
-                .setApprovalPrompt("force") // fuerza que Google siempre entregue refresh_token
+                .set("prompt", "consent") // fuerza que Google siempre entregue refresh_token
                 .setState(String.valueOf(idUsuario))
                 .build();
     }
@@ -136,18 +137,13 @@ public class GoogleOAuthService {
 
     public String obtenerAccessToken(String refreshToken) {
         try {
-            TokenResponse response = new GoogleAuthorizationCodeFlow
-                    .Builder(
+            TokenResponse response = new GoogleRefreshTokenRequest(
                     new NetHttpTransport(),
                     GsonFactory.getDefaultInstance(),
+                    refreshToken,
                     clientId,
-                    clientSecret,
-                    SCOPES
-            )
-                    .build()
-                    .newTokenRequest(refreshToken)
-                    .setRedirectUri(redirectUri)
-                    .execute();
+                    clientSecret
+            ).execute();
 
             return response.getAccessToken();
         } catch (IOException e) {

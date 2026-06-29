@@ -83,7 +83,7 @@ $env:MAIL_USERNAME="tu_correo@gmail.com"
 $env:MAIL_PASSWORD="tu_password_de_aplicacion"
 $env:GOOGLE_CLIENT_ID="tu_google_client_id"
 $env:GOOGLE_CLIENT_SECRET="tu_google_client_secret"
-$env:GOOGLE_REDIRECT_URI="http://localhost:8080/api/google/callback"
+$env:GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
 ```
 
 *Windows - Opción 2: Símbolo del sistema (CMD)*
@@ -98,7 +98,7 @@ set MAIL_USERNAME=tu_correo@gmail.com
 set MAIL_PASSWORD=tu_password_de_aplicacion
 set GOOGLE_CLIENT_ID=tu_google_client_id
 set GOOGLE_CLIENT_SECRET=tu_google_client_secret
-set GOOGLE_REDIRECT_URI=http://localhost:8080/api/google/callback
+set GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
 ```
 
 *macOS & Linux (bash/zsh)*
@@ -113,7 +113,7 @@ export MAIL_USERNAME="tu_correo@gmail.com"
 export MAIL_PASSWORD="tu_password_de_aplicacion"
 export GOOGLE_CLIENT_ID="tu_google_client_id"
 export GOOGLE_CLIENT_SECRET="tu_google_client_secret"
-export GOOGLE_REDIRECT_URI="http://localhost:8080/api/google/callback"
+export GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
 ```
 
 **Paso 2: Ejecutar el proyecto**
@@ -131,7 +131,7 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
 5. En el campo de **Environment variables**, agregá lo siguiente:
    ```text
-   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/google/callback
+   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
    ```
    *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 7. Aplicá los cambios (**Apply → OK**).
