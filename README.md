@@ -18,6 +18,7 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
   - [Ejecución desde la Terminal](#ejecución-desde-la-terminal)
   - [Ejecución desde IntelliJ IDEA](#ejecución-desde-intellij-idea)
   - [Ejecución de Pruebas (Tests)](#ejecución-de-pruebas-tests)
+- [Integración con Google Calendar](#integración-con-google-calendar)
 - [Documentación de la API (Swagger)](#documentación-de-la-api-swagger)
 
 ## Requisitos previos
@@ -145,6 +146,24 @@ Este proyecto cuenta con una amplia suite de tests unitarios y de integración p
 *   **En macOS/Linux:** `./mvnw clean test`
 
 > **Nota:** Los tests utilizan una base de datos en memoria (H2) y las propiedades definidas en `application-test.properties`. No es necesario levantar Docker ni configurar las variables de entorno reales en tu computadora para que la suite se ejecute con éxito.
+
+## Integración con Google Calendar
+
+El sistema permite que los funcionarios sincronicen sus cuentas para ver los recordatorios directamente en Google Calendar.
+
+### Cómo probar la vinculación vía API (Postman)
+Para vincular tu cuenta localmente sin necesidad de una interfaz gráfica, seguí estos pasos:
+1. Asegurate de tener la variable `GOOGLE_REDIRECT_URI` configurada como `http://localhost:8080/api/auth/google/callback` y que esa URL esté autorizada en Google Cloud Console.
+2. Iniciá sesión (`POST /api/auth/login`) con un usuario que tenga el permiso `GCAL_SYNC_RECORDATORIOS` y copiá el Token JWT devuelto.
+3. En Postman, realizá una petición `GET` a `http://localhost:8080/api/auth/google/init` enviando el token en la pestaña Authorization (`Bearer Token`). **Importante:** En la configuración de Postman, desactivá la opción "Automatically follow redirects".
+4. Al enviar la petición, el backend devolverá un `302 Found`. Copiá la URL gigante que viene en el header `Location` de la respuesta.
+5. Pegá esa URL en tu navegador web habitual, iniciá sesión con tu cuenta de Google y otorgá los permisos de Calendar.
+6. Google te devolverá a la API, la cual procesará y guardará tu token correctamente.
+
+### Sincronización Automática
+Una vez vinculado el calendario, la creación de eventos funciona sola:
+- Al crear un `Recordatorio` (`POST /api/recordatorios`), si le asignás como `idResponsable` el ID de tu usuario, el evento aparecerá mágicamente en tu Google Calendar.
+- **Tolerancia a fallos:** Si los servidores de Google se caen, la API no lanza error. El recordatorio se guarda igual en la base de datos local y se deja un registro de advertencia (`[WARN]`) en la consola del backend.
 
 ## Documentación de la API (Swagger)
 
