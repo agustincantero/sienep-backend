@@ -17,6 +17,7 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
   - [Preparar la base de datos (Docker)](#preparar-la-base-de-datos-docker)
   - [Ejecución desde la Terminal](#ejecución-desde-la-terminal)
   - [Ejecución desde IntelliJ IDEA](#ejecución-desde-intellij-idea)
+  - [Ejecución de Pruebas (Tests)](#ejecución-de-pruebas-tests)
 - [Documentación de la API (Swagger)](#documentación-de-la-api-swagger)
 
 ## Requisitos previos
