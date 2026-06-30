@@ -35,6 +35,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mockito;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,7 +118,6 @@ public class AuditoriaServiceTest {
 
     @Test
     @DisplayName("Listar auditorías paginadas con filtros - Éxito")
-    @SuppressWarnings("unchecked")
     void listarAuditorias_Exito() {
         Usuario autor = new Estudiante();
         autor.setIdUsuario(1);
@@ -132,7 +132,7 @@ public class AuditoriaServiceTest {
 
         Page<Auditoria> pageMock = new PageImpl<>(List.of(aud), PageRequest.of(0, 10), 1);
 
-        when(auditoriaRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pageMock);
+        when(auditoriaRepository.findAll(Mockito.<Specification<Auditoria>>any(), any(Pageable.class))).thenReturn(pageMock);
 
         Page<AuditoriaResponseDTO> resultado = auditoriaService.listarAuditorias(0, 10, "PERMISO", TipoAccion.INSERT, 1);
 
@@ -146,7 +146,7 @@ public class AuditoriaServiceTest {
     @DisplayName("Listar auditorías sin filtros - Éxito")
     void listarAuditorias_SinFiltros_Exito() {
         Page<Auditoria> pageMock = new PageImpl<>(List.of());
-        when(auditoriaRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(auditoriaRepository.findAll(Mockito.<Specification<Auditoria>>any(), any(Pageable.class)))
             .thenReturn(pageMock);
 
         Page<AuditoriaResponseDTO> resultado = auditoriaService.listarAuditorias(0, 10, null, null, null);
@@ -173,7 +173,7 @@ public class AuditoriaServiceTest {
         when(pathAutor.get("idUsuario")).thenReturn(pathIdUsuario);
 
         Page<Auditoria> pageMock = new PageImpl<>(List.of());
-        ArgumentCaptor<Specification<Auditoria>> specCaptor = ArgumentCaptor.forClass(Specification.class);
+        ArgumentCaptor<Specification<Auditoria>> specCaptor = (ArgumentCaptor<Specification<Auditoria>>) (Object) ArgumentCaptor.forClass(Specification.class);
         
         when(auditoriaRepository.findAll(specCaptor.capture(), any(Pageable.class))).thenReturn(pageMock);
 
