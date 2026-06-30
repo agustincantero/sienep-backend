@@ -56,7 +56,7 @@ public class InstanciaComunService {
 
         if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "El estudiante con id " + dto.getIdEstudiante() + " no está activo");
         }
 
@@ -66,7 +66,7 @@ public class InstanciaComunService {
 
         if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "El funcionario autenticado no está activo");
         }
 
@@ -77,7 +77,7 @@ public class InstanciaComunService {
 
         if (categoria.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "La categoría con id " + dto.getIdCategoria() + " no está activa");
         }
 
@@ -168,7 +168,7 @@ public class InstanciaComunService {
 
         if (categoria.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "La categoría con id " + dto.getIdCategoria() + " no está activa");
         }
 

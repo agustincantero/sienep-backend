@@ -41,7 +41,7 @@ public class RecordatorioService {
 
         if (instancia.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "La instancia con id " + dto.getCodInstancia() + " no está activa");
         }
 
@@ -52,7 +52,7 @@ public class RecordatorioService {
 
         if (categoria.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "La categoría con id " + dto.getIdCategoria() + " no está activa");
         }
 
@@ -63,7 +63,7 @@ public class RecordatorioService {
 
         if (responsable.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "El funcionario con id " + dto.getIdResponsable() + " no está activo");
         }
 
@@ -86,7 +86,7 @@ public class RecordatorioService {
 
             if (frecuencia.getEstado() != EstadoLogico.ACTIVO) {
                 throw new ResponseStatusException(
-                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        HttpStatus.UNPROCESSABLE_CONTENT,
                         "La frecuencia con id " + dto.getIdFrecuencia() + " no está activa");
             }
             recordatorio.setFrecuencia(frecuencia);
@@ -157,7 +157,7 @@ public class RecordatorioService {
 
         if (instancia.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "La instancia con id " + dto.getCodInstancia() + " no está activa");
         }
 
@@ -168,7 +168,7 @@ public class RecordatorioService {
 
         if (categoria.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "La categoría con id " + dto.getIdCategoria() + " no está activa");
         }
 
@@ -179,7 +179,7 @@ public class RecordatorioService {
 
         if (responsable.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "El funcionario con id " + dto.getIdResponsable() + " no está activo");
         }
 
@@ -200,7 +200,7 @@ public class RecordatorioService {
 
             if (frecuencia.getEstado() != EstadoLogico.ACTIVO) {
                 throw new ResponseStatusException(
-                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        HttpStatus.UNPROCESSABLE_CONTENT,
                         "La frecuencia con id " + dto.getIdFrecuencia() + " no está activa");
             }
             recordatorio.setFrecuencia(frecuencia);

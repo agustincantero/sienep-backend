@@ -184,7 +184,7 @@ class InstanciaComunServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> instanciaComunService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
     }
 
@@ -213,7 +213,7 @@ class InstanciaComunServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> instanciaComunService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
     }
 
@@ -244,7 +244,7 @@ class InstanciaComunServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> instanciaComunService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
     }
 
@@ -399,7 +399,7 @@ class InstanciaComunServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> instanciaComunService.actualizar(1, updateDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
     }
 

@@ -126,7 +126,7 @@ class RecordatorioServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> recordatorioService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
@@ -153,7 +153,7 @@ class RecordatorioServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> recordatorioService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
@@ -182,7 +182,7 @@ class RecordatorioServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> recordatorioService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
@@ -319,7 +319,7 @@ class RecordatorioServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> recordatorioService.actualizar(1, requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 

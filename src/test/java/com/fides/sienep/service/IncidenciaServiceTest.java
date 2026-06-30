@@ -129,7 +129,7 @@ class IncidenciaServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> incidenciaService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(incidenciaRepository, never()).save(any());
     }
 
@@ -144,7 +144,7 @@ class IncidenciaServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> incidenciaService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(incidenciaRepository, never()).save(any());
     }
 
@@ -276,7 +276,7 @@ class IncidenciaServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> incidenciaService.actualizar(1, requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(incidenciaRepository, never()).save(any());
     }
 

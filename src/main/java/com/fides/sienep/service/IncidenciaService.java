@@ -49,7 +49,7 @@ public class IncidenciaService {
 
         if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "El estudiante con id " + dto.getIdEstudiante() + " no está activo");
         }
 
@@ -59,7 +59,7 @@ public class IncidenciaService {
 
         if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "El funcionario autenticado no está activo");
         }
 
@@ -127,7 +127,7 @@ public class IncidenciaService {
 
         if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    HttpStatus.UNPROCESSABLE_CONTENT,
                     "El estudiante con id " + dto.getIdEstudiante() + " no está activo");
         }
 
