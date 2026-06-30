@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class EmailService {
             log.info("[AUDIT] Email de contraseña temporal enviado a {}", destinatario);
         } catch (Exception e) {
             log.error("[AUDIT] Error al enviar email a {}: {}", destinatario, e.getMessage());
-            throw new RuntimeException("No se pudo enviar el email a " + destinatario);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo enviar el email a " + destinatario);
         }
     }
 
@@ -51,7 +53,7 @@ public class EmailService {
             log.info("[AUDIT] Email de restablecimiento enviado a {}", destinatario);
         } catch (Exception e) {
             log.error("[AUDIT] Error al enviar email a {}: {}", destinatario, e.getMessage());
-            throw new RuntimeException("No se pudo enviar el email a " + destinatario);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo enviar el email a " + destinatario);
         }
     }
 

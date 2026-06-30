@@ -17,6 +17,8 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
@@ -66,7 +68,7 @@ public class ReportePdfService {
             return baos.toByteArray();
 
         } catch (Exception e) {
-            throw new RuntimeException("Error al generar el PDF del reporte", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al generar el PDF del reporte", e);
         }
     }
 
