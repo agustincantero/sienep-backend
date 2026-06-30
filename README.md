@@ -13,6 +13,7 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
 - [Requisitos previos](#requisitos-previos)
 - [Funcionalidad principal](#funcionalidad-principal)
 - [Arquitectura general](#arquitectura-general)
+- [Arquitectura de Seguridad y Autenticación](#arquitectura-de-seguridad-y-autenticación)
 - [Configuración y Ejecución](#configuración-y-ejecución)
   - [Preparar la base de datos (Docker)](#preparar-la-base-de-datos-docker)
   - [Ejecución desde la Terminal](#ejecución-desde-la-terminal)
@@ -49,6 +50,21 @@ Este proyecto sigue una arquitectura en capas estándar de Spring Boot orientada
 - **Repositorios (`repository/`):** Interfaces de Spring Data JPA para el acceso a PostgreSQL.
 - **Modelo (`model/`):** Entidades JPA mapeadas directamente al esquema relacional.
 - **DTOs (`dto/`):** Objetos de transferencia de datos. Se utiliza el patrón CQRS simplificado separando las entradas de las salidas para mantener validaciones limpias e independientes.
+
+## Arquitectura de Seguridad y Autenticación
+
+El sistema implementa una arquitectura de seguridad robusta y altamente personalizada basada en **Spring Security** y **JWT** (JSON Web Tokens), operando de forma 100% *stateless* (sin almacenamiento de sesiones en el servidor).
+
+A continuación se detalla la responsabilidad de las clases clave que componen este flujo, un aspecto fundamental del diseño del sistema:
+
+*   **`SecurityConfig`:** Configura el comportamiento central de Spring Security. Deshabilita CSRF (apropiado para APIs REST con JWT), establece la política de sesión sin estado (`STATELESS`), define qué endpoints son públicos (como `/api/auth/**` y Swagger) y exige autenticación para el resto. También registra el filtro JWT para que actúe antes de los filtros estándar.
+*   **`AuthController` y `AuthService`:** Exponen y procesan el endpoint `/api/auth/login`. Gestionan la validación inicial, la protección contra ataques de fuerza bruta (bloqueando cuentas tras 5 intentos fallidos en 10 minutos) y auditan el acceso exitoso o denegado. Si las credenciales son válidas, solicitan la emisión del Token.
+*   **`LoginUsuarioDetailsService`:** Implementación de `UserDetailsService`. Su única función es asistir en el proceso de **Autenticación (Login)**. Busca al usuario en la base de datos (sea `Funcionario` o `Estudiante`) utilizando su **correo electrónico**. Esto permite a Spring validar la contraseña provista contra el hash encriptado de la base de datos.
+*   **`JwtTokenUtil`:** Clase utilitaria encargada de la criptografía. Al generar el Token, asigna el `idUsuario` (la clave primaria) como el *Subject* (sujeto) en lugar del email, mejorando la privacidad y la eficiencia de consultas futuras. Los tokens tienen una validez configurada (ej. 5 horas) y están firmados con algoritmos seguros.
+*   **`JwtRequestFilter`:** Filtro interceptor que evalúa cada petición entrante HTTP. Busca el header `Authorization: Bearer <token>`, extrae el JWT, verifica su validez y expiración, y obtiene el `idUsuario` embebido. Si es válido, inyecta la identidad autenticada en el `SecurityContextHolder`.
+*   **`CustomUsuarioDetailsService`:** Utilizado exclusivamente por el `JwtRequestFilter` para la fase de **Autorización**. A diferencia del servicio de Login, esta clase busca al usuario directamente por su **ID** y levanta sus privilegios en memoria:
+    *   **Funcionarios:** Convierte el Rol y la lista de permisos (`RolPermiso`) asignados dinámicamente en la base de datos a instancias de `GrantedAuthority` de Spring.
+    *   **Estudiantes:** Se les inyecta un rol sintético (`ROLE_ESTUDIANTE`) y permisos base (`VER_COMENTARIO_NORMAL_ESTUDIANTE`), logrando que ambos actores convivan transparentemente bajo el mismo control de acceso basado en anotaciones (`@PreAuthorize`).
 
 ## Configuración y Ejecución
 
