@@ -35,7 +35,7 @@ La API expone los servicios correspondientes a los 7 módulos centrales del sist
 
 1. **Autenticación y Acceso:** Inicio y cierre de sesión, y gestión segura de credenciales.
 2. **Gestión de Estudiantes:** Altas, bajas lógicas, modificaciones, búsquedas y capacidad para adjuntar informes médicos.
-3. **Gestión de Instancias:** Registro, categorización, clonación, visualización e integración con Google Calendar.
+3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar. *(Nota: La funcionalidad de clonación es manejada directamente por el Frontend utilizando los endpoints estándar de lectura y creación).*
 4. **Gestión de Recordatorios:** Creación (únicos y recurrentes), notificaciones, vinculación a instancias e integración con Google Calendar.
 5. **Gestión de Incidencias:** Registro detallado y visualización del historial de incidencias.
 6. **Reportes:** Generación y exportación de informes del sistema.
