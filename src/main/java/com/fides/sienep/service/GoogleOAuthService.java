@@ -35,6 +35,7 @@ public class GoogleOAuthService {
 
     private final FuncionarioRepository    funcionarioRepository;
     private final FuncionarioGcalRepository funcionarioGcalRepository;
+    private final OAuthStateStore          oAuthStateStore;
 
     @Value("${google.oauth2.client-id}")
     private String clientId;
@@ -47,10 +48,13 @@ public class GoogleOAuthService {
 
     // ── Generar URL de autorización ───────────────────────────────────────
     // El frontend redirige al usuario a esta URL.
-    // El parámetro state es el idUsuario — lo usamos en el callback
-    // para saber a qué funcionario asociar el token sin depender de sesión.
+    // El parámetro state es un token opaco y aleatorio generado por OAuthStateStore,
+    // NO el idUsuario en texto plano — eso era la vulnerabilidad original: cualquiera
+    // podía adivinar el id de otro funcionario y completar el callback en su nombre.
 
     public String generarUrlAutorizacion(int idUsuario) {
+        String state = oAuthStateStore.generarState(idUsuario);
+
         GoogleAuthorizationCodeRequestUrl url = new GoogleAuthorizationCodeRequestUrl(
                 clientId,
                 redirectUri,
@@ -59,23 +63,25 @@ public class GoogleOAuthService {
         return url
                 .setAccessType("offline")   // necesario para recibir refresh_token
                 .set("prompt", "consent") // fuerza que Google siempre entregue refresh_token
-                .setState(String.valueOf(idUsuario))
+                .setState(state)
                 .build();
     }
 
     // ── Procesar callback de Google ───────────────────────────────────────
     // Recibe el code que Google nos manda, lo intercambia por tokens,
     // y guarda el refresh_token en BD asociado al funcionario.
+    //
+    // El idUsuario NUNCA sale del state que presenta el cliente: se resuelve
+    // consumiendo el token contra OAuthStateStore, que es la única fuente de verdad
+    // de "a qué funcionario corresponde este callback". Si el token no existe (nunca
+    // se generó, ya se usó, o venció), se rechaza con 400 sin tocar ningún dato.
 
     @Transactional
     public void procesarCallback(String code, String state) {
-        int idUsuario;
-        try {
-            idUsuario = Integer.parseInt(state);
-        } catch (NumberFormatException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "El parámetro state del callback no es válido");
-        }
+        int idUsuario = oAuthStateStore.consumir(state)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "El parámetro state del callback es inválido, ya fue usado o venció. " +
+                                "Volvé a iniciar la conexión desde /api/auth/google/init."));
 
         Funcionario funcionario = funcionarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,

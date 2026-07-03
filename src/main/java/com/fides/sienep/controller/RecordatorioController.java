@@ -1,7 +1,10 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.InstanciaComunResponseDTO;
+import com.fides.sienep.dto.InstanciaDesdeRecordatorioDTO;
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.service.InstanciaComunService;
 import com.fides.sienep.service.RecordatorioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,6 +24,7 @@ import java.util.List;
 public class RecordatorioController {
 
     private final RecordatorioService recordatorioService;
+    private final InstanciaComunService instanciaComunService;
 
     @Operation(summary = "Crear un recordatorio")
     @ApiResponse(responseCode = "201", description = "Recordatorio creado correctamente")
@@ -85,5 +89,22 @@ public class RecordatorioController {
     @PatchMapping("/{id}/reactivar")
     public ResponseEntity<RecordatorioResponseDTO> reactivar(@PathVariable int id) {
         return ResponseEntity.ok(recordatorioService.reactivar(id));
+    }
+
+    @Operation(summary = "Crear instancia desde un recordatorio cumplido",
+            description = "Genera una instancia de seguimiento a partir de un recordatorio activo, " +
+                    "usando el mismo estudiante que la instancia de origen del recordatorio. " +
+                    "Marca el recordatorio como cumplido (RF27). No se puede volver a usar el " +
+                    "mismo recordatorio una vez que ya generó una instancia.")
+    @ApiResponse(responseCode = "201", description = "Instancia creada correctamente")
+    @ApiResponse(responseCode = "400", description = "Datos inválidos")
+    @ApiResponse(responseCode = "404", description = "Recordatorio o categoría no encontrada")
+    @ApiResponse(responseCode = "409", description = "El recordatorio ya generó una instancia")
+    @PostMapping("/{id}/crear-instancia")
+    public ResponseEntity<InstanciaComunResponseDTO> crearInstanciaDesdeRecordatorio(
+            @PathVariable int id,
+            @Valid @RequestBody InstanciaDesdeRecordatorioDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(instanciaComunService.crearDesdeRecordatorio(id, dto));
     }
 }

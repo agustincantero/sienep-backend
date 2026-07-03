@@ -26,4 +26,5 @@ public class InstanciaComunResponseDTO {
     private EstadoLogico estado;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private RecordatorioResponseDTO recordatorioCreado;
 }

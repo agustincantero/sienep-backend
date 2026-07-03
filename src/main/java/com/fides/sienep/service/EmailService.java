@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -80,6 +82,60 @@ public class EmailService {
         } catch (Exception e) {
             log.warn("[AUDIT] No se pudo enviar notificación de instancia {} a {}: {}",
                     idNegInstancia, destinatario, e.getMessage());
+        }
+    }
+
+    // RF23 — notificación por email al responsable cuando se le asigna un recordatorio.
+    // Mismo criterio que RF15: un fallo de envío no debe revertir la creación del
+    // recordatorio, que ya fue persistido (y, si corresponde, sincronizado con Calendar).
+    public void enviarNotificacionRecordatorio(String destinatario, String nombreUsuario,
+                                               String idNegRecordatorio, String tituloRecordatorio,
+                                               LocalDateTime fechaHora) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@sienep.app");
+            message.setTo(destinatario);
+            message.setSubject("Nuevo recordatorio asignado - " + idNegRecordatorio);
+            message.setText(
+                    "¡Hola, " + nombreUsuario + "!\n\n" +
+                            "Se te asignó un nuevo recordatorio en el sistema.\n\n" +
+                            "ID: " + idNegRecordatorio + "\n" +
+                            "Título: " + tituloRecordatorio + "\n" +
+                            "Fecha y hora: " + fechaHora + "\n\n" +
+                            "Podés consultarlo en el sistema SIENEP."
+            );
+            mailSender.send(message);
+            log.info("[AUDIT] Notificación de recordatorio {} enviada a {}", idNegRecordatorio, destinatario);
+        } catch (Exception e) {
+            log.warn("[AUDIT] No se pudo enviar notificación de recordatorio {} a {}: {}",
+                    idNegRecordatorio, destinatario, e.getMessage());
+        }
+    }
+
+    // RF23 — aviso de proximidad, disparado por RecordatorioNotificacionScheduler (cron propio).
+    // Distinto del método anterior: ese confirma que el recordatorio fue creado;
+    // este avisa que está por vencer (dentro de las próximas 24hs).
+    public void enviarRecordatorioProximo(String destinatario, String nombreUsuario,
+                                          String idNegRecordatorio, String tituloRecordatorio,
+                                          LocalDateTime fechaHora) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@sienep.app");
+            message.setTo(destinatario);
+            message.setSubject("Recordatorio próximo a vencer - " + idNegRecordatorio);
+            message.setText(
+                    "¡Hola, " + nombreUsuario + "!\n\n" +
+                            "Tenés un recordatorio próximo a vencer en el sistema SIENEP.\n\n" +
+                            "ID: " + idNegRecordatorio + "\n" +
+                            "Título: " + tituloRecordatorio + "\n" +
+                            "Fecha y hora: " + fechaHora + "\n\n" +
+                            "Recordá revisarlo antes de que venza."
+            );
+            mailSender.send(message);
+            log.info("[AUDIT] Aviso de proximidad de recordatorio {} enviado a {}", idNegRecordatorio, destinatario);
+        } catch (Exception e) {
+            log.warn("[AUDIT] No se pudo enviar aviso de proximidad de recordatorio {} a {}: {}",
+                    idNegRecordatorio, destinatario, e.getMessage());
         }
     }
 }

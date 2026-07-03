@@ -3,6 +3,10 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.InstanciaComunRequestDTO;
 import com.fides.sienep.dto.InstanciaComunResponseDTO;
 import com.fides.sienep.dto.InstanciaComunUpdateDTO;
+import com.fides.sienep.dto.InstanciaDesdeRecordatorioDTO;
+import com.fides.sienep.dto.RecordatorioInicialDTO;
+import com.fides.sienep.dto.RecordatorioRequestDTO;
+import com.fides.sienep.dto.RecordatorioResponseDTO;
 import com.fides.sienep.mapper.InstanciaComunMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
@@ -11,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,6 +31,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -39,6 +45,8 @@ class InstanciaComunServiceTest {
     @Mock private InstanciaIdGenerator instanciaIdGenerator;
     @Mock private InstanciaComunMapper instanciaComunMapper;
     @Mock private EmailService emailService;
+    @Mock private RecordatorioService recordatorioService;
+    @Mock private RecordatorioRepository recordatorioRepository;
 
     @InjectMocks
     private InstanciaComunService instanciaComunService;
@@ -162,6 +170,62 @@ class InstanciaComunServiceTest {
     }
 
     @Test
+    @DisplayName("Crear instancia común - Con recordatorioInicial delega en RecordatorioService y devuelve ambos (RF13)")
+    void crear_ConRecordatorioInicial_DelegaEnRecordatorioService() {
+        RecordatorioInicialDTO recordatorioInicial = new RecordatorioInicialDTO();
+        recordatorioInicial.setTitulo("Recordatorio de seguimiento");
+        recordatorioInicial.setTipo(TipoRecordatorio.LLAMADA);
+        recordatorioInicial.setFechaHora(LocalDateTime.now().plusDays(1));
+        recordatorioInicial.setIdCategoria(1);
+        requestDTO.setRecordatorioInicial(recordatorioInicial);
+
+        RecordatorioResponseDTO recordatorioResponseDTO = new RecordatorioResponseDTO();
+        recordatorioResponseDTO.setCodRecordatorio(1);
+        recordatorioResponseDTO.setIdNegRecordatorio("REC-2026-000001");
+        recordatorioResponseDTO.setCodInstancia(1);
+
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+        when(recordatorioService.crear(any(RecordatorioRequestDTO.class))).thenReturn(recordatorioResponseDTO);
+
+        InstanciaComunResponseDTO resultado = instanciaComunService.crear(requestDTO);
+
+        assertNotNull(resultado.getRecordatorioCreado());
+        assertEquals("REC-2026-000001", resultado.getRecordatorioCreado().getIdNegRecordatorio());
+
+        ArgumentCaptor<RecordatorioRequestDTO> captor = ArgumentCaptor.forClass(RecordatorioRequestDTO.class);
+        verify(recordatorioService).crear(captor.capture());
+
+        RecordatorioRequestDTO enviado = captor.getValue();
+        assertEquals(1, enviado.getCodInstancia());
+        assertEquals("Recordatorio de seguimiento", enviado.getTitulo());
+        // idResponsable no vino en el recordatorioInicial → debe caer al funcionario creador (idUsuario 2)
+        assertEquals(2, enviado.getIdResponsable());
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Sin recordatorioInicial no llama a RecordatorioService (RF13)")
+    void crear_SinRecordatorioInicial_NoLlamaARecordatorioService() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        InstanciaComunResponseDTO resultado = instanciaComunService.crear(requestDTO);
+
+        assertNull(resultado.getRecordatorioCreado());
+        verify(recordatorioService, never()).crear(any());
+    }
+
+    @Test
     @DisplayName("Crear instancia común - Estudiante no encontrado (404)")
     void crear_LanzaNotFound_EstudianteNoExiste() {
         mockSecurityContext(2);
@@ -246,6 +310,106 @@ class InstanciaComunServiceTest {
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
+    }
+
+    // ── Crear desde recordatorio (RF27) ──────────────────────
+
+    @Test
+    @DisplayName("Crear desde recordatorio - Éxito, deriva estudiante y marca cumplido")
+    void crearDesdeRecordatorio_Exito() {
+        Recordatorio recordatorio = new Recordatorio();
+        recordatorio.setCodRecordatorio(5);
+        recordatorio.setIdNegRecordatorio("REC-2026-000005");
+        recordatorio.setTitulo("Llamar a la familia");
+        recordatorio.setInstancia(instancia); // instancia.getEstudiante() == estudiante (fixture)
+        recordatorio.setCumplido(false);
+
+        InstanciaDesdeRecordatorioDTO dto = new InstanciaDesdeRecordatorioDTO();
+        dto.setIdCategoria(1);
+
+        mockSecurityContext(2);
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(5, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000002");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        InstanciaComunResponseDTO resultado = instanciaComunService.crearDesdeRecordatorio(5, dto);
+
+        assertNotNull(resultado);
+
+        ArgumentCaptor<InstanciaComun> captor = ArgumentCaptor.forClass(InstanciaComun.class);
+        verify(instanciaComunRepository).save(captor.capture());
+        assertEquals("Seguimiento: Llamar a la familia", captor.getValue().getTitulo());
+        assertEquals(1, captor.getValue().getEstudiante().getIdUsuario());
+
+        verify(recordatorioService).marcarCumplido(5);
+    }
+
+    @Test
+    @DisplayName("Crear desde recordatorio - Con título propio no usa el default")
+    void crearDesdeRecordatorio_ConTituloPropio_NoUsaDefault() {
+        Recordatorio recordatorio = new Recordatorio();
+        recordatorio.setCodRecordatorio(5);
+        recordatorio.setTitulo("Llamar a la familia");
+        recordatorio.setInstancia(instancia);
+        recordatorio.setCumplido(false);
+
+        InstanciaDesdeRecordatorioDTO dto = new InstanciaDesdeRecordatorioDTO();
+        dto.setIdCategoria(1);
+        dto.setTitulo("Seguimiento post-llamada");
+
+        mockSecurityContext(2);
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(5, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000002");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        instanciaComunService.crearDesdeRecordatorio(5, dto);
+
+        ArgumentCaptor<InstanciaComun> captor = ArgumentCaptor.forClass(InstanciaComun.class);
+        verify(instanciaComunRepository).save(captor.capture());
+        assertEquals("Seguimiento post-llamada", captor.getValue().getTitulo());
+    }
+
+    @Test
+    @DisplayName("Crear desde recordatorio - Recordatorio no encontrado (404)")
+    void crearDesdeRecordatorio_LanzaNotFound_RecordatorioNoExiste() {
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(99, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.crearDesdeRecordatorio(99, new InstanciaDesdeRecordatorioDTO()));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+        verify(recordatorioService, never()).marcarCumplido(anyInt());
+    }
+
+    @Test
+    @DisplayName("Crear desde recordatorio - Ya cumplido (409)")
+    void crearDesdeRecordatorio_LanzaConflict_YaCumplido() {
+        Recordatorio recordatorio = new Recordatorio();
+        recordatorio.setCodRecordatorio(5);
+        recordatorio.setInstancia(instancia);
+        recordatorio.setCumplido(true);
+
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(5, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.crearDesdeRecordatorio(5, new InstanciaDesdeRecordatorioDTO()));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+        verify(recordatorioService, never()).marcarCumplido(anyInt());
     }
 
     // ── Listar ────────────────────────────────────────────────

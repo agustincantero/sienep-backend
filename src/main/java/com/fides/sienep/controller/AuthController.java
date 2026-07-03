@@ -88,8 +88,9 @@ public class AuthController {
 // Google redirige aquí después de que el usuario acepta (o rechaza).
 // No requiere JWT porque el navegador del usuario llega aquí directamente
 // desde Google — no hay forma de que traiga el token de SIENEP.
-// La seguridad está en el parámetro `state` (idUsuario firmado implícitamente
-// por haber sido generado en /google/init con el JWT del usuario).
+// La seguridad está en el parámetro `state`: es un token aleatorio y de un solo
+// uso (ver OAuthStateStore), generado en /google/init y consumido acá. El
+// idUsuario nunca viaja en texto plano ni es adivinable desde este endpoint.
 
     @Operation(summary = "Callback OAuth2 de Google Calendar",
             description = "Endpoint al que Google redirige tras la autorización del usuario")

@@ -3,16 +3,23 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.InstanciaComunRequestDTO;
 import com.fides.sienep.dto.InstanciaComunResponseDTO;
 import com.fides.sienep.dto.InstanciaComunUpdateDTO;
+import com.fides.sienep.dto.InstanciaDesdeRecordatorioDTO;
+import com.fides.sienep.dto.RecordatorioInicialDTO;
+import com.fides.sienep.dto.RecordatorioRequestDTO;
+import com.fides.sienep.dto.RecordatorioResponseDTO;
 import com.fides.sienep.mapper.InstanciaComunMapper;
 import com.fides.sienep.model.CategoriaInstancia;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.Funcionario;
+import com.fides.sienep.model.Instancia;
 import com.fides.sienep.model.InstanciaComun;
+import com.fides.sienep.model.Recordatorio;
 import com.fides.sienep.repository.CategoriaInstanciaRepository;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.InstanciaComunRepository;
+import com.fides.sienep.repository.RecordatorioRepository;
 import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -25,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -40,6 +48,8 @@ public class InstanciaComunService {
     private final InstanciaIdGenerator instanciaIdGenerator;
     private final InstanciaComunMapper instanciaComunMapper;
     private final EmailService emailService;
+    private final RecordatorioService recordatorioService;
+    private final RecordatorioRepository recordatorioRepository;
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -111,7 +121,89 @@ public class InstanciaComunService {
                     response.getIdNegInstancia(), funcionario.getIdUsuario(), e.getMessage());
         }
 
+        // RF13 — recordatorio inicial opcional, con sync a Google Calendar heredado de RF22.
+        // A diferencia del email y de Google Calendar (servicios externos, "best effort" con
+        // try/catch propio adentro de RecordatorioService), acá NO atrapamos la excepción:
+        // si el funcionario pidió explícitamente un recordatorio y los datos son inválidos
+        // (categoría inexistente, frecuencia inactiva, etc.), es mejor que falle todo el POST
+        // con un 404/422 claro que crear una instancia "a medias" sin el recordatorio pedido.
+        // Al estar dentro del mismo @Transactional, si recordatorioService.crear() lanza
+        // ResponseStatusException, se hace rollback también de la instancia recién guardada.
+        if (dto.getRecordatorioInicial() != null) {
+            RecordatorioRequestDTO recordatorioDto = construirRecordatorioDesdeInstancia(
+                    dto.getRecordatorioInicial(), response.getCodInstancia(), funcionario.getIdUsuario());
+
+            RecordatorioResponseDTO recordatorioCreado = recordatorioService.crear(recordatorioDto);
+            response.setRecordatorioCreado(recordatorioCreado);
+        }
+
         return response;
+    }
+
+    // RF13 — arma el RecordatorioRequestDTO "completo" a partir del RecordatorioInicialDTO
+    // (que no trae codInstancia ni, a veces, idResponsable).
+    private RecordatorioRequestDTO construirRecordatorioDesdeInstancia(
+            RecordatorioInicialDTO origen, int codInstancia, int idFuncionarioCreador) {
+
+        RecordatorioRequestDTO dto = new RecordatorioRequestDTO();
+        dto.setTitulo(origen.getTitulo());
+        dto.setTipo(origen.getTipo());
+        dto.setFechaHora(origen.getFechaHora());
+        dto.setCodInstancia(codInstancia);
+        dto.setIdCategoria(origen.getIdCategoria());
+        dto.setIdResponsable(
+                origen.getIdResponsable() != null ? origen.getIdResponsable() : idFuncionarioCreador);
+        dto.setIdFrecuencia(origen.getIdFrecuencia());
+        dto.setFechaFin(origen.getFechaFin());
+        dto.setNroOcurrencias(origen.getNroOcurrencias());
+        return dto;
+    }
+
+    // RF27 — genera una instancia de seguimiento a partir de un recordatorio cumplido.
+    // Vive acá y no en RecordatorioService a propósito: InstanciaComunService ya depende
+    // de RecordatorioService (desde RF13), así que agregar la dependencia inversa crearía
+    // un ciclo. RecordatorioService.marcarCumplido() no sabe nada de instancias.
+    @Transactional
+    @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
+    public InstanciaComunResponseDTO crearDesdeRecordatorio(int codRecordatorio, InstanciaDesdeRecordatorioDTO dto) {
+        Recordatorio recordatorio = recordatorioRepository
+                .findByCodRecordatorioAndEstado(codRecordatorio, EstadoLogico.ACTIVO)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró un recordatorio activo con el id " + codRecordatorio));
+
+        if (recordatorio.isCumplido()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El recordatorio con id " + codRecordatorio + " ya generó una instancia");
+        }
+
+        Instancia instanciaOrigen = recordatorio.getInstancia();
+        Estudiante estudiante = instanciaOrigen.getEstudiante();
+
+        InstanciaComunRequestDTO instanciaDto = new InstanciaComunRequestDTO();
+        instanciaDto.setTitulo(
+                dto.getTitulo() != null && !dto.getTitulo().isBlank()
+                        ? dto.getTitulo()
+                        : "Seguimiento: " + recordatorio.getTitulo());
+        instanciaDto.setFechaHora(LocalDateTime.now());
+        instanciaDto.setIdEstudiante(estudiante.getIdUsuario());
+        instanciaDto.setCanal(dto.getCanal());
+        instanciaDto.setIdCategoria(dto.getIdCategoria());
+
+        // Self-invocation intencional: this.crear() no pasa por el proxy de Spring, así que
+        // su propio @Transactional/@PreAuthorize no se re-evalúan acá — corre como método
+        // plano, dentro de la misma transacción que ya abrió crearDesdeRecordatorio(), y la
+        // autorización ya se validó arriba. Es el comportamiento buscado, no un bug: si
+        // alguna vez esto se refactoriza a una clase separada, hay que revisar este detalle.
+        InstanciaComunResponseDTO nuevaInstancia = this.crear(instanciaDto);
+
+        // Se marca cumplido recién después de que la instancia se creó con éxito: si crear()
+        // lanza una excepción, el rollback de @Transactional deshace todo y el recordatorio
+        // queda sin marcar, disponible para reintentar.
+        recordatorioService.marcarCumplido(codRecordatorio);
+
+        return nuevaInstancia;
     }
 
     @Transactional(readOnly = true)

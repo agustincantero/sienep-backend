@@ -23,10 +23,16 @@ public class InstanciaComunController {
 
     private final InstanciaComunService instanciaComunService;
 
-    @Operation(summary = "Crear una instancia")
-    @ApiResponse(responseCode = "201", description = "Instancia creada correctamente")
+    @Operation(summary = "Crear una instancia",
+            description = "Crea una instancia asociada a un estudiante. Opcionalmente, se puede incluir " +
+                    "el campo 'recordatorioInicial' para crear en la misma operación un Recordatorio " +
+                    "vinculado a la instancia recién creada (RF13). Si el funcionario responsable de ese " +
+                    "recordatorio tiene la integración con Google Calendar activa (RF22), el evento se " +
+                    "sincroniza automáticamente en su calendario personal.")
+    @ApiResponse(responseCode = "201", description = "Instancia creada correctamente (y recordatorio, si se solicitó)")
     @ApiResponse(responseCode = "400", description = "Datos inválidos")
-    @ApiResponse(responseCode = "404", description = "Estudiante, funcionario o categoría no encontrada")
+    @ApiResponse(responseCode = "404", description = "Estudiante, funcionario, categoría, frecuencia o responsable de recordatorio no encontrado")
+    @ApiResponse(responseCode = "422", description = "Estudiante, funcionario o categoría no activos")
     @PostMapping
     public ResponseEntity<InstanciaComunResponseDTO> crear(
             @Valid @RequestBody InstanciaComunRequestDTO dto) {
