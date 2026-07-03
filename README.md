@@ -51,6 +51,16 @@ Este proyecto sigue una arquitectura en capas estándar de Spring Boot orientada
 - **Modelo (`model/`):** Entidades JPA mapeadas directamente al esquema relacional.
 - **DTOs (`dto/`):** Objetos de transferencia de datos. Se utiliza el patrón CQRS simplificado separando las entradas de las salidas para mantener validaciones limpias e independientes.
 
+### Patrones de Diseño Implementados
+
+Para asegurar la escalabilidad, el desacoplamiento y la mantenibilidad del código, el equipo aplicó los siguientes patrones de diseño de software:
+
+- **Data Transfer Object (DTO):** Patrón estructural aplicado a lo largo de toda la API que actúa como barrera entre el modelo de datos (Entidades JPA) y la capa de presentación (JSON). Garantiza que la API consuma y exponga únicamente la información estrictamente necesaria, blindando la base de datos de modificaciones directas.
+- **Facade (Fachada) - `GoogleOAuthService`:** En lugar de exponer la complejidad del SDK oficial de Google (`NetHttpTransport`, `GsonFactory`, y múltiples requests) hacia las capas superiores, esta clase encapsula todo este subsistema engorroso. Lo oculta detrás de métodos de negocio extremadamente limpios, liberando completamente al `AuthController` de conocer los detalles de la infraestructura externa.
+- **Builder (Constructor):** Patrón creacional implementado a través de la anotación `@Builder` de Lombok, especialmente en la capa de DTOs y en conjunto con `MapStruct`. Se eligió este patrón para evitar la proliferación de constructores gigantes y asegurar la inmutabilidad en el mapeo de objetos, permitiendo ensamblar instancias complejas paso a paso de forma legible.
+- **Singleton (Instancia Única):** Patrón creacional adoptado en toda la capa de lógica y acceso a datos (`@Service`, `@Repository`, `@RestController`). En lugar de instanciar manualmente objetos pesados (que agotarían la memoria), el equipo delegó la gestión del patrón Singleton al Contenedor de Inversión de Control (IoC) de Spring Boot. Spring garantiza que exista una única instancia global de estos componentes en memoria, inyectándolos dinámicamente donde se necesiten.
+
+
 ## Arquitectura de Seguridad y Autenticación
 
 El sistema implementa una arquitectura de seguridad robusta y altamente personalizada basada en **Spring Security** y **JWT** (JSON Web Tokens), operando de forma 100% *stateless* (sin almacenamiento de sesiones en el servidor).
