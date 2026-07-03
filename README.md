@@ -50,6 +50,12 @@ Este proyecto sigue una arquitectura en capas estándar de Spring Boot orientada
 - **Repositorios (`repository/`):** Interfaces de Spring Data JPA para el acceso a PostgreSQL.
 - **Modelo (`model/`):** Entidades JPA mapeadas directamente al esquema relacional.
 - **DTOs (`dto/`):** Objetos de transferencia de datos. Se utiliza el patrón CQRS simplificado separando las entradas de las salidas para mantener validaciones limpias e independientes.
+- **Mapeadores (`mapper/`):** Interfaces procesadas por `MapStruct` para automatizar la conversión bidireccional entre Entidades y DTOs, evitando código repetitivo.
+- **Seguridad (`security/`):** Filtros, utilidades de JWT y servicios de extracción de identidad para proteger los endpoints.
+- **Configuración (`config/`):** Clases de configuración global (`@Configuration`) para inyectar beans de Spring Security, CORS, OpenAPI, Caché, entre otros.
+- **Excepciones (`exception/`):** Manejo centralizado de errores (`@ControllerAdvice`) para capturar fallos y devolver respuestas HTTP estandarizadas al cliente frontend.
+- **Utilidades (`utils/`):** Clases sin estado que agrupan lógica reutilizable.
+- **Aspectos (`aspect/`):** Implementación de Programación Orientada a Aspectos (AOP) para interceptar de forma transversal la capa de servicios e inyectar el contexto de seguridad web (ID de usuario e IP) en las transacciones de PostgreSQL (`SET LOCAL`), alimentando los triggers de auditoría de la base de datos.
 
 ### Patrones de Diseño Implementados
 
