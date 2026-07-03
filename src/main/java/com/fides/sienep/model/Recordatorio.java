@@ -77,6 +77,15 @@ public class Recordatorio {
     @Column(name = "event_id_google", length = 1024)
     private String eventIdGoogle;
 
+    // RF23 — evita mandar el email de "vence pronto" más de una vez para el mismo recordatorio.
+    @Column(name = "notificado_proximidad", nullable = false)
+    private boolean notificadoProximidad = false;
+
+    // RF27 — true una vez que el recordatorio generó su instancia de seguimiento.
+    // Evita generar más de una instancia por el mismo recordatorio.
+    @Column(name = "cumplido", nullable = false)
+    private boolean cumplido = false;
+
     public Recordatorio(String titulo, TipoRecordatorio tipo, LocalDateTime fechaHora,
                         Instancia instancia, CategoriaRecordatorio categoria, Funcionario responsable) {
         this.titulo = titulo;

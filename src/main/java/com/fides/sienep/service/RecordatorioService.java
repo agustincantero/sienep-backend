@@ -30,6 +30,7 @@ public class RecordatorioService {
     private final RecordatorioIdGenerator recordatorioIdGenerator;
     private final FuncionarioGcalRepository funcionarioGcalRepository;
     private final GoogleCalendarService     googleCalendarService;
+    private final EmailService              emailService;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
@@ -113,6 +114,22 @@ public class RecordatorioService {
         } catch (Exception e) {
             log.warn("[GCAL] Fallo al sincronizar recordatorio {} con Google Calendar: {}",
                     guardado.getIdNegRecordatorio(), e.getMessage());
+        }
+
+        // ── RF23: notificar por email al responsable del recordatorio ──
+        // No es bloqueante: enviarNotificacionRecordatorio() ya atrapa sus propias excepciones,
+        // este try/catch es una segunda capa de defensa (mismo criterio que RF15 en InstanciaComunService).
+        try {
+            emailService.enviarNotificacionRecordatorio(
+                    responsable.getEmail(),
+                    responsable.getNombre(),
+                    guardado.getIdNegRecordatorio(),
+                    guardado.getTitulo(),
+                    guardado.getFechaHora()
+            );
+        } catch (Exception e) {
+            log.warn("[AUDIT] Fallo al notificar recordatorio {} al responsable {}: {}",
+                    guardado.getIdNegRecordatorio(), responsable.getIdUsuario(), e.getMessage());
         }
 
         return recordatorioMapper.toDto(guardado);
@@ -245,6 +262,27 @@ public class RecordatorioService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un recordatorio activo con el id " + id));
+    }
+
+    // RF27 — Se llama desde InstanciaComunService.crearDesdeRecordatorio() una vez que la
+    // instancia de seguimiento ya fue creada exitosamente. Deliberadamente NO conoce nada
+    // de InstanciaComunService ni de Instancia: solo marca el flag. Mantener esta dirección
+    // (InstanciaComunService → RecordatorioService) es lo que evita un ciclo de dependencias
+    // entre los dos services — si esto alguna vez necesita "saber" sobre instancias, esa
+    // lógica va en InstanciaComunService, no acá.
+    @Transactional
+    @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
+    public RecordatorioResponseDTO marcarCumplido(int id) {
+        Recordatorio recordatorio = buscarActivoOFallar(id);
+
+        if (recordatorio.isCumplido()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El recordatorio con id " + id + " ya fue marcado como cumplido");
+        }
+
+        recordatorio.setCumplido(true);
+        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
     }
 
 

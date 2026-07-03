@@ -1,8 +1,7 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.model.Frecuencia;
 import com.fides.sienep.model.Recordatorio;
-import com.fides.sienep.model.TipoFrecuencia;
+import com.fides.sienep.utils.RecurrenceRuleBuilder;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.json.gson.GsonFactory;
@@ -36,6 +35,7 @@ public class GoogleCalendarService {
     private static final String ZONA_HORARIA  = "America/Montevideo";
 
     private final GoogleOAuthService googleOAuthService;
+    private final RecurrenceRuleBuilder recurrenceRuleBuilder;
 
     // ── Crear evento ──────────────────────────────────────────────────────
     // Retorna el eventId de Google, que se guarda en Recordatorio.eventIdGoogle.
@@ -49,7 +49,8 @@ public class GoogleCalendarService {
             evento.setSummary("[SIENEP] " + recordatorio.getTitulo());
             evento.setDescription(
                     "Recordatorio SIENEP\n" +
-                            "ID: " + recordatorio.getIdNegRecordatorio() + "\n" +
+                            "ID Recordatorio: " + recordatorio.getIdNegRecordatorio() + "\n" +
+                            "Instancia: " + recordatorio.getInstancia().getIdNegInstancia() + "\n" +
                             "Tipo: " + recordatorio.getTipo().name()
             );
 
@@ -67,7 +68,7 @@ public class GoogleCalendarService {
 
             // Recurrencia — solo si el recordatorio tiene frecuencia asignada
             if (recordatorio.getFrecuencia() != null) {
-                String rrule = construirRrule(recordatorio);
+                String rrule = recurrenceRuleBuilder.construir(recordatorio);
                 if (rrule != null) {
                     evento.setRecurrence(List.of(rrule));
                 }
@@ -129,77 +130,5 @@ public class GoogleCalendarService {
 
     private DateTime toGoogleDateTime(ZonedDateTime zdt) {
         return new DateTime(zdt.toInstant().toEpochMilli());
-    }
-
-    // ── Construcción de RRULE desde modelo Frecuencia ────────────────────
-    //
-    // Mapeo:
-    //   DIARIA        → FREQ=DAILY
-    //   SEMANAL       → FREQ=WEEKLY;BYDAY=<DiaSemana>
-    //   MENSUAL       → FREQ=MONTHLY
-    //   PERSONALIZADA → FREQ=DAILY;INTERVAL=<intDias>
-    //
-    // Si el recordatorio tiene fechaFin → UNTIL=<fecha>
-    // Si tiene nroOcurrencias           → COUNT=<n>
-    // Si no tiene ninguno de los dos    → sin límite (poco probable por validaciones del DTO)
-
-    private String construirRrule(Recordatorio recordatorio) {
-        Frecuencia frecuencia = recordatorio.getFrecuencia();
-        if (frecuencia == null) {
-            return null;
-        }
-
-        StringBuilder rrule = new StringBuilder("RRULE:FREQ=");
-
-        if (frecuencia.getTipo() == TipoFrecuencia.DIARIA) {
-            rrule.append("DAILY");
-
-        } else if (frecuencia.getTipo() == TipoFrecuencia.SEMANAL) {
-            rrule.append("WEEKLY");
-            if (frecuencia.getDiaSemana() != null) {
-                // DiaSemana enum → abreviatura RRULE (ej. LUNES → MO)
-                String byday = mapearDiaSemana(frecuencia.getDiaSemana().name());
-                if (byday != null) {
-                    rrule.append(";BYDAY=").append(byday);
-                }
-            }
-
-        } else if (frecuencia.getTipo() == TipoFrecuencia.MENSUAL) {
-            rrule.append("MONTHLY");
-
-        } else if (frecuencia.getTipo() == TipoFrecuencia.PERSONALIZADA) {
-            rrule.append("DAILY");
-            if (frecuencia.getIntDias() != null && frecuencia.getIntDias() > 0) {
-                rrule.append(";INTERVAL=").append(frecuencia.getIntDias());
-            }
-        } else {
-            return null;
-        }
-
-        // Límite: fechaFin tiene precedencia sobre nroOcurrencias
-        if (recordatorio.getFechaFin() != null) {
-            // UNTIL requiere formato YYYYMMDD en RRULE
-            String hasta = recordatorio.getFechaFin()
-                    .toString()
-                    .replace("-", "");
-            rrule.append(";UNTIL=").append(hasta);
-        } else if (recordatorio.getNroOcurrencias() != null && recordatorio.getNroOcurrencias() > 0) {
-            rrule.append(";COUNT=").append(recordatorio.getNroOcurrencias());
-        }
-
-        return rrule.toString();
-    }
-
-    private String mapearDiaSemana(String diaSemana) {
-        switch (diaSemana) {
-            case "LUNES":     return "MO";
-            case "MARTES":    return "TU";
-            case "MIERCOLES": return "WE";
-            case "JUEVES":    return "TH";
-            case "VIERNES":   return "FR";
-            case "SABADO":    return "SA";
-            case "DOMINGO":   return "SU";
-            default:          return null;
-        }
     }
 }

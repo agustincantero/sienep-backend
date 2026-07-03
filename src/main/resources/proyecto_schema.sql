@@ -455,6 +455,8 @@ CREATE TABLE proyecto.recordatorios (
                                         created_at          TIMESTAMP                  NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                         updated_at          TIMESTAMP                  NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                         event_id_google VARCHAR(1024),
+                                        notificado_proximidad BOOLEAN NOT NULL DEFAULT FALSE,
+                                        cumplido BOOLEAN NOT NULL DEFAULT FALSE,
                                         CONSTRAINT chk_rec_titulo_valido CHECK (TRIM(titulo) <> ''),
                                         CONSTRAINT chk_fec_hora_futura   CHECK (fec_hora > CURRENT_TIMESTAMP),
                                         CONSTRAINT chk_recurrencia_fec_fin CHECK (
@@ -740,20 +742,20 @@ CREATE TABLE proyecto.auditoria (
 CREATE OR REPLACE FUNCTION proyecto.trg_auditoria_general()
 RETURNS TRIGGER AS $$
 DECLARE
-    v_usuario_id INT;
+v_usuario_id INT;
     v_ip VARCHAR(45);
     v_valor_anterior JSONB;
     v_valor_nuevo JSONB;
     v_accion proyecto.tipo_accion;
 BEGIN
     -- Obtener usuario e IP de las variables de sesión de Postgres
-    BEGIN
+BEGIN
         v_usuario_id := NULLIF(current_setting('sienep.usuario_actual', true), '')::INT;
         v_ip := NULLIF(current_setting('sienep.ip_actual', true), '');
-    EXCEPTION WHEN OTHERS THEN
+EXCEPTION WHEN OTHERS THEN
         v_usuario_id := NULL;
         v_ip := NULL;
-    END;
+END;
 
     -- Preparar los JSON quitando la contraseña por seguridad
     IF TG_OP = 'INSERT' THEN
@@ -768,16 +770,16 @@ BEGIN
         v_accion := 'DELETE';
         v_valor_anterior := to_jsonb(OLD) - 'contrasenia';
         v_valor_nuevo := NULL;
-    END IF;
+END IF;
 
     -- Insertar en la tabla de auditoría (registrando también el usuario_bd)
-    INSERT INTO proyecto.auditoria (entidad, accion, id_usuario, ip, usuario_bd, valor_anterior, valor_nuevo)
-    VALUES (UPPER(TG_TABLE_NAME), v_accion, v_usuario_id, v_ip, CURRENT_USER, v_valor_anterior, v_valor_nuevo);
+INSERT INTO proyecto.auditoria (entidad, accion, id_usuario, ip, usuario_bd, valor_anterior, valor_nuevo)
+VALUES (UPPER(TG_TABLE_NAME), v_accion, v_usuario_id, v_ip, CURRENT_USER, v_valor_anterior, v_valor_nuevo);
 
-    IF TG_OP = 'DELETE' THEN
+IF TG_OP = 'DELETE' THEN
         RETURN OLD;
-    END IF;
-    RETURN NEW;
+END IF;
+RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -815,141 +817,141 @@ SET search_path TO proyecto;
 -- ROLES
 -- =============================================
 INSERT INTO proyecto.roles (nom_rol) VALUES
-    ('ADMINISTRADOR'),
-    ('PSICOPEDAGOGO'),
-    ('TUTOR'),
-    ('DOCENTE'),
-    ('LEGALES')
-ON CONFLICT (nom_rol) DO NOTHING;
+                                         ('ADMINISTRADOR'),
+                                         ('PSICOPEDAGOGO'),
+                                         ('TUTOR'),
+                                         ('DOCENTE'),
+                                         ('LEGALES')
+    ON CONFLICT (nom_rol) DO NOTHING;
 
 -- =============================================
 -- CATEGORIAS DE INSTANCIA
 -- =============================================
 INSERT INTO proyecto.cat_instancias (nom_cate_instancias) VALUES
-    ('REUNIÓN'),
-    ('LLAMADA'),
-    ('COORDINACIÓN'),
-    ('INFORME')
-ON CONFLICT (nom_cate_instancias) DO NOTHING;
+                                                              ('REUNIÓN'),
+                                                              ('LLAMADA'),
+                                                              ('COORDINACIÓN'),
+                                                              ('INFORME')
+    ON CONFLICT (nom_cate_instancias) DO NOTHING;
 
 -- =============================================
 -- CATEGORIAS DE RECORDATORIO
 -- =============================================
 INSERT INTO proyecto.cat_recordatorios (nom_cate_recordatorios, descripcion) VALUES
-    ('ADMINISTRATIVO',  'Tareas administrativas del sistema'),
-    ('ACADÉMICO',       'Recordatorios relacionados a actividades académicas'),
-    ('SEGUIMIENTO',     'Acciones de seguimiento a estudiantes'),
-    ('URGENTE',         'Recordatorios que requieren atención inmediata')
-ON CONFLICT (nom_cate_recordatorios) DO NOTHING;
+                                                                                 ('ADMINISTRATIVO',  'Tareas administrativas del sistema'),
+                                                                                 ('ACADÉMICO',       'Recordatorios relacionados a actividades académicas'),
+                                                                                 ('SEGUIMIENTO',     'Acciones de seguimiento a estudiantes'),
+                                                                                 ('URGENTE',         'Recordatorios que requieren atención inmediata')
+    ON CONFLICT (nom_cate_recordatorios) DO NOTHING;
 
 -- =============================================
 -- PERMISOS
 -- =============================================
 INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
-    -- Funcionarios
-    ('VER_FUNCIONARIOS',        'Permite ver la lista de funcionarios del sistema'),
-    ('CREAR_FUNCIONARIO',       'Permite registrar un nuevo funcionario'),
-    ('EDITAR_FUNCIONARIO',      'Permite editar los datos de un funcionario'),
-    ('ELIMINAR_FUNCIONARIO',    'Permite dar de baja a un funcionario'),
-    ('REACTIVAR_FUNCIONARIO',   'Permite reactivar un funcionario dado de baja'),
-    -- Roles
-    ('VER_ROLES',               'Permite ver la lista de roles del sistema'),
-    ('CREAR_ROL',               'Permite crear nuevos roles'),
-    ('EDITAR_ROL',              'Permite editar la información de un rol'),
-    ('ELIMINAR_ROL',            'Permite eliminar un rol existente'),
-    ('REACTIVAR_ROL',           'Permite reactivar un rol dado de baja'),
-    ('ASIGNAR_PERMISOS',        'Permite asignar o revocar permisos a roles'),
-    -- Estudiantes
-    ('VER_ESTUDIANTE',              'Permite visualizar los datos de los estudiantes'),
-    ('VER_ESTUDIANTE_RESUMIDO',     'Permite visualizar datos resumidos de estudiantes'),
-    ('CREAR_ESTUDIANTE',            'Permite registrar nuevos estudiantes'),
-    ('EDITAR_ESTUDIANTE',           'Permite modificar datos de un estudiante existente'),
-    ('ELIMINAR_ESTUDIANTE',         'Permite dar de baja a un estudiante'),
-    ('BUSCAR_ESTUDIANTE',           'Permite buscar estudiantes por criterios específicos'),
-    ('REACTIVAR_ESTUDIANTE',        'Permite reactivar estudiantes dados de baja'),
-    -- Adjuntos
-    ('VER_ADJUNTOS',            'Permite ver los archivos adjuntos de un estudiante o instancia'),
-    ('ADJUNTAR_INFORME',        'Permite adjuntar un informe u otro archivo al sistema'),
-    ('ELIMINAR_INFORME',        'Permite dar de baja un informe.'),
-    -- Instancias
-    ('VER_INSTANCIAS',          'Permite visualizar las instancias registradas'),
-    ('CREAR_INSTANCIA',         'Permite crear nuevas instancias'),
-    ('EDITAR_INSTANCIA',        'Permite modificar una instancia existente'),
-    ('BAJA_INSTANCIA',          'Permite dar de baja una instancia'),
-    ('CATEGORIZAR_INSTANCIA',   'Permite asignar categorías a las instancias'),
-    ('VER_BLOQUE_CONFIDENCIAL', 'Permite ver el bloque confidencial de una instancia'),
-    -- Recordatorios
-    ('VER_RECORDATORIOS',       'Permite ver los recordatorios existentes'),
-    ('CREAR_RECORDATORIO',      'Permite crear nuevos recordatorios'),
-    ('EDITAR_RECORDATORIO',     'Permite editar recordatorios existentes'),
-    ('BAJA_RECORDATORIO',       'Permite eliminar o desactivar recordatorios'),
-    ('CONFIG_RECURRENCIA',      'Permite configurar la recurrencia de los recordatorios'),
-    ('ETIQUETAR_TIPO',          'Permite asignar etiquetas o tipos a recordatorios'),
-    -- Integraciones
-    ('GCAL_SYNC_INSTANCIAS',    'Permite sincronizar instancias con Google Calendar'),
-    ('GCAL_SYNC_RECORDATORIOS', 'Permite sincronizar recordatorios con Google Calendar'),
-    ('NOTIFICAR_RECORDATORIOS', 'Permite enviar notificaciones de recordatorios'),
-    -- Incidencias
-    ('REGISTRAR_INCIDENCIA',    'Permite registrar nuevas incidencias'),
-    ('VER_INCIDENCIAS',         'Permite visualizar las incidencias registradas'),
-    ('HISTORIAL_INCIDENCIAS',   'Permite consultar el historial de incidencias'),
-    ('EDITAR_INCIDENCIAS',      'Permite editar incidencias existentes'),
-    ('ELIMINAR_INCIDENCIAS',    'Permite eliminar incidencias existentes'),
-    -- Reportes
-    ('VER_REPORTES',            'Permite acceder al módulo de reportes'),
-    ('EXPORTAR_REPORTES',       'Permite exportar los reportes generados'),
-    -- Categorías
-    ('VER_CATEGORIA_INSTANCIA',    'Permite visualizar categorías de instancias'),
-    ('CREAR_CATEGORIA_INSTANCIA',  'Permite crear categorías de instancias'),
-    ('EDITAR_CATEGORIA_INSTANCIA', 'Permite editar categorías de instancias'),
-    ('ELIMINAR_CATEGORIA_INSTANCIA','Permite dar de baja categorías de instancias'),
-    ('REACTIVAR_CATEGORIA_INSTANCIA','Permite reactivar categorías de instancias dadas de baja'),
-    ('VER_CATEGORIA_RECORDATORIO', 'Permite visualizar categorías de recordatorios'),
-    ('CREAR_CATEGORIA_RECORDATORIO','Permite crear categorías de recordatorios'),
-    ('EDITAR_CATEGORIA_RECORDATORIO','Permite editar categorías de recordatorios'),
-    ('ELIMINAR_CATEGORIA_RECORDATORIO','Permite dar de baja categorías de recordatorios'),
-    ('REACTIVAR_CATEGORIA_RECORDATORIO','Permite reactivar categorías de recordatorios dadas de baja'),
-    -- Permisos y perfil
-    ('VER_PERMISOS',               'Permite visualizar la lista de permisos del sistema'),
-    ('EDITAR_PERMISO',             'Permite editar la descripción de los permisos'),
-    ('EDITAR_MIS_DATOS',            'Permite editar los datos personales del usuario logueado'),
-    ('VER_AUDITORIA',              'Permite consultar el historial de eventos y auditoría del sistema'),
-    -- Comentarios de estudiante
-    ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),
-    ('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',      'Permite ver comentarios confidenciales de estudiantes'),
-    ('CREAR_COMENTARIO_NORMAL_ESTUDIANTE',          'Permite crear comentarios normales sobre un estudiante'),
-    ('CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',    'Permite crear comentarios confidenciales sobre un estudiante'),
-    ('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE',         'Permite editar comentarios normales de un estudiante'),
-    ('EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',   'Permite editar comentarios confidenciales de un estudiante'),
-    ('ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',       'Permite eliminar comentarios normales de un estudiante'),
-    ('ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'Permite eliminar comentarios confidenciales de un estudiante'),
-    -- Comentarios de instancia
-    ('VER_COMENTARIO_NORMAL_INSTANCIA',             'Permite ver comentarios normales de instancia'),
-    ('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA',       'Permite ver comentarios confidenciales de instancia'),
-    ('CREAR_COMENTARIO_NORMAL_INSTANCIA',           'Permite crear comentarios normales de instancia'),
-    ('CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',     'Permite crear comentarios confidenciales de instancia'),
-    ('EDITAR_COMENTARIO_NORMAL_INSTANCIA',          'Permite editar comentarios normales de instancia'),
-    ('EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',    'Permite editar comentarios confidenciales de instancia'),
-    ('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA',        'Permite eliminar comentarios normales de instancia'),
-    ('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',  'Permite eliminar comentarios confidenciales de instancia'),
-    -- Grupos
-    ('CREAR_GRUPO', 'Permite crear nuevos grupos'),
-    ('VER_GRUPOS', 'Permite visualizar grupos existentes'),
-    ('EDITAR_GRUPOS', 'Permite editar grupos existentes'),
-    ('ELIMINAR_GRUPOS', 'Permite eliminar grupos'),
-    -- Carreras
-    ('VER_CARRERAS', 'Permite ver la lista de carreras del sistema'),
-    ('CREAR_CARRERA', 'Permite registrar una nueva carrera'),
-    ('EDITAR_CARRERA', 'Permite editar los datos de una carrera'),
-    ('ELIMINAR_CARRERA', 'Permite dar de baja una carrera'),
-    ('REACTIVAR_CARRERA', 'Permite reactivar una carrera dada de baja'),
-    -- ITRs
-    ('VER_ITRS', 'Permite ver la lista de ITRs del sistema'),
-    ('CREAR_ITR', 'Permite registrar un nuevo ITR'),
-    ('EDITAR_ITR', 'Permite editar los datos de un ITR'),
-    ('ELIMINAR_ITR', 'Permite dar de baja un ITR'),
-    ('REACTIVAR_ITR', 'Permite reactivar un ITR dado de baja')
-ON CONFLICT (nom_permiso) DO NOTHING;
+                                                                 -- Funcionarios
+                                                                 ('VER_FUNCIONARIOS',        'Permite ver la lista de funcionarios del sistema'),
+                                                                 ('CREAR_FUNCIONARIO',       'Permite registrar un nuevo funcionario'),
+                                                                 ('EDITAR_FUNCIONARIO',      'Permite editar los datos de un funcionario'),
+                                                                 ('ELIMINAR_FUNCIONARIO',    'Permite dar de baja a un funcionario'),
+                                                                 ('REACTIVAR_FUNCIONARIO',   'Permite reactivar un funcionario dado de baja'),
+                                                                 -- Roles
+                                                                 ('VER_ROLES',               'Permite ver la lista de roles del sistema'),
+                                                                 ('CREAR_ROL',               'Permite crear nuevos roles'),
+                                                                 ('EDITAR_ROL',              'Permite editar la información de un rol'),
+                                                                 ('ELIMINAR_ROL',            'Permite eliminar un rol existente'),
+                                                                 ('REACTIVAR_ROL',           'Permite reactivar un rol dado de baja'),
+                                                                 ('ASIGNAR_PERMISOS',        'Permite asignar o revocar permisos a roles'),
+                                                                 -- Estudiantes
+                                                                 ('VER_ESTUDIANTE',              'Permite visualizar los datos de los estudiantes'),
+                                                                 ('VER_ESTUDIANTE_RESUMIDO',     'Permite visualizar datos resumidos de estudiantes'),
+                                                                 ('CREAR_ESTUDIANTE',            'Permite registrar nuevos estudiantes'),
+                                                                 ('EDITAR_ESTUDIANTE',           'Permite modificar datos de un estudiante existente'),
+                                                                 ('ELIMINAR_ESTUDIANTE',         'Permite dar de baja a un estudiante'),
+                                                                 ('BUSCAR_ESTUDIANTE',           'Permite buscar estudiantes por criterios específicos'),
+                                                                 ('REACTIVAR_ESTUDIANTE',        'Permite reactivar estudiantes dados de baja'),
+                                                                 -- Adjuntos
+                                                                 ('VER_ADJUNTOS',            'Permite ver los archivos adjuntos de un estudiante o instancia'),
+                                                                 ('ADJUNTAR_INFORME',        'Permite adjuntar un informe u otro archivo al sistema'),
+                                                                 ('ELIMINAR_INFORME',        'Permite dar de baja un informe.'),
+                                                                 -- Instancias
+                                                                 ('VER_INSTANCIAS',          'Permite visualizar las instancias registradas'),
+                                                                 ('CREAR_INSTANCIA',         'Permite crear nuevas instancias'),
+                                                                 ('EDITAR_INSTANCIA',        'Permite modificar una instancia existente'),
+                                                                 ('BAJA_INSTANCIA',          'Permite dar de baja una instancia'),
+                                                                 ('CATEGORIZAR_INSTANCIA',   'Permite asignar categorías a las instancias'),
+                                                                 ('VER_BLOQUE_CONFIDENCIAL', 'Permite ver el bloque confidencial de una instancia'),
+                                                                 -- Recordatorios
+                                                                 ('VER_RECORDATORIOS',       'Permite ver los recordatorios existentes'),
+                                                                 ('CREAR_RECORDATORIO',      'Permite crear nuevos recordatorios'),
+                                                                 ('EDITAR_RECORDATORIO',     'Permite editar recordatorios existentes'),
+                                                                 ('BAJA_RECORDATORIO',       'Permite eliminar o desactivar recordatorios'),
+                                                                 ('CONFIG_RECURRENCIA',      'Permite configurar la recurrencia de los recordatorios'),
+                                                                 ('ETIQUETAR_TIPO',          'Permite asignar etiquetas o tipos a recordatorios'),
+                                                                 -- Integraciones
+                                                                 ('GCAL_SYNC_INSTANCIAS',    'Permite sincronizar instancias con Google Calendar'),
+                                                                 ('GCAL_SYNC_RECORDATORIOS', 'Permite sincronizar recordatorios con Google Calendar'),
+                                                                 ('NOTIFICAR_RECORDATORIOS', 'Permite enviar notificaciones de recordatorios'),
+                                                                 -- Incidencias
+                                                                 ('REGISTRAR_INCIDENCIA',    'Permite registrar nuevas incidencias'),
+                                                                 ('VER_INCIDENCIAS',         'Permite visualizar las incidencias registradas'),
+                                                                 ('HISTORIAL_INCIDENCIAS',   'Permite consultar el historial de incidencias'),
+                                                                 ('EDITAR_INCIDENCIAS',      'Permite editar incidencias existentes'),
+                                                                 ('ELIMINAR_INCIDENCIAS',    'Permite eliminar incidencias existentes'),
+                                                                 -- Reportes
+                                                                 ('VER_REPORTES',            'Permite acceder al módulo de reportes'),
+                                                                 ('EXPORTAR_REPORTES',       'Permite exportar los reportes generados'),
+                                                                 -- Categorías
+                                                                 ('VER_CATEGORIA_INSTANCIA',    'Permite visualizar categorías de instancias'),
+                                                                 ('CREAR_CATEGORIA_INSTANCIA',  'Permite crear categorías de instancias'),
+                                                                 ('EDITAR_CATEGORIA_INSTANCIA', 'Permite editar categorías de instancias'),
+                                                                 ('ELIMINAR_CATEGORIA_INSTANCIA','Permite dar de baja categorías de instancias'),
+                                                                 ('REACTIVAR_CATEGORIA_INSTANCIA','Permite reactivar categorías de instancias dadas de baja'),
+                                                                 ('VER_CATEGORIA_RECORDATORIO', 'Permite visualizar categorías de recordatorios'),
+                                                                 ('CREAR_CATEGORIA_RECORDATORIO','Permite crear categorías de recordatorios'),
+                                                                 ('EDITAR_CATEGORIA_RECORDATORIO','Permite editar categorías de recordatorios'),
+                                                                 ('ELIMINAR_CATEGORIA_RECORDATORIO','Permite dar de baja categorías de recordatorios'),
+                                                                 ('REACTIVAR_CATEGORIA_RECORDATORIO','Permite reactivar categorías de recordatorios dadas de baja'),
+                                                                 -- Permisos y perfil
+                                                                 ('VER_PERMISOS',               'Permite visualizar la lista de permisos del sistema'),
+                                                                 ('EDITAR_PERMISO',             'Permite editar la descripción de los permisos'),
+                                                                 ('EDITAR_MIS_DATOS',            'Permite editar los datos personales del usuario logueado'),
+                                                                 ('VER_AUDITORIA',              'Permite consultar el historial de eventos y auditoría del sistema'),
+                                                                 -- Comentarios de estudiante
+                                                                 ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),
+                                                                 ('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',      'Permite ver comentarios confidenciales de estudiantes'),
+                                                                 ('CREAR_COMENTARIO_NORMAL_ESTUDIANTE',          'Permite crear comentarios normales sobre un estudiante'),
+                                                                 ('CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',    'Permite crear comentarios confidenciales sobre un estudiante'),
+                                                                 ('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE',         'Permite editar comentarios normales de un estudiante'),
+                                                                 ('EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',   'Permite editar comentarios confidenciales de un estudiante'),
+                                                                 ('ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',       'Permite eliminar comentarios normales de un estudiante'),
+                                                                 ('ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'Permite eliminar comentarios confidenciales de un estudiante'),
+                                                                 -- Comentarios de instancia
+                                                                 ('VER_COMENTARIO_NORMAL_INSTANCIA',             'Permite ver comentarios normales de instancia'),
+                                                                 ('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA',       'Permite ver comentarios confidenciales de instancia'),
+                                                                 ('CREAR_COMENTARIO_NORMAL_INSTANCIA',           'Permite crear comentarios normales de instancia'),
+                                                                 ('CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',     'Permite crear comentarios confidenciales de instancia'),
+                                                                 ('EDITAR_COMENTARIO_NORMAL_INSTANCIA',          'Permite editar comentarios normales de instancia'),
+                                                                 ('EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',    'Permite editar comentarios confidenciales de instancia'),
+                                                                 ('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA',        'Permite eliminar comentarios normales de instancia'),
+                                                                 ('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',  'Permite eliminar comentarios confidenciales de instancia'),
+                                                                 -- Grupos
+                                                                 ('CREAR_GRUPO', 'Permite crear nuevos grupos'),
+                                                                 ('VER_GRUPOS', 'Permite visualizar grupos existentes'),
+                                                                 ('EDITAR_GRUPOS', 'Permite editar grupos existentes'),
+                                                                 ('ELIMINAR_GRUPOS', 'Permite eliminar grupos'),
+                                                                 -- Carreras
+                                                                 ('VER_CARRERAS', 'Permite ver la lista de carreras del sistema'),
+                                                                 ('CREAR_CARRERA', 'Permite registrar una nueva carrera'),
+                                                                 ('EDITAR_CARRERA', 'Permite editar los datos de una carrera'),
+                                                                 ('ELIMINAR_CARRERA', 'Permite dar de baja una carrera'),
+                                                                 ('REACTIVAR_CARRERA', 'Permite reactivar una carrera dada de baja'),
+                                                                 -- ITRs
+                                                                 ('VER_ITRS', 'Permite ver la lista de ITRs del sistema'),
+                                                                 ('CREAR_ITR', 'Permite registrar un nuevo ITR'),
+                                                                 ('EDITAR_ITR', 'Permite editar los datos de un ITR'),
+                                                                 ('ELIMINAR_ITR', 'Permite dar de baja un ITR'),
+                                                                 ('REACTIVAR_ITR', 'Permite reactivar un ITR dado de baja')
+    ON CONFLICT (nom_permiso) DO NOTHING;
 
 -- =============================================
 -- PERMISOS POR ROL
@@ -960,7 +962,7 @@ INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM proyecto.roles r, proyecto.permisos p
 WHERE r.nom_rol = 'ADMINISTRADOR'
-ON CONFLICT DO NOTHING;
+    ON CONFLICT DO NOTHING;
 
 -- PSICOPEDAGOGO
 INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
@@ -992,30 +994,30 @@ WHERE r.nom_rol = 'PSICOPEDAGOGO'
 INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM proyecto.roles r
-JOIN proyecto.permisos p ON p.nom_permiso IN (
-    'VER_ESTUDIANTE_RESUMIDO', 'BUSCAR_ESTUDIANTE',
-    'VER_ADJUNTOS',
-    'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
-    'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
-    'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
-    'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA'
-)
+         JOIN proyecto.permisos p ON p.nom_permiso IN (
+                                                       'VER_ESTUDIANTE_RESUMIDO', 'BUSCAR_ESTUDIANTE',
+                                                       'VER_ADJUNTOS',
+                                                       'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
+                                                       'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
+                                                       'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
+                                                       'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA'
+    )
 WHERE r.nom_rol = 'TUTOR'
-ON CONFLICT DO NOTHING;
+    ON CONFLICT DO NOTHING;
 
 -- DOCENTE
 INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
 SELECT r.id_rol, p.id_permiso
 FROM proyecto.roles r
-JOIN proyecto.permisos p ON p.nom_permiso IN (
-    'VER_ESTUDIANTE_RESUMIDO',
-    'VER_INSTANCIAS',
-    'VER_RECORDATORIOS', 'CREAR_RECORDATORIO',
-    'VER_COMENTARIO_NORMAL_ESTUDIANTE',
-    'VER_COMENTARIO_NORMAL_INSTANCIA'
-)
+         JOIN proyecto.permisos p ON p.nom_permiso IN (
+                                                       'VER_ESTUDIANTE_RESUMIDO',
+                                                       'VER_INSTANCIAS',
+                                                       'VER_RECORDATORIOS', 'CREAR_RECORDATORIO',
+                                                       'VER_COMENTARIO_NORMAL_ESTUDIANTE',
+                                                       'VER_COMENTARIO_NORMAL_INSTANCIA'
+    )
 WHERE r.nom_rol = 'DOCENTE'
-ON CONFLICT DO NOTHING;
+    ON CONFLICT DO NOTHING;
 
 -- LEGALES
 INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)

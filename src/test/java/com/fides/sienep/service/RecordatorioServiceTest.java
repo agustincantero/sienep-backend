@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +35,7 @@ class RecordatorioServiceTest {
     @Mock private FrecuenciaRepository frecuenciaRepository;
     @Mock private RecordatorioMapper recordatorioMapper;
     @Mock private RecordatorioIdGenerator recordatorioIdGenerator;
+    @Mock private EmailService emailService;
 
     @InjectMocks
     private RecordatorioService recordatorioService;
@@ -61,6 +63,7 @@ class RecordatorioServiceTest {
         responsable.setIdUsuario(2);
         responsable.setNombre("Juan");
         responsable.setApellido("García");
+        responsable.setEmail("juan.garcia@utec.edu.uy");
         responsable.setEstado(EstadoLogico.ACTIVO);
 
         recordatorio = new Recordatorio();
@@ -102,6 +105,46 @@ class RecordatorioServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodRecordatorio());
+        verify(recordatorioRepository).save(any(Recordatorio.class));
+    }
+
+    @Test
+    @DisplayName("Crear recordatorio - Notificación enviada al responsable (RF23)")
+    void crear_EnviaNotificacionAlResponsable() {
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
+        when(recordatorioIdGenerator.generarIdNeg()).thenReturn("REC-2026-000001");
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+
+        recordatorioService.crear(requestDTO);
+
+        verify(emailService).enviarNotificacionRecordatorio(
+                eq("juan.garcia@utec.edu.uy"),
+                eq("Juan"),
+                eq(recordatorio.getIdNegRecordatorio()),
+                eq("Llamar a Ana"),
+                eq(recordatorio.getFechaHora())
+        );
+    }
+
+    @Test
+    @DisplayName("Crear recordatorio - Fallo de email no revierte la transacción (RF23)")
+    void crear_FalloDeEmail_NoRollback() {
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
+        when(recordatorioIdGenerator.generarIdNeg()).thenReturn("REC-2026-000001");
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+        doThrow(new RuntimeException("SMTP no disponible"))
+                .when(emailService).enviarNotificacionRecordatorio(any(), any(), any(), any(), any());
+
+        RecordatorioResponseDTO resultado = assertDoesNotThrow(
+                () -> recordatorioService.crear(requestDTO));
+
+        assertNotNull(resultado);
         verify(recordatorioRepository).save(any(Recordatorio.class));
     }
 
@@ -478,6 +521,51 @@ class RecordatorioServiceTest {
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> recordatorioService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
+
+    // ── Marcar cumplido (RF27) ───────────────────────────────
+
+    @Test
+    @DisplayName("Marcar cumplido - Éxito")
+    void marcarCumplido_Exito() {
+        recordatorio.setCumplido(false);
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+
+        RecordatorioResponseDTO resultado = recordatorioService.marcarCumplido(1);
+
+        assertNotNull(resultado);
+        assertTrue(recordatorio.isCumplido());
+        verify(recordatorioRepository).save(recordatorio);
+    }
+
+    @Test
+    @DisplayName("Marcar cumplido - No encontrado (404)")
+    void marcarCumplido_LanzaNotFound() {
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(99, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.marcarCumplido(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Marcar cumplido - Ya estaba cumplido (409)")
+    void marcarCumplido_LanzaConflict_CuandoYaEstaCumplido() {
+        recordatorio.setCumplido(true);
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.marcarCumplido(1));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());

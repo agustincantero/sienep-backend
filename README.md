@@ -15,10 +15,10 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
 - [Arquitectura general](#arquitectura-general)
 - [Arquitectura de Seguridad y Autenticación](#arquitectura-de-seguridad-y-autenticación)
 - [Configuración y Ejecución](#configuración-y-ejecución)
-  - [Preparar la base de datos (Docker)](#preparar-la-base-de-datos-docker)
-  - [Ejecución desde la Terminal](#ejecución-desde-la-terminal)
-  - [Ejecución desde IntelliJ IDEA](#ejecución-desde-intellij-idea)
-  - [Ejecución de Pruebas (Tests)](#ejecución-de-pruebas-tests)
+    - [Preparar la base de datos (Docker)](#preparar-la-base-de-datos-docker)
+    - [Ejecución desde la Terminal](#ejecución-desde-la-terminal)
+    - [Ejecución desde IntelliJ IDEA](#ejecución-desde-intellij-idea)
+    - [Ejecución de Pruebas (Tests)](#ejecución-de-pruebas-tests)
 - [Integración con Google Calendar](#integración-con-google-calendar)
 - [Documentación de la API (Swagger)](#documentación-de-la-api-swagger)
 
@@ -35,7 +35,7 @@ La API expone los servicios correspondientes a los 7 módulos centrales del sist
 
 1. **Autenticación y Acceso:** Inicio y cierre de sesión, y gestión segura de credenciales.
 2. **Gestión de Estudiantes:** Altas, bajas lógicas, modificaciones, búsquedas y capacidad para adjuntar informes médicos.
-3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar. *(Nota: La funcionalidad de clonación es manejada directamente por el Frontend utilizando los endpoints estándar de lectura y creación).*
+3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (creando un recordatorio inicial en la misma llamada, ver RF13). La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /api/instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /api/instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
 4. **Gestión de Recordatorios:** Creación (únicos y recurrentes), notificaciones, vinculación a instancias e integración con Google Calendar.
 5. **Gestión de Incidencias:** Registro detallado y visualización del historial de incidencias.
 6. **Reportes:** Generación y exportación de informes del sistema.
@@ -147,10 +147,10 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 3. Seleccioná el perfil de Spring Boot llamado **SienepApplication** (IntelliJ lo suele detectar y crear automáticamente).
 4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
 5. En el campo de **Environment variables**, agregá lo siguiente:
-   ```text
+```text
    JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
-   ```
-   *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
+```
+*(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 7. Aplicá los cambios (**Apply → OK**).
 8. Ejecutá la aplicación con el botón ▶️.
 

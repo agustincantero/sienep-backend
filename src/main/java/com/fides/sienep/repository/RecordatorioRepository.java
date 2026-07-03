@@ -39,4 +39,8 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
 
     // ── Reactivar ─────────────────────────────────────────────
     Optional<Recordatorio> findByCodRecordatorio(int codRecordatorio);
+
+    // ── RF23: recordatorios próximos a vencer, aún no notificados ──
+    List<Recordatorio> findByEstadoAndNotificadoProximidadFalseAndFechaHoraBetween(
+            EstadoLogico estado, LocalDateTime desde, LocalDateTime hasta);
 }
