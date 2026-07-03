@@ -163,6 +163,14 @@ Este proyecto cuenta con una amplia suite de tests unitarios y de integración p
 
 > **Nota:** Los tests utilizan una base de datos en memoria (H2) y las propiedades definidas en `application-test.properties`. No es necesario levantar Docker ni configurar las variables de entorno reales en tu computadora para que la suite se ejecute con éxito.
 
+#### Reporte de Cobertura (JaCoCo)
+Al ejecutar los tests mediante Maven (`mvn test`), el proyecto generará automáticamente un reporte de cobertura de código utilizando el plugin **JaCoCo**. 
+
+> **Aclaración Arquitectónica:** Por decisión del equipo, el esfuerzo de *Unit Testing* se centró exclusivamente en la **capa de Servicios** (`service/`), ya que es donde reside el núcleo de la lógica de negocio, reglas de validación y orquestación transaccional. Por este motivo, al leer el reporte se recomienda enfocar el análisis en dicho paquete.
+
+Para visualizar este reporte interactivo y comprobar la alta cobertura de la lógica de negocio, abrí en tu navegador web el siguiente archivo generado localmente:
+👉 `target/site/jacoco/index.html`
+
 ## Integración con Google Calendar
 
 El sistema permite que los funcionarios sincronicen sus cuentas para ver los recordatorios directamente en Google Calendar.
