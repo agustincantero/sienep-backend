@@ -95,12 +95,14 @@ public class RecordatorioController {
             description = "Genera una instancia de seguimiento a partir de un recordatorio activo, " +
                     "usando el mismo estudiante que la instancia de origen del recordatorio. " +
                     "Marca el recordatorio como cumplido (RF27). No se puede volver a usar el " +
-                    "mismo recordatorio una vez que ya generó una instancia.")
+                    "mismo recordatorio una vez que ya generó una instancia. No es un recurso " +
+                    "anidado puro (no existe un GET equivalente): es una acción de negocio con " +
+                    "un efecto secundario, nombrada como sub-recurso plural por legibilidad.")
     @ApiResponse(responseCode = "201", description = "Instancia creada correctamente")
     @ApiResponse(responseCode = "400", description = "Datos inválidos")
     @ApiResponse(responseCode = "404", description = "Recordatorio o categoría no encontrada")
     @ApiResponse(responseCode = "409", description = "El recordatorio ya generó una instancia")
-    @PostMapping("/{id}/crear-instancia")
+    @PostMapping("/{id}/instancias")
     public ResponseEntity<InstanciaComunResponseDTO> crearInstanciaDesdeRecordatorio(
             @PathVariable int id,
             @Valid @RequestBody InstanciaDesdeRecordatorioDTO dto) {
