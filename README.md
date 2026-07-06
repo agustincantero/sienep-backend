@@ -167,6 +167,7 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
    JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
 ```
 *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
+
 7. Aplicá los cambios (**Apply → OK**).
 8. Ejecutá la aplicación con el botón ▶️.
 
