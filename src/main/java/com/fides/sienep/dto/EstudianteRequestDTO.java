@@ -68,7 +68,7 @@ public class EstudianteRequestDTO {
 
     @Size(max = 160)
     @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
-    @Schema(example = "Av. 18 de Julio")
+    @Schema(example = "Av 18 de Julio")
     private String calle;
 
     @Min(1) @Max(9999)

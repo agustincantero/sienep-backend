@@ -8,6 +8,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,7 +79,19 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, ex.getStatusCode());
     }
 
-    // 4. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
+    // 4. Ataja errores de autorización (Spring Security)
+    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(RuntimeException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Acceso denegado");
+        body.put("message", "No tienes permisos suficientes para realizar esta acción.");
+
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    }
+
+    // 5. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         // Imprime la traza en consola para el desarrollador
