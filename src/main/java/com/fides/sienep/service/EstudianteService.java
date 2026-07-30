@@ -91,9 +91,23 @@ public class EstudianteService {
         asignarGrupos(estudiante, dto.getIdGrupos());
 
         Estudiante guardado = estudianteRepository.save(estudiante);
-        emailService.enviarContraseniaTemporal(guardado.getEmail(), guardado.getNombre(), contraseniaPlana);
 
-        return estudianteMapper.toDto(guardado);
+        // RF05 — un fallo al enviar el email no debe impedir el alta: los datos ya son
+        // válidos y persistidos, y existe un camino de recuperación (resetContrasenia).
+        // A diferencia de resetContrasenia(), acá no bloqueamos porque la cuenta recién
+        // creada no tiene ninguna contraseña previa que se pueda seguir usando mientras
+        // tanto — bloquear el alta entera por un problema de SMTP sería peor.
+        EstudianteResponseDTO response = estudianteMapper.toDto(guardado);
+        try {
+            emailService.enviarContraseniaTemporal(guardado.getEmail(), guardado.getNombre(), contraseniaPlana);
+        } catch (Exception e) {
+            log.warn("[AUDIT] No se pudo enviar el email de contraseña temporal al estudiante {}: {}",
+                    guardado.getIdUsuario(), e.getMessage());
+            response.setAdvertencia("El estudiante se creó correctamente, pero no se pudo enviar el email " +
+                    "con la contraseña temporal. Usá 'Resetear contraseña' para reintentar el envío.");
+        }
+
+        return response;
     }
 
     // =========================================================

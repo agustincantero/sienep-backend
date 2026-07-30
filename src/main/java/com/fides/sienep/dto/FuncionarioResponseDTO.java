@@ -38,4 +38,9 @@ public class FuncionarioResponseDTO {
 
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
         private LocalDateTime updatedAt;
+
+        @Schema(description = "Advertencia sobre el alta (ej. no se pudo enviar el email con la contraseña temporal). " +
+                "Solo se completa en la respuesta de creación, null en el resto de las consultas.",
+                accessMode = Schema.AccessMode.READ_ONLY)
+        private String advertencia;
     }

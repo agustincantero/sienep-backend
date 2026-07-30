@@ -4,12 +4,14 @@ import com.fides.sienep.model.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
+@Setter
 @Builder
 @Schema(description = "Datos completos de un estudiante — requiere VER_ESTUDIANTE")
 public class EstudianteResponseDTO {
@@ -47,4 +49,9 @@ public class EstudianteResponseDTO {
 
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime updatedAt;
+
+    @Schema(description = "Advertencia sobre el alta (ej. no se pudo enviar el email con la contraseña temporal). " +
+            "Solo se completa en la respuesta de creación, null en el resto de las consultas.",
+            accessMode = Schema.AccessMode.READ_ONLY)
+    private String advertencia;
 }

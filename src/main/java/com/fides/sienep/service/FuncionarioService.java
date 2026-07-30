@@ -72,9 +72,23 @@ public class FuncionarioService {
         // estado queda PENDIENTE_DE_ACTIVACION por default (definido en el constructor/schema)
 
         Funcionario guardado = funcionarioRepository.save(funcionario);
-        emailService.enviarContraseniaTemporal(guardado.getEmail(), guardado.getNombre(), contraseniaPlana);
 
-        return funcionarioMapper.toDto(guardado);
+        // RF32/RF05 — un fallo al enviar el email no debe impedir el alta: los datos ya son
+        // válidos y persistidos, y existe un camino de recuperación (resetContrasenia).
+        // A diferencia de resetContrasenia(), acá no bloqueamos porque la cuenta recién
+        // creada no tiene ninguna contraseña previa que se pueda seguir usando mientras
+        // tanto — bloquear el alta entera por un problema de SMTP sería peor.
+        FuncionarioResponseDTO response = funcionarioMapper.toDto(guardado);
+        try {
+            emailService.enviarContraseniaTemporal(guardado.getEmail(), guardado.getNombre(), contraseniaPlana);
+        } catch (Exception e) {
+            log.warn("[AUDIT] No se pudo enviar el email de contraseña temporal al funcionario {}: {}",
+                    guardado.getIdUsuario(), e.getMessage());
+            response.setAdvertencia("El funcionario se creó correctamente, pero no se pudo enviar el email " +
+                    "con la contraseña temporal. Usá 'Resetear contraseña' para reintentar el envío.");
+        }
+
+        return response;
     }
 
     @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")

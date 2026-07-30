@@ -111,6 +111,27 @@ class FuncionarioServiceTest {
         assertNotNull(result);
         assertEquals("Carlos", result.getNombre());
         assertEquals("Psicopedagogo", result.getRol());
+        assertNull(result.getAdvertencia());
+        verify(funcionarioRepository).save(any(Funcionario.class));
+    }
+
+    @Test
+    @DisplayName("Crear funcionario - Éxito aunque falle el envío del email (RF05/RF32 no debe ser bloqueante)")
+    void crear_Exito_AunqueFalleEmail() {
+        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
+        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
+        when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
+        when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
+        when(funcionarioMapper.toDto(any(Funcionario.class))).thenReturn(responseDTO);
+        doThrow(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SMTP no disponible"))
+                .when(emailService).enviarContraseniaTemporal(any(), any(), any());
+
+        FuncionarioResponseDTO result = assertDoesNotThrow(() -> funcionarioService.crear(requestDTO));
+
+        assertNotNull(result);
+        assertNotNull(result.getAdvertencia());
         verify(funcionarioRepository).save(any(Funcionario.class));
     }
 

@@ -244,6 +244,27 @@ class EstudianteServiceTest {
 
         assertNotNull(resultado);
         assertEquals("Ana", resultado.getNombre());
+        assertNull(resultado.getAdvertencia());
+        verify(estudianteRepository).save(any(Estudiante.class));
+    }
+
+    @Test
+    @DisplayName("Crear - Éxito aunque falle el envío del email (RF05 no debe ser bloqueante)")
+    void crear_Exito_AunqueFalleEmail() {
+        EstudianteRequestDTO dto = buildDtoValido();
+        when(estudianteRepository.existsByDocumento(anyString())).thenReturn(false);
+        when(estudianteRepository.existsByEmail(anyString())).thenReturn(false);
+        when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+        doThrow(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SMTP no disponible"))
+                .when(emailService).enviarContraseniaTemporal(any(), any(), any());
+
+        EstudianteResponseDTO resultado = assertDoesNotThrow(() -> estudianteService.crear(dto));
+
+        assertNotNull(resultado);
+        assertNotNull(resultado.getAdvertencia());
         verify(estudianteRepository).save(any(Estudiante.class));
     }
 
