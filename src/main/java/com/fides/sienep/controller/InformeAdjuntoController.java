@@ -1,6 +1,6 @@
 package com.fides.sienep.controller;
 
-import com.fides.sienep.dto.InformeAdjuntoArchivoDTO;
+import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.dto.InformeAdjuntoRequestDTO;
 import com.fides.sienep.dto.InformeAdjuntoResponseDTO;
 import com.fides.sienep.service.InformeAdjuntoService;
@@ -60,7 +60,7 @@ public class InformeAdjuntoController {
     @ApiResponse(responseCode = "200", description = "Archivo descargado")
     @ApiResponse(responseCode = "404", description = "Informe no encontrado")
     public ResponseEntity<Resource> descargar(@PathVariable Integer id) {
-        InformeAdjuntoArchivoDTO archivo = informeService.descargar(id);
+        ArchivoDescargaDTO archivo = informeService.descargar(id);
         return ResponseEntity.ok()
                 .contentType(archivo.contentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,

@@ -12,19 +12,23 @@ import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
+import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.utils.ValidadorDeCedulasUy;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -36,6 +40,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EstudianteService {
 
+    private static final List<String> EXTENSIONES_FOTO_PERMITIDAS = List.of("jpg", "jpeg", "png");
+    private static final long MAX_TAMANIO_FOTO_BYTES = 5L * 1024 * 1024;
+    private static final String SUBCARPETA_FOTOS = "fotos";
+
     private final FuncionarioRepository funcionarioRepository;
     private final EstudianteRepository estudianteRepository;
     private final GrupoRepository grupoRepository;
@@ -43,6 +51,7 @@ public class EstudianteService {
     private final EstudianteMapper estudianteMapper;
     private final EmailService emailService;
     private final PasswordGeneratorService passwordGeneratorService;
+    private final FileStorageService fileStorageService;
     private static final Logger log = LoggerFactory.getLogger(EstudianteService.class);
     // =========================================================
     // CREAR
@@ -75,7 +84,7 @@ public class EstudianteService {
                 dto.getEmail(), dto.getCiudad(), dto.getDepartamento(),
                 dto.getCalle(), dto.getNroPuerta(), dto.getInformacionSalud(),
                 dto.getSistemaSalud(), dto.getFechaNacimiento(),
-                dto.getMotivoDerivacion(), dto.getFoto(), null, null
+                dto.getMotivoDerivacion(), null, null, null
         );
 
         asignarTelefonos(estudiante, dto.getTelefonos());
@@ -194,6 +203,43 @@ public class EstudianteService {
         emailService.enviarContraseniaRestablecida(estudiante.getEmail(), estudiante.getNombre(), contraseniaPlana);
         log.info("[AUDIT] Admin reseteó contraseña del estudiante id={}", id);
     }
+
+    // =========================================================
+    // FOTO DE PERFIL
+    // =========================================================
+
+    @PreAuthorize("authentication.name == #id.toString() or hasAuthority('EDITAR_ESTUDIANTE')")
+    @Transactional
+    public EstudianteResponseDTO subirFoto(Integer id, MultipartFile foto) {
+        Estudiante estudiante = buscarOFallar(id);
+
+        String subdirectorio = SUBCARPETA_FOTOS + "/" + id;
+        String nombreFisico = fileStorageService.guardar(
+                foto, subdirectorio, EXTENSIONES_FOTO_PERMITIDAS, MAX_TAMANIO_FOTO_BYTES);
+
+        // No se borra el archivo físico anterior (si existía): mismo criterio de
+        // "nunca borrado físico" que se usa en el resto del sistema (baja lógica).
+        estudiante.setFoto(subdirectorio + "/" + nombreFisico);
+
+        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
+    }
+
+    @PreAuthorize("authentication.name == #id.toString() or hasAuthority('VER_ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public ArchivoDescargaDTO obtenerFoto(Integer id) {
+        Estudiante estudiante = buscarOFallar(id);
+        if (estudiante.getFoto() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El estudiante no tiene foto cargada");
+        }
+
+        Resource recurso = fileStorageService.cargar(estudiante.getFoto());
+        String extension = fileStorageService.extraerExtension(estudiante.getFoto());
+        MediaType contentType = fileStorageService.mediaTypeDeExtension(extension);
+        String nombreDescarga = "foto_" + id + "." + extension;
+
+        return new ArchivoDescargaDTO(recurso, contentType, nombreDescarga);
+    }
+
     // =========================================================
     // BAJA Y REACTIVACIÓN
     // =========================================================
@@ -247,7 +293,6 @@ public class EstudianteService {
         estudiante.setSistemaSalud(dto.getSistemaSalud());
         estudiante.setFechaNacimiento(dto.getFechaNacimiento());
         estudiante.setMotivoDerivacion(dto.getMotivoDerivacion());
-        estudiante.setFoto(dto.getFoto());
         asignarTelefonos(estudiante, dto.getTelefonos());
         asignarGrupos(estudiante, dto.getIdGrupos());
     }

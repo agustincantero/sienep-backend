@@ -30,7 +30,11 @@ public class EstudianteResponseDTO {
     private String informacionSalud;
     private String sistemaSalud;
     private String motivoDerivacion;
-    private String foto;
+
+    @Schema(description = "Ruta para ver la foto de perfil (null si no tiene foto cargada). " +
+            "Requiere autenticación y permiso VER_ESTUDIANTE, o ser el propio estudiante.",
+            example = "/api/estudiantes/5/foto")
+    private String urlFoto;
 
     @Schema(description = "Números de teléfono del estudiante")
     private List<String> telefonos;

@@ -30,6 +30,9 @@ import java.util.List;
  *
  * También se excluye contrasenia: el cambio de contraseña tiene
  * su propio endpoint PUT /{id}/contrasenia con flujo dedicado.
+ *
+ * Tampoco incluye foto: se sube como archivo real (multipart) vía
+ * PUT /api/estudiantes/{id}/foto.
  */
 @Getter
 @Setter
@@ -88,11 +91,6 @@ public class EstudianteUpdateDTO {
 
     @Schema(description = "Motivo de derivación al servicio psicopedagógico")
     private String motivoDerivacion;
-
-    @Size(max = 255)
-    @Pattern(regexp = "^.*\\.(jpg|jpeg|png)$", flags = Pattern.Flag.CASE_INSENSITIVE, message = "La foto debe ser .jpg, .jpeg o .png")
-    @Schema(description = "URL o ruta de la foto", example = "foto.jpg")
-    private String foto;
 
     @Schema(description = "Lista de números de teléfono", example = "[\"099123456\", \"22001122\"]")
     private List<@NotBlank @Pattern(regexp = "^[0-9]{8,12}$", message = "El teléfono debe contener entre 8 y 12 dígitos numéricos") String> telefonos;

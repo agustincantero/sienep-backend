@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
@@ -22,13 +23,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -64,6 +69,9 @@ class EstudianteServiceTest {
 
     @Mock
     private EstudianteMapper estudianteMapper;
+
+    @Mock
+    private FileStorageService fileStorageService;
 
     @InjectMocks
     private EstudianteService estudianteService;
@@ -468,6 +476,88 @@ class EstudianteServiceTest {
         verify(estudianteRepository).save(estudianteExistente);
     }
 
+
+    // =========================================================
+    // FOTO DE PERFIL
+    // =========================================================
+
+    @Test
+    @DisplayName("Subir foto - Éxito, guarda la ruta relativa devuelta por FileStorageService")
+    void subirFoto_Exito() {
+        MultipartFile foto = new MockMultipartFile(
+                "foto", "perfil.jpg", "image/jpeg", "contenido".getBytes());
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(fileStorageService.guardar(eq(foto), eq("fotos/1"), anyList(), anyLong()))
+                .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg");
+        when(estudianteRepository.save(any(Estudiante.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(estudianteMapper.toDto(estudianteExistente)).thenReturn(responseDTO);
+
+        EstudianteResponseDTO resultado = estudianteService.subirFoto(1, foto);
+
+        assertNotNull(resultado);
+        assertEquals("fotos/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg", estudianteExistente.getFoto());
+        verify(estudianteRepository).save(estudianteExistente);
+    }
+
+    @Test
+    @DisplayName("Subir foto - Estudiante no encontrado (404)")
+    void subirFoto_LanzaExcepcion_NoEncontrado() {
+        MultipartFile foto = new MockMultipartFile(
+                "foto", "perfil.jpg", "image/jpeg", "contenido".getBytes());
+
+        when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.subirFoto(99, foto));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verifyNoInteractions(fileStorageService);
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Obtener foto - Éxito")
+    void obtenerFoto_Exito() {
+        estudianteExistente.setFoto("fotos/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg");
+        Resource recursoMock = mock(Resource.class);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(fileStorageService.cargar("fotos/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg")).thenReturn(recursoMock);
+        when(fileStorageService.extraerExtension(estudianteExistente.getFoto())).thenReturn("jpg");
+        when(fileStorageService.mediaTypeDeExtension("jpg")).thenReturn(MediaType.IMAGE_JPEG);
+
+        ArchivoDescargaDTO resultado = estudianteService.obtenerFoto(1);
+
+        assertNotNull(resultado);
+        assertEquals("foto_1.jpg", resultado.nombreDescarga());
+        assertEquals(MediaType.IMAGE_JPEG, resultado.contentType());
+        assertSame(recursoMock, resultado.recurso());
+    }
+
+    @Test
+    @DisplayName("Obtener foto - Estudiante sin foto cargada (404)")
+    void obtenerFoto_LanzaExcepcion_SinFotoCargada() {
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.obtenerFoto(1));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    @DisplayName("Obtener foto - Estudiante no encontrado (404)")
+    void obtenerFoto_LanzaExcepcion_NoEncontrado() {
+        when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.obtenerFoto(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verifyNoInteractions(fileStorageService);
+    }
 
     // =========================================================
     // BAJA Y REACTIVACIÓN

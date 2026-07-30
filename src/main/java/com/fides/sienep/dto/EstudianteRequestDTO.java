@@ -21,6 +21,9 @@ import java.util.List;
  *
  * contrasenia solo se usa en el alta. En actualizaciones el Service la ignora
  * si viene vacía — el cambio de contraseña tiene su propio endpoint.
+ *
+ * No incluye foto: la foto de perfil se sube como archivo real (multipart)
+ * vía PUT /api/estudiantes/{id}/foto, requiere que el estudiante ya exista.
  */
 @Getter
 @Setter
@@ -90,11 +93,6 @@ public class EstudianteRequestDTO {
 
     @Schema(description = "Motivo de derivación al servicio psicopedagógico")
     private String motivoDerivacion;
-
-    @Size(max = 255)
-    @Pattern(regexp = "^.*\\.(jpg|jpeg|png)$", flags = Pattern.Flag.CASE_INSENSITIVE, message = "La foto debe ser .jpg, .jpeg o .png")
-    @Schema(description = "URL o ruta de la foto", example = "perfil_maria.jpg")
-    private String foto;
 
     @Schema(description = "Lista de números de teléfono", example = "[\"099123456\", \"22001122\"]")
     private List<@NotBlank @Pattern(regexp = "^[0-9]{8,12}$", message = "El teléfono debe contener entre 8 y 12 dígitos numéricos") String> telefonos;

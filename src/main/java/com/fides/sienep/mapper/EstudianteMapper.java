@@ -18,6 +18,8 @@ public interface EstudianteMapper {
     @Mapping(target = "grupos",    expression = "java(mapGrupos(entidad.getGrupos()))")
     @Mapping(target = "createdAt", source = "estudianteCreatedAt")
     @Mapping(target = "updatedAt", source = "estudianteUpdatedAt")
+    @Mapping(target = "urlFoto",
+            expression = "java(entidad.getFoto() != null ? \"/api/estudiantes/\" + entidad.getIdUsuario() + \"/foto\" : null)")
     EstudianteResponseDTO toDto(Estudiante entidad);
 
     @Mapping(target = "telefonos", expression = "java(mapTelefonos(entidad.getTelefonos()))")

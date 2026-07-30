@@ -78,11 +78,11 @@ public class InformeAdjunto {
     private String urlArchivo;
 
     /**
-     * Subdirectorio (relativo a app.storage.informes-dir) donde vive el
-     * archivo físico. Por defecto, el id del estudiante.
+     * Subdirectorio (relativo a app.storage.base-dir, vía FileStorageService)
+     * donde vive el archivo físico: "informes/{idUsuario}".
      */
     @Column(name = "ruta", length = 255)
-    @Schema(description = "Subdirectorio de almacenamiento del archivo", example = "5")
+    @Schema(description = "Subdirectorio de almacenamiento del archivo", example = "informes/5")
     private String ruta;
 
     @Column(name = "nom_archivo", nullable = false, length = 70)
