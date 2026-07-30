@@ -139,14 +139,32 @@ public class EstudianteController {
 
     @PatchMapping("/{id}/contrasenia")
     @Operation(summary = "Cambiar contraseña",
-            description = "Cualquier usuario autenticado sobre su propia cuenta. " +
-                    "Si el estudiante estaba PENDIENTE_DE_ACTIVACION, pasa a ACTIVO.")
+            description = "Exclusivo del propio estudiante autenticado sobre su propia cuenta — requiere " +
+                    "la contraseña actual. Si estaba PENDIENTE_DE_ACTIVACION, pasa a ACTIVO. " +
+                    "Para que un funcionario le restablezca la contraseña a un estudiante, usar " +
+                    "POST /{id}/contrasenia en su lugar.")
     @ApiResponse(responseCode = "204", description = "Contraseña actualizada")
+    @ApiResponse(responseCode = "401", description = "La contraseña actual no es correcta")
     @ApiResponse(responseCode = "403", description = "Intento de cambiar contraseña de otro usuario")
     public ResponseEntity<Void> cambiarContrasenia(
             @PathVariable Integer id,
             @Valid @RequestBody CambiarContraseniaDTO dto) {
         estudianteService.cambiarContrasenia(id, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Mismo sub-recurso que cambiarContrasenia (/{id}/contrasenia): acá el cliente no manda
+    // ningún body porque no es él quien define el valor nuevo, lo genera el servidor y lo
+    // manda por email. POST (no PATCH) porque es una acción con efecto secundario, no una
+    // modificación de estado descrita por el cliente — mismo criterio que se usó en RF27
+    // para no meter un verbo en la URL (ver crearInstanciaDesdeRecordatorio).
+    @PostMapping("/{id}/contrasenia")
+    @Operation(summary = "Restablecer contraseña de un estudiante",
+            description = "Requiere EDITAR_ESTUDIANTE. Genera una nueva contraseña y la envía por email.")
+    @ApiResponse(responseCode = "204", description = "Contraseña restablecida y email enviado")
+    @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
+    public ResponseEntity<Void> restablecerContrasenia(@PathVariable Integer id) {
+        estudianteService.restablecerContrasenia(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -181,17 +199,6 @@ public class EstudianteController {
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
     public ResponseEntity<Void> reactivar(@PathVariable Integer id) {
         estudianteService.reactivar(id);
-        return ResponseEntity.noContent().build();
-    }
-
-
-    @Operation(summary = "Resetear contraseña de un estudiante",
-            description = "Requiere EDITAR_ESTUDIANTE. Genera una nueva contraseña y la envía por email.")
-    @ApiResponse(responseCode = "204", description = "Contraseña reseteada y email enviado")
-    @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
-    @PatchMapping("/{id}/reset-contrasenia")
-    public ResponseEntity<Void> resetContrasenia(@PathVariable Integer id) {
-        estudianteService.resetContrasenia(id);
         return ResponseEntity.noContent().build();
     }
 

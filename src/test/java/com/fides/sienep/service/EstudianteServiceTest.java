@@ -444,11 +444,14 @@ class EstudianteServiceTest {
     @DisplayName("Cambiar contraseña - Éxito")
     void cambiarContrasenia_Exito() {
         mockAuth("1", true);
+        estudianteExistente.setContrasenia("hashedContraseniaVieja");
 
         CambiarContraseniaDTO dto = new CambiarContraseniaDTO();
+        dto.setContraseniaActual("ViejaContrasenia123!");
         dto.setContrasenia("NuevaContrasenia123!");
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(passwordEncoder.matches("ViejaContrasenia123!", "hashedContraseniaVieja")).thenReturn(true);
         when(passwordEncoder.encode(anyString())).thenReturn("hashedNueva");
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
 
@@ -459,12 +462,34 @@ class EstudianteServiceTest {
     }
 
     @Test
+    @DisplayName("Cambiar contraseña - Contraseña actual incorrecta (401)")
+    void cambiarContrasenia_LanzaExcepcion_ContraseniaActualIncorrecta() {
+        mockAuth("1", true);
+        estudianteExistente.setContrasenia("hashedContraseniaVieja");
+
+        CambiarContraseniaDTO dto = new CambiarContraseniaDTO();
+        dto.setContraseniaActual("ContraseniaIncorrecta");
+        dto.setContrasenia("NuevaContrasenia123!");
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(passwordEncoder.matches("ContraseniaIncorrecta", "hashedContraseniaVieja")).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.cambiarContrasenia(1, dto));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
     @Disabled("Requiere contexto de Spring Security para validar @PreAuthorize")
     @DisplayName("Cambiar contraseña - Intenta cambiar la de otro → 403")
     void cambiarContrasenia_LanzaExcepcion_OtroUsuario() {
         mockAuth("2", true);
 
         CambiarContraseniaDTO dto = new CambiarContraseniaDTO();
+        dto.setContraseniaActual("ViejaContrasenia123!");
         dto.setContrasenia("NuevaContrasenia123!");
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
@@ -483,11 +508,14 @@ class EstudianteServiceTest {
         mockAuth("1", true);
 
         estudianteExistente.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
+        estudianteExistente.setContrasenia("hashedContraseniaVieja");
 
         CambiarContraseniaDTO dto = new CambiarContraseniaDTO();
+        dto.setContraseniaActual("ViejaContrasenia123!");
         dto.setContrasenia("NuevaContrasenia123!");
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(passwordEncoder.matches("ViejaContrasenia123!", "hashedContraseniaVieja")).thenReturn(true);
         when(passwordEncoder.encode(anyString())).thenReturn("hashedNueva");
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
 
@@ -497,6 +525,38 @@ class EstudianteServiceTest {
         verify(estudianteRepository).save(estudianteExistente);
     }
 
+    // =========================================================
+    // RESTABLECER CONTRASEÑA
+    // =========================================================
+
+    @Test
+    @DisplayName("Restablecer contraseña - Éxito")
+    void restablecerContrasenia_Exito() {
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(passwordGeneratorService.generar()).thenReturn("NuevaPassGenerada123!");
+        when(passwordEncoder.encode("NuevaPassGenerada123!")).thenReturn("hashedNuevaPass");
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+
+        estudianteService.restablecerContrasenia(1);
+
+        assertEquals("hashedNuevaPass", estudianteExistente.getContrasenia());
+        verify(estudianteRepository).save(estudianteExistente);
+        verify(emailService).enviarContraseniaRestablecida(
+                estudianteExistente.getEmail(), estudianteExistente.getNombre(), "NuevaPassGenerada123!");
+    }
+
+    @Test
+    @DisplayName("Restablecer contraseña - No encontrado (404)")
+    void restablecerContrasenia_LanzaNotFound() {
+        when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.restablecerContrasenia(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
+    }
 
     // =========================================================
     // FOTO DE PERFIL

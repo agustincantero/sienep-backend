@@ -14,6 +14,10 @@ import lombok.Setter;
 public class CambiarContraseniaDTO {
 
     @NotBlank
+    @Schema(description = "Contraseña actual, para confirmar la identidad antes de cambiarla", example = "ViejaPass123!")
+    private String contraseniaActual;
+
+    @NotBlank
     @Size(min = 8, max = 100)
     @Schema(description = "Nueva contraseña", example = "NuevaPass123!")
     private String contrasenia;

@@ -74,8 +74,8 @@ public class FuncionarioService {
         Funcionario guardado = funcionarioRepository.save(funcionario);
 
         // RF32/RF05 — un fallo al enviar el email no debe impedir el alta: los datos ya son
-        // válidos y persistidos, y existe un camino de recuperación (resetContrasenia).
-        // A diferencia de resetContrasenia(), acá no bloqueamos porque la cuenta recién
+        // válidos y persistidos, y existe un camino de recuperación (restablecerContrasenia).
+        // A diferencia de restablecerContrasenia(), acá no bloqueamos porque la cuenta recién
         // creada no tiene ninguna contraseña previa que se pueda seguir usando mientras
         // tanto — bloquear el alta entera por un problema de SMTP sería peor.
         FuncionarioResponseDTO response = funcionarioMapper.toDto(guardado);
@@ -85,7 +85,7 @@ public class FuncionarioService {
             log.warn("[AUDIT] No se pudo enviar el email de contraseña temporal al funcionario {}: {}",
                     guardado.getIdUsuario(), e.getMessage());
             response.setAdvertencia("El funcionario se creó correctamente, pero no se pudo enviar el email " +
-                    "con la contraseña temporal. Usá 'Resetear contraseña' para reintentar el envío.");
+                    "con la contraseña temporal. Usá 'Restablecer contraseña' para reintentar el envío.");
         }
 
         return response;
@@ -130,7 +130,7 @@ public class FuncionarioService {
 
     @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
     @Transactional
-    public void resetContrasenia(Integer id) {
+    public void restablecerContrasenia(Integer id) {
         Funcionario funcionario = buscarOFallar(id);
 
         String contraseniaPlana = passwordGeneratorService.generar();
@@ -138,7 +138,7 @@ public class FuncionarioService {
         funcionarioRepository.save(funcionario);
 
         emailService.enviarContraseniaRestablecida(funcionario.getEmail(), funcionario.getNombre(), contraseniaPlana);
-        log.info("[AUDIT] Admin reseteó contraseña del funcionario id={}", id);
+        log.info("[AUDIT] Admin restableció contraseña del funcionario id={}", id);
     }
 
     @PreAuthorize("hasAuthority('ELIMINAR_FUNCIONARIO')")
@@ -178,10 +178,18 @@ public class FuncionarioService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cédula uruguaya es inválida.");
         }
     }
-    @PreAuthorize("authentication.name == #id.toString() or hasAuthority('EDITAR_FUNCIONARIO')")
+    // Exclusivo del propio funcionario: para plantarle una contraseña a otro sin que la
+    // elija ni la sepa está restablecerContrasenia() (genera una random y la manda por
+    // mail). Este endpoint es "yo elijo mi nueva contraseña", por eso exige la actual.
+    @PreAuthorize("authentication.name == #id.toString()")
     @Transactional
     public void cambiarContrasenia(Integer id, CambiarContraseniaDTO dto) {
         Funcionario funcionario = buscarOFallar(id);
+
+        if (!passwordEncoder.matches(dto.getContraseniaActual(), funcionario.getContrasenia())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La contraseña actual no es correcta.");
+        }
+
         funcionario.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
 
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(funcionario.getEstado())) {

@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
 import com.fides.sienep.dto.FuncionarioUpdateDTO;
@@ -318,6 +319,98 @@ class FuncionarioServiceTest {
         verify(funcionarioRepository, never()).deleteById(any());
     }
 
+    // =========================================================
+    // RESTABLECER CONTRASEÑA
+    // =========================================================
+
+    @Test
+    @DisplayName("Restablecer contraseña - Éxito")
+    void restablecerContrasenia_Exito() {
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(passwordGeneratorService.generar()).thenReturn("NuevaPassGenerada123!");
+        when(passwordEncoder.encode("NuevaPassGenerada123!")).thenReturn("hashedNuevaPass");
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
+
+        funcionarioService.restablecerContrasenia(1);
+
+        assertEquals("hashedNuevaPass", funcionarioMock.getContrasenia());
+        verify(funcionarioRepository).save(funcionarioMock);
+        verify(emailService).enviarContraseniaRestablecida(
+                funcionarioMock.getEmail(), funcionarioMock.getNombre(), "NuevaPassGenerada123!");
+    }
+
+    @Test
+    @DisplayName("Restablecer contraseña - No encontrado (404)")
+    void restablecerContrasenia_LanzaNotFound() {
+        when(funcionarioRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.restablecerContrasenia(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    // =========================================================
+    // CAMBIAR CONTRASEÑA
+    // =========================================================
+
+    @Test
+    @DisplayName("Cambiar contraseña - Éxito")
+    void cambiarContrasenia_Exito() {
+        CambiarContraseniaDTO dto = new CambiarContraseniaDTO();
+        dto.setContraseniaActual("ViejaContrasenia123!");
+        dto.setContrasenia("NuevaContrasenia123!");
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(passwordEncoder.matches("ViejaContrasenia123!", funcionarioMock.getContrasenia())).thenReturn(true);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedNueva");
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
+
+        funcionarioService.cambiarContrasenia(1, dto);
+
+        assertEquals("hashedNueva", funcionarioMock.getContrasenia());
+        verify(funcionarioRepository).save(funcionarioMock);
+    }
+
+    @Test
+    @DisplayName("Cambiar contraseña - Contraseña actual incorrecta (401)")
+    void cambiarContrasenia_LanzaExcepcion_ContraseniaActualIncorrecta() {
+        CambiarContraseniaDTO dto = new CambiarContraseniaDTO();
+        dto.setContraseniaActual("ContraseniaIncorrecta");
+        dto.setContrasenia("NuevaContrasenia123!");
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(passwordEncoder.matches("ContraseniaIncorrecta", funcionarioMock.getContrasenia())).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.cambiarContrasenia(1, dto));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Cambiar contraseña - Estado PENDIENTE_DE_ACTIVACION pasa a ACTIVO")
+    void cambiarContrasenia_ActivaEstadoPendiente() {
+        funcionarioMock.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
+
+        CambiarContraseniaDTO dto = new CambiarContraseniaDTO();
+        dto.setContraseniaActual("ViejaContrasenia123!");
+        dto.setContrasenia("NuevaContrasenia123!");
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(passwordEncoder.matches("ViejaContrasenia123!", funcionarioMock.getContrasenia())).thenReturn(true);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedNueva");
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
+
+        funcionarioService.cambiarContrasenia(1, dto);
+
+        assertEquals(EstadoLogico.ACTIVO, funcionarioMock.getEstado());
+        verify(funcionarioRepository).save(funcionarioMock);
+    }
 
     @Test
     @DisplayName("Obtener por documento - Éxito")

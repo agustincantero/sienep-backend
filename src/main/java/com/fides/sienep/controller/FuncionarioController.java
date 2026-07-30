@@ -92,26 +92,33 @@ public class FuncionarioController {
 
 
 
-    @Operation(summary = "Resetear contraseña de un funcionario",
-            description = "Requiere EDITAR_FUNCIONARIO. Genera una nueva contraseña y la envía por email.")
-    @ApiResponse(responseCode = "204", description = "Contraseña reseteada y email enviado")
-    @ApiResponse(responseCode = "404", description = "Funcionario no encontrado")
-    @PatchMapping("/{id}/reset-contrasenia")
-    public ResponseEntity<Void> resetContrasenia(@PathVariable Integer id) {
-        funcionarioService.resetContrasenia(id);
-        return ResponseEntity.noContent().build();
-    }
-
     @Operation(summary = "Cambiar contraseña propia",
-            description = "El funcionario autenticado cambia su propia contraseña. " +
-                    "Si estaba PENDIENTE_DE_ACTIVACION pasa a ACTIVO.")
+            description = "Exclusivo del propio funcionario autenticado — requiere la contraseña actual. " +
+                    "Si estaba PENDIENTE_DE_ACTIVACION pasa a ACTIVO. Para restablecerle la contraseña " +
+                    "a otro funcionario, usar POST /{id}/contrasenia en su lugar.")
     @ApiResponse(responseCode = "204", description = "Contraseña actualizada")
+    @ApiResponse(responseCode = "401", description = "La contraseña actual no es correcta")
     @ApiResponse(responseCode = "403", description = "Intento de cambiar contraseña de otro usuario")
     @PatchMapping("/{id}/contrasenia")
     public ResponseEntity<Void> cambiarContrasenia(
             @PathVariable Integer id,
             @Valid @RequestBody CambiarContraseniaDTO dto) {
         funcionarioService.cambiarContrasenia(id, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Mismo sub-recurso que cambiarContrasenia (/{id}/contrasenia): acá el cliente no manda
+    // ningún body porque no es él quien define el valor nuevo, lo genera el servidor y lo
+    // manda por email. POST (no PATCH) porque es una acción con efecto secundario, no una
+    // modificación de estado descrita por el cliente — mismo criterio que se usó en RF27
+    // para no meter un verbo en la URL (ver crearInstanciaDesdeRecordatorio).
+    @Operation(summary = "Restablecer contraseña de un funcionario",
+            description = "Requiere EDITAR_FUNCIONARIO. Genera una nueva contraseña y la envía por email.")
+    @ApiResponse(responseCode = "204", description = "Contraseña restablecida y email enviado")
+    @ApiResponse(responseCode = "404", description = "Funcionario no encontrado")
+    @PostMapping("/{id}/contrasenia")
+    public ResponseEntity<Void> restablecerContrasenia(@PathVariable Integer id) {
+        funcionarioService.restablecerContrasenia(id);
         return ResponseEntity.noContent().build();
     }
 
