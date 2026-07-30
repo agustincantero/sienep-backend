@@ -448,7 +448,7 @@ CREATE TABLE proyecto.recordatorios (
                                         cod_instancia       INT                        NOT NULL,
                                         id_frecuencia       INT,
                                         fec_fin             DATE,
-                                        nro_ocurrencias     INT CHECK (nro_ocurrencias BETWEEN 0 AND 5),
+                                        nro_ocurrencias     INT CHECK (nro_ocurrencias BETWEEN 1 AND 5),
                                         responsable         INT                        NOT NULL,
                                         estado_operativo    proyecto.estado_operativo  NOT NULL DEFAULT 'FUTURO',
                                         estado              proyecto.estado_logico     NOT NULL DEFAULT 'ACTIVO',

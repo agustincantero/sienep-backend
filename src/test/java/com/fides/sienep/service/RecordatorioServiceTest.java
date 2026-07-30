@@ -36,6 +36,8 @@ class RecordatorioServiceTest {
     @Mock private RecordatorioMapper recordatorioMapper;
     @Mock private RecordatorioIdGenerator recordatorioIdGenerator;
     @Mock private EmailService emailService;
+    @Mock private FuncionarioGcalRepository funcionarioGcalRepository;
+    @Mock private GoogleCalendarService googleCalendarService;
 
     @InjectMocks
     private RecordatorioService recordatorioService;
@@ -435,6 +437,122 @@ class RecordatorioServiceTest {
         verify(recordatorioRepository).save(recordatorio);
     }
 
+    // ── Actualizar - RF22 (sync Calendar) / RF23 (reset notificación) ──
+
+    @Test
+    @DisplayName("Actualizar recordatorio - Resetea notificadoProximidad cuando cambia la fecha (RF23)")
+    void actualizar_ReseteaNotificadoProximidad_CuandoCambiaFecha() {
+        recordatorio.setNotificadoProximidad(true);
+        requestDTO.setFechaHora(recordatorio.getFechaHora().plusDays(3));
+
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+
+        recordatorioService.actualizar(1, requestDTO);
+
+        assertFalse(recordatorio.isNotificadoProximidad());
+    }
+
+    @Test
+    @DisplayName("Actualizar recordatorio - No resetea notificadoProximidad cuando la fecha no cambia (RF23)")
+    void actualizar_NoReseteaNotificadoProximidad_CuandoFechaNoCambia() {
+        LocalDateTime mismaFecha = LocalDateTime.now().plusDays(1);
+        recordatorio.setFechaHora(mismaFecha);
+        recordatorio.setNotificadoProximidad(true);
+        requestDTO.setFechaHora(mismaFecha);
+
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+
+        recordatorioService.actualizar(1, requestDTO);
+
+        assertTrue(recordatorio.isNotificadoProximidad());
+    }
+
+    @Test
+    @DisplayName("Actualizar recordatorio - Actualiza el evento existente cuando el responsable no cambió (RF22)")
+    void actualizar_ActualizaEventoGoogle_CuandoResponsableNoCambia() {
+        recordatorio.setEventIdGoogle("evento-existente-id");
+        FuncionarioGcal gcal = new FuncionarioGcal(responsable, "refresh-token", "juan@gmail.com");
+
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcal));
+
+        recordatorioService.actualizar(1, requestDTO);
+
+        verify(googleCalendarService).actualizarEvento(recordatorio, "evento-existente-id", "refresh-token");
+        verify(googleCalendarService, never()).crearEvento(any(), any());
+        verify(googleCalendarService, never()).eliminarEvento(any(), any());
+    }
+
+    @Test
+    @DisplayName("Actualizar recordatorio - Cambia responsable: borra el evento viejo y crea uno nuevo (RF22)")
+    void actualizar_CambiaResponsable_BorraYCreaEvento() {
+        recordatorio.setEventIdGoogle("evento-viejo-id");
+
+        Funcionario responsableNuevo = new Funcionario();
+        responsableNuevo.setIdUsuario(3);
+        responsableNuevo.setNombre("María");
+        responsableNuevo.setApellido("López");
+        responsableNuevo.setEmail("maria.lopez@utec.edu.uy");
+        responsableNuevo.setEstado(EstadoLogico.ACTIVO);
+        requestDTO.setIdResponsable(3);
+
+        FuncionarioGcal gcalViejo = new FuncionarioGcal(responsable, "refresh-token-viejo", "juan@gmail.com");
+        FuncionarioGcal gcalNuevo = new FuncionarioGcal(responsableNuevo, "refresh-token-nuevo", "maria@gmail.com");
+
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(3)).thenReturn(Optional.of(responsableNuevo));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcalViejo));
+        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(3)).thenReturn(Optional.of(gcalNuevo));
+        when(googleCalendarService.crearEvento(any(), eq("refresh-token-nuevo"))).thenReturn("evento-nuevo-id");
+
+        recordatorioService.actualizar(1, requestDTO);
+
+        verify(googleCalendarService).eliminarEvento("evento-viejo-id", "refresh-token-viejo");
+        verify(googleCalendarService).crearEvento(recordatorio, "refresh-token-nuevo");
+        verify(googleCalendarService, never()).actualizarEvento(any(), any(), any());
+        assertEquals("evento-nuevo-id", recordatorio.getEventIdGoogle());
+    }
+
+    @Test
+    @DisplayName("Actualizar recordatorio - Responsable sin Google Calendar vinculado: no sincroniza")
+    void actualizar_NoSincroniza_CuandoResponsableSinGcal() {
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+        // funcionarioGcalRepository sin stub → Optional.empty() por defecto
+
+        recordatorioService.actualizar(1, requestDTO);
+
+        verifyNoInteractions(googleCalendarService);
+    }
+
     @Test
     @DisplayName("Dar de baja - Éxito")
     void darDeBaja_Exito() {
@@ -523,6 +641,48 @@ class RecordatorioServiceTest {
                 () -> recordatorioService.reactivar(1));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar recordatorio - Instancia asociada inactiva (422)")
+    void reactivar_LanzaUnprocessable_InstanciaInactiva() {
+        recordatorio.setEstado(EstadoLogico.INACTIVO);
+        when(instancia.getEstado()).thenReturn(EstadoLogico.INACTIVO);
+        when(recordatorioRepository.findByCodRecordatorio(1)).thenReturn(Optional.of(recordatorio));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.reactivar(1));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar recordatorio - Categoría asociada inactiva (422)")
+    void reactivar_LanzaUnprocessable_CategoriaInactiva() {
+        recordatorio.setEstado(EstadoLogico.INACTIVO);
+        categoria.setEstado(EstadoLogico.INACTIVO);
+        when(recordatorioRepository.findByCodRecordatorio(1)).thenReturn(Optional.of(recordatorio));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.reactivar(1));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar recordatorio - Responsable asociado inactivo (422)")
+    void reactivar_LanzaUnprocessable_ResponsableInactivo() {
+        recordatorio.setEstado(EstadoLogico.INACTIVO);
+        responsable.setEstado(EstadoLogico.INACTIVO);
+        when(recordatorioRepository.findByCodRecordatorio(1)).thenReturn(Optional.of(recordatorio));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.reactivar(1));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 

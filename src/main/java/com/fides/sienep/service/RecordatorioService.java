@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -200,6 +201,12 @@ public class RecordatorioService {
                     "El funcionario con id " + dto.getIdResponsable() + " no está activo");
         }
 
+        // Se capturan antes de sobrescribir: hacen falta para decidir cómo sincronizar
+        // con Google Calendar y si corresponde volver a notificar (RF22/RF23).
+        Funcionario responsableAnterior = recordatorio.getResponsable();
+        String eventIdAnterior = recordatorio.getEventIdGoogle();
+        boolean cambioFecha = !recordatorio.getFechaHora().equals(dto.getFechaHora());
+
         recordatorio.setTitulo(dto.getTitulo());
         recordatorio.setTipo(dto.getTipo());
         recordatorio.setFechaHora(dto.getFechaHora());
@@ -225,7 +232,64 @@ public class RecordatorioService {
             recordatorio.setFrecuencia(null);
         }
 
-        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
+        // RF23 — si la fecha cambió, hay que poder volver a notificar "próximo a vencer"
+        // para la nueva fecha; de lo contrario el flag queda pegado en true para siempre
+        // y el recordatorio postergado nunca se vuelve a notificar.
+        if (cambioFecha) {
+            recordatorio.setNotificadoProximidad(false);
+        }
+
+        Recordatorio actualizado = recordatorioRepository.save(recordatorio);
+
+        // RF22 — mantener sincronizado el evento de Google Calendar tras la edición.
+        // No es bloqueante, mismo criterio que en crear()/darDeBaja().
+        sincronizarEdicionConGoogleCalendar(actualizado, responsableAnterior, eventIdAnterior);
+
+        return recordatorioMapper.toDto(actualizado);
+    }
+
+    private void sincronizarEdicionConGoogleCalendar(Recordatorio recordatorio,
+                                                      Funcionario responsableAnterior,
+                                                      String eventIdAnterior) {
+        try {
+            boolean cambioResponsable = responsableAnterior.getIdUsuario() != recordatorio.getResponsable().getIdUsuario();
+            String eventIdParaActualizar = eventIdAnterior;
+
+            // El evento vive en el calendario del responsable ANTERIOR: si cambió, no se
+            // puede "actualizar" con el token del responsable nuevo, hay que borrarlo ahí
+            // y (más abajo) crear uno nuevo en el calendario del responsable actual.
+            if (cambioResponsable && eventIdAnterior != null) {
+                funcionarioGcalRepository
+                        .findByFuncionarioIdUsuario(responsableAnterior.getIdUsuario())
+                        .filter(FuncionarioGcal::isAutorizado)
+                        .ifPresent(gcal -> googleCalendarService.eliminarEvento(eventIdAnterior, gcal.getRefreshToken()));
+                recordatorio.setEventIdGoogle(null);
+                eventIdParaActualizar = null;
+            }
+
+            Optional<FuncionarioGcal> gcalActual = funcionarioGcalRepository
+                    .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario())
+                    .filter(FuncionarioGcal::isAutorizado);
+
+            if (gcalActual.isEmpty()) {
+                return;
+            }
+
+            String refreshToken = gcalActual.get().getRefreshToken();
+            if (eventIdParaActualizar != null) {
+                googleCalendarService.actualizarEvento(recordatorio, eventIdParaActualizar, refreshToken);
+            } else {
+                // No tenía evento (nunca se sincronizó, o cambió de responsable): se crea uno nuevo.
+                String eventId = googleCalendarService.crearEvento(recordatorio, refreshToken);
+                if (eventId != null) {
+                    recordatorio.setEventIdGoogle(eventId);
+                    recordatorioRepository.save(recordatorio);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[GCAL] Fallo al sincronizar la edición del recordatorio {} con Google Calendar: {}",
+                    recordatorio.getIdNegRecordatorio(), e.getMessage());
+        }
     }
 
 
@@ -296,6 +360,21 @@ public class RecordatorioService {
         if (recordatorio.getEstado() == EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "El recordatorio ya se encuentra activo");
+        }
+
+        // Mismas validaciones que crear()/actualizar(): mientras estuvo INACTIVO, la
+        // instancia, categoría o responsable pudieron haberse dado de baja también.
+        if (recordatorio.getInstancia().getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "No se puede reactivar: la instancia asociada ya no está activa");
+        }
+        if (recordatorio.getCategoria().getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "No se puede reactivar: la categoría asociada ya no está activa");
+        }
+        if (recordatorio.getResponsable().getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "No se puede reactivar: el responsable asociado ya no está activo");
         }
 
         recordatorio.setEstado(EstadoLogico.ACTIVO);

@@ -69,6 +69,16 @@ class GoogleCalendarServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar evento - Falla al obtener access_token, no lanza excepción")
+    void actualizarEvento_FallaAlObtenerAccessToken_NoLanza() {
+        when(googleOAuthService.obtenerAccessToken("refresh-token-invalido"))
+                .thenThrow(new RuntimeException("Token revocado por el usuario"));
+
+        assertDoesNotThrow(
+                () -> googleCalendarService.actualizarEvento(recordatorio, "evento-id", "refresh-token-invalido"));
+    }
+
+    @Test
     @DisplayName("Eliminar evento - Falla al obtener access_token, no lanza excepción")
     void eliminarEvento_FallaAlObtenerAccessToken_NoLanza() {
         when(googleOAuthService.obtenerAccessToken("refresh-token-invalido"))

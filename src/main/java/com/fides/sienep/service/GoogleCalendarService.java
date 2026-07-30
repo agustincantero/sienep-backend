@@ -44,43 +44,7 @@ public class GoogleCalendarService {
     public String crearEvento(Recordatorio recordatorio, String refreshToken) {
         try {
             Calendar service = construirServicio(refreshToken);
-
-            Event evento = new Event();
-            evento.setSummary("[SIENEP] " + recordatorio.getTitulo());
-            evento.setDescription(
-                    "Recordatorio SIENEP\n" +
-                            "ID Recordatorio: " + recordatorio.getIdNegRecordatorio() + "\n" +
-                            "Instancia: " + recordatorio.getInstancia().getIdNegInstancia() + "\n" +
-                            "Tipo: " + recordatorio.getTipo().name()
-            );
-
-            // Fecha/hora de inicio — LocalDateTime a ZonedDateTime con zona de Uruguay
-            ZonedDateTime inicio = recordatorio.getFechaHora()
-                    .atZone(ZoneId.of(ZONA_HORARIA));
-            ZonedDateTime fin    = inicio.plusHours(1); // duración por defecto: 1 hora
-
-            evento.setStart(new EventDateTime()
-                    .setDateTime(toGoogleDateTime(inicio))
-                    .setTimeZone(ZONA_HORARIA));
-            evento.setEnd(new EventDateTime()
-                    .setDateTime(toGoogleDateTime(fin))
-                    .setTimeZone(ZONA_HORARIA));
-
-            // Recurrencia — solo si el recordatorio tiene frecuencia asignada
-            if (recordatorio.getFrecuencia() != null) {
-                String rrule = recurrenceRuleBuilder.construir(recordatorio);
-                if (rrule != null) {
-                    evento.setRecurrence(List.of(rrule));
-                }
-            }
-
-            // Recordatorio por email 24h antes y popup 30 min antes
-            evento.setReminders(new Event.Reminders()
-                    .setUseDefault(false)
-                    .setOverrides(List.of(
-                            new EventReminder().setMethod("email").setMinutes(24 * 60),
-                            new EventReminder().setMethod("popup").setMinutes(30)
-                    )));
+            Event evento = construirEvento(recordatorio);
 
             Event eventoCreado = service.events()
                     .insert(CALENDAR_ID, evento)
@@ -94,6 +58,25 @@ public class GoogleCalendarService {
             log.warn("[GCAL] No se pudo crear el evento para recordatorio {}: {}",
                     recordatorio.getIdNegRecordatorio(), e.getMessage());
             return null;
+        }
+    }
+
+    // ── Actualizar evento ─────────────────────────────────────────────────
+    // Se llama desde RecordatorioService.actualizar() cuando el recordatorio ya
+    // tenía un evento sincronizado y el responsable no cambió (RF22).
+
+    public void actualizarEvento(Recordatorio recordatorio, String eventIdGoogle, String refreshToken) {
+        try {
+            Calendar service = construirServicio(refreshToken);
+            Event evento = construirEvento(recordatorio);
+
+            service.events().update(CALENDAR_ID, eventIdGoogle, evento).execute();
+            log.info("[GCAL] Evento actualizado: {} para recordatorio {}",
+                    eventIdGoogle, recordatorio.getIdNegRecordatorio());
+
+        } catch (Exception e) {
+            log.warn("[GCAL] No se pudo actualizar el evento {} para recordatorio {}: {}",
+                    eventIdGoogle, recordatorio.getIdNegRecordatorio(), e.getMessage());
         }
     }
 
@@ -111,6 +94,47 @@ public class GoogleCalendarService {
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────
+
+    private Event construirEvento(Recordatorio recordatorio) {
+        Event evento = new Event();
+        evento.setSummary("[SIENEP] " + recordatorio.getTitulo());
+        evento.setDescription(
+                "Recordatorio SIENEP\n" +
+                        "ID Recordatorio: " + recordatorio.getIdNegRecordatorio() + "\n" +
+                        "Instancia: " + recordatorio.getInstancia().getIdNegInstancia() + "\n" +
+                        "Tipo: " + recordatorio.getTipo().name()
+        );
+
+        // Fecha/hora de inicio — LocalDateTime a ZonedDateTime con zona de Uruguay
+        ZonedDateTime inicio = recordatorio.getFechaHora()
+                .atZone(ZoneId.of(ZONA_HORARIA));
+        ZonedDateTime fin    = inicio.plusHours(1); // duración por defecto: 1 hora
+
+        evento.setStart(new EventDateTime()
+                .setDateTime(toGoogleDateTime(inicio))
+                .setTimeZone(ZONA_HORARIA));
+        evento.setEnd(new EventDateTime()
+                .setDateTime(toGoogleDateTime(fin))
+                .setTimeZone(ZONA_HORARIA));
+
+        // Recurrencia — solo si el recordatorio tiene frecuencia asignada
+        if (recordatorio.getFrecuencia() != null) {
+            String rrule = recurrenceRuleBuilder.construir(recordatorio);
+            if (rrule != null) {
+                evento.setRecurrence(List.of(rrule));
+            }
+        }
+
+        // Recordatorio por email 24h antes y popup 30 min antes
+        evento.setReminders(new Event.Reminders()
+                .setUseDefault(false)
+                .setOverrides(List.of(
+                        new EventReminder().setMethod("email").setMinutes(24 * 60),
+                        new EventReminder().setMethod("popup").setMinutes(30)
+                )));
+
+        return evento;
+    }
 
     private Calendar construirServicio(String refreshToken) throws GeneralSecurityException, IOException {
         String accessToken = googleOAuthService.obtenerAccessToken(refreshToken);
