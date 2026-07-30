@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,6 +78,19 @@ public class GlobalExceptionHandler {
         body.put("message", ex.getReason());
 
         return new ResponseEntity<>(body, ex.getStatusCode());
+    }
+
+    // 3B. Ataja archivos que superan spring.servlet.multipart.max-file-size / max-request-size
+    // (se dispara al parsear el multipart, antes de llegar al Service)
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Archivo demasiado grande");
+        body.put("message", "El archivo supera el tamaño máximo permitido de 5MB.");
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     // 4. Ataja errores de autorización (Spring Security)

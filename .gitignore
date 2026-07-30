@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 GEMINI.md
+CLAUDE.md
 
 ### STS ###
 .apt_generated

@@ -67,16 +67,22 @@ public class InformeAdjunto {
     private Estudiante estudiante;
 
     /**
-     * URL de acceso al archivo. El schema valida formato de URL y extensión
-     * (PDF, JPG, JPEG, PNG). Esas validaciones de negocio van en el Service o
-     * con @Pattern en el DTO, no en la entidad.
+     * Nombre físico del archivo guardado en disco (UUID + extensión original),
+     * generado internamente por InformeAdjuntoService al subir el MultipartFile
+     * (nunca lo define el cliente). Reutiliza la columna histórica url_archivo
+     * -antes pensada para una URL externa- para no requerir una migración del
+     * schema; el schema valida igualmente su extensión (PDF, JPG, JPEG, PNG).
      */
     @Column(name = "url_archivo", nullable = false, length = 255)
-    @Schema(description = "URL de acceso al archivo", example = "https://storage.example.com/informes/informe_2024.pdf")
+    @Schema(description = "Nombre físico del archivo en el almacenamiento local", example = "3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf")
     private String urlArchivo;
 
+    /**
+     * Subdirectorio (relativo a app.storage.informes-dir) donde vive el
+     * archivo físico. Por defecto, el id del estudiante.
+     */
     @Column(name = "ruta", length = 255)
-    @Schema(description = "Ruta del archivo en el sistema de archivos (puede ser null)", example = "/informes/2024/")
+    @Schema(description = "Subdirectorio de almacenamiento del archivo", example = "5")
     private String ruta;
 
     @Column(name = "nom_archivo", nullable = false, length = 70)

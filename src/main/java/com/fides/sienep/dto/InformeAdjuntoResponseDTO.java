@@ -13,9 +13,10 @@ public class InformeAdjuntoResponseDTO {
 
     private Integer idInforme;
     private Integer idUsuario;
-    private String urlArchivo;
-    private String ruta;
     private String nombre;
+    @Schema(description = "Ruta relativa para descargar el archivo (requiere autenticación y permiso VER_ADJUNTOS)",
+            example = "/api/informes-adjuntos/1/descargar")
+    private String urlDescarga;
     private EstadoLogico estado;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
