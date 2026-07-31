@@ -924,6 +924,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  ('CREAR_RECORDATORIO',      'Permite crear nuevos recordatorios'),
                                                                  ('EDITAR_RECORDATORIO',     'Permite editar recordatorios existentes'),
                                                                  ('BAJA_RECORDATORIO',       'Permite eliminar o desactivar recordatorios'),
+                                                                 ('REACTIVAR_RECORDATORIO',  'Permite reactivar recordatorios y frecuencias dados de baja'),
                                                                  ('CONFIG_RECURRENCIA',      'Permite configurar la recurrencia de los recordatorios'),
                                                                  ('ETIQUETAR_TIPO',          'Permite asignar etiquetas o tipos a recordatorios'),
                                                                  -- Integraciones
@@ -1015,7 +1016,7 @@ FROM proyecto.roles r
                                                        'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
                                                        'CATEGORIZAR_INSTANCIA', 'VER_BLOQUE_CONFIDENCIAL',
                                                        'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
-                                                       'BAJA_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
+                                                       'BAJA_RECORDATORIO', 'REACTIVAR_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
                                                        'REGISTRAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
                                                        'EDITAR_INCIDENCIAS', 'ELIMINAR_INCIDENCIAS',
                                                        'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
@@ -1039,7 +1040,7 @@ FROM proyecto.roles r
                                                        'VER_ESTUDIANTE_RESUMIDO', 'BUSCAR_ESTUDIANTE',
                                                        'VER_ADJUNTOS',
                                                        'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
-                                                       'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
+                                                       'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO', 'REACTIVAR_RECORDATORIO',
                                                        'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
                                                        'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA'
     )

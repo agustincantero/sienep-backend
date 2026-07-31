@@ -387,8 +387,13 @@ public class RecordatorioService {
     }
 
 
+    // H7 — permiso propio en vez de EDITAR_RECORDATORIO, igual que el resto de
+    // las entidades con reactivar() (Carrera/Grupo/Itr/Estudiante/Funcionario/
+    // Rol/CategoriaInstancia/CategoriaRecordatorio). Se asigna a los mismos
+    // roles que ya tenían EDITAR_RECORDATORIO (PSICOPEDAGOGO, TUTOR), así que
+    // no cambia quién puede reactivar hoy — solo separa el permiso.
     @Transactional
-    @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
+    @PreAuthorize("hasAuthority('REACTIVAR_RECORDATORIO')")
     public RecordatorioResponseDTO reactivar(int id) {
         Recordatorio recordatorio = recordatorioRepository.findByCodRecordatorio(id)
                 .orElseThrow(() -> new ResponseStatusException(

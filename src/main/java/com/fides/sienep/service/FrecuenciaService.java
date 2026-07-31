@@ -84,8 +84,12 @@ public class FrecuenciaService {
         frecuenciaRepository.save(frecuencia);
     }
 
+    // H7 — permiso propio (REACTIVAR_RECORDATORIO), ver misma nota en
+    // RecordatorioService.reactivar(). Frecuencia comparte todo el namespace
+    // de permisos de Recordatorio (no tiene los suyos propios), así que usa
+    // el mismo permiso nuevo.
     @Transactional
-    @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
+    @PreAuthorize("hasAuthority('REACTIVAR_RECORDATORIO')")
     public FrecuenciaResponseDTO reactivar(int id) {
         Frecuencia frecuencia = frecuenciaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
