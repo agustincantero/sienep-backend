@@ -81,7 +81,12 @@ public class InformeAdjuntoService {
                 .nombre(dto.getNombre())
                 .build();
 
-        informeRepository.save(informe);
+        try {
+            informeRepository.save(informe);
+        } catch (RuntimeException e) {
+            fileStorageService.eliminarSiExiste(subdirectorio + "/" + nombreFisico);
+            throw e;
+        }
         log.info("[AUDIT] Informe adjuntado al estudiante {}", dto.getIdUsuario());
         return informeMapper.toDto(informe);
     }

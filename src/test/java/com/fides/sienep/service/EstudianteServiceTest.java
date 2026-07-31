@@ -29,6 +29,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -832,6 +833,25 @@ class EstudianteServiceTest {
         assertNotNull(resultado);
         assertEquals("fotos/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg", estudianteExistente.getFoto());
         verify(estudianteRepository).save(estudianteExistente);
+    }
+
+    @Test
+    @DisplayName("Subir foto - Si el save() falla, limpia el archivo físico y restaura la ruta anterior")
+    void subirFoto_LimpiaArchivoFisico_SiFallaElSave() {
+        estudianteExistente.setFoto("fotos/1/foto-vieja.jpg");
+        MultipartFile foto = new MockMultipartFile(
+                "foto", "perfil.jpg", "image/jpeg", "contenido".getBytes());
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(fileStorageService.guardar(eq(foto), eq("fotos/1"), anyList(), anyLong()))
+                .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg");
+        when(estudianteRepository.save(any(Estudiante.class)))
+                .thenThrow(new DataIntegrityViolationException("constraint violation"));
+
+        assertThrows(DataIntegrityViolationException.class, () -> estudianteService.subirFoto(1, foto));
+
+        assertEquals("fotos/1/foto-vieja.jpg", estudianteExistente.getFoto());
+        verify(fileStorageService).eliminarSiExiste("fotos/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg");
     }
 
     @Test

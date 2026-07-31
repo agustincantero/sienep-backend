@@ -1,5 +1,7 @@
 package com.fides.sienep.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -24,6 +26,8 @@ import java.util.UUID;
  */
 @Service
 public class FileStorageService {
+
+    private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
 
     // Campo separado (no final): Lombok no copia @Value a los parámetros del
     // constructor generado por @RequiredArgsConstructor sin un lombok.config,
@@ -64,6 +68,17 @@ public class FileStorageService {
                     "No se pudo guardar el archivo en el servidor", e);
         }
         return nombreFisico;
+    }
+
+    // No hay rollback de filesystem al fallar un save() posterior en la misma
+    // transacción de BD — el consumidor tiene que invocar esto explícitamente
+    // en su catch para no dejar el archivo huérfano en disco.
+    public void eliminarSiExiste(String rutaRelativa) {
+        try {
+            Files.deleteIfExists(Path.of(baseDir, rutaRelativa));
+        } catch (IOException e) {
+            log.warn("No se pudo limpiar el archivo huérfano en {}: {}", rutaRelativa, e.getMessage());
+        }
     }
 
     public Resource cargar(String rutaRelativa) {

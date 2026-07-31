@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -162,6 +163,25 @@ class InformeAdjuntoServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         verify(informeRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Adjuntar informe - Si el save() falla, limpia el archivo físico recién escrito")
+    void adjuntar_LimpiaArchivoFisico_SiFallaElSave() {
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "informe.pdf", "application/pdf", "contenido".getBytes());
+        InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
+        when(fileStorageService.guardar(eq(archivo), eq("informes/1"), anyList(), anyLong()))
+                .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
+        when(informeRepository.save(any(InformeAdjunto.class)))
+                .thenThrow(new DataIntegrityViolationException("constraint violation"));
+
+        assertThrows(DataIntegrityViolationException.class, () -> informeService.adjuntar(dto));
+
+        verify(fileStorageService).eliminarSiExiste("informes/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
     }
 
     // ── Obtener por ID ────────────────────────────────────────

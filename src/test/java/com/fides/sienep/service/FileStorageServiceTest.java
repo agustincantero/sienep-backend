@@ -148,4 +148,25 @@ class FileStorageServiceTest {
         assertEquals(MediaType.IMAGE_PNG, fileStorageService.mediaTypeDeExtension("png"));
         assertEquals(MediaType.APPLICATION_OCTET_STREAM, fileStorageService.mediaTypeDeExtension("exe"));
     }
+
+    @Test
+    @DisplayName("Eliminar si existe - Borra el archivo físico")
+    void eliminarSiExiste_BorraElArchivo() {
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "informe.pdf", "application/pdf",
+                new byte[]{0x25, 0x50, 0x44, 0x46, 0x00, 0x00, 0x00, 0x00});
+        String nombreFisico = fileStorageService.guardar(archivo, "informes/1", EXTENSIONES, MAX_TAMANIO);
+        Path ruta = baseDir.resolve("informes/1").resolve(nombreFisico);
+        assertTrue(Files.exists(ruta));
+
+        fileStorageService.eliminarSiExiste("informes/1/" + nombreFisico);
+
+        assertFalse(Files.exists(ruta));
+    }
+
+    @Test
+    @DisplayName("Eliminar si existe - No falla si el archivo no existe")
+    void eliminarSiExiste_NoFallaSiNoExiste() {
+        assertDoesNotThrow(() -> fileStorageService.eliminarSiExiste("informes/1/no-existe.pdf"));
+    }
 }

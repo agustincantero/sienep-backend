@@ -254,9 +254,18 @@ public class EstudianteService {
 
         // No se borra el archivo físico anterior (si existía): mismo criterio de
         // "nunca borrado físico" que se usa en el resto del sistema (baja lógica).
-        estudiante.setFoto(subdirectorio + "/" + nombreFisico);
+        String rutaAnterior = estudiante.getFoto();
+        String rutaNueva = subdirectorio + "/" + nombreFisico;
+        estudiante.setFoto(rutaNueva);
 
-        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
+        try {
+            Estudiante guardado = estudianteRepository.save(estudiante);
+            return estudianteMapper.toDto(guardado);
+        } catch (RuntimeException e) {
+            estudiante.setFoto(rutaAnterior);
+            fileStorageService.eliminarSiExiste(rutaNueva);
+            throw e;
+        }
     }
 
     @PreAuthorize("authentication.name == #id.toString() or hasAuthority('VER_ESTUDIANTE')")
