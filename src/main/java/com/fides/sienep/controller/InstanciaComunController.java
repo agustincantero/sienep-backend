@@ -9,6 +9,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,23 +52,24 @@ public class InstanciaComunController {
     }
 
     @Operation(summary = "Listar instancias con filtros opcionales")
-    @ApiResponse(responseCode = "200", description = "Lista de instancias")
+    @ApiResponse(responseCode = "200", description = "Página de instancias")
     @GetMapping
-    public ResponseEntity<List<InstanciaComunResponseDTO>> listar(
+    public ResponseEntity<Page<InstanciaComunResponseDTO>> listar(
             @RequestParam(required = false) Integer idEstudiante,
             @RequestParam(required = false) Integer idFuncionario,
-            @RequestParam(required = false) Integer idCategoria) {
+            @RequestParam(required = false) Integer idCategoria,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
 
         if (idEstudiante != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorEstudiante(idEstudiante));
+            return ResponseEntity.ok(instanciaComunService.listarPorEstudiante(idEstudiante, pageable));
         }
         if (idFuncionario != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorFuncionario(idFuncionario));
+            return ResponseEntity.ok(instanciaComunService.listarPorFuncionario(idFuncionario, pageable));
         }
         if (idCategoria != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorCategoria(idCategoria));
+            return ResponseEntity.ok(instanciaComunService.listarPorCategoria(idCategoria, pageable));
         }
-        return ResponseEntity.ok(instanciaComunService.listarActivas());
+        return ResponseEntity.ok(instanciaComunService.listarActivas(pageable));
     }
 
     @Operation(summary = "Actualizar una instancia")

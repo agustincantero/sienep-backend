@@ -20,6 +20,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -447,54 +451,59 @@ class InstanciaComunServiceTest {
     // ── Listar ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Listar activas - Éxito")
+    @DisplayName("Listar activas - Éxito, paginado (H3)")
     void listarActivas_Exito() {
-        when(instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(instancia));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarActivas();
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarActivas(pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito")
+    @DisplayName("Listar por estudiante - Éxito, paginado (H3)")
     void listarPorEstudiante_Exito() {
-        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(instancia));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorEstudiante(1);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorEstudiante(1, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por funcionario - Éxito")
+    @DisplayName("Listar por funcionario - Éxito, paginado (H3)")
     void listarPorFuncionario_Exito() {
-        when(instanciaComunRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(instancia));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(instanciaComunRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorFuncionario(2);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorFuncionario(2, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por categoría - Éxito")
+    @DisplayName("Listar por categoría - Éxito, paginado (H3)")
     void listarPorCategoria_Exito() {
-        when(instanciaComunRepository.findByCategoriaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(instancia));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(instanciaComunRepository.findByCategoriaAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorCategoria(1);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorCategoria(1, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test

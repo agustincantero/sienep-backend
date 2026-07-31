@@ -2,6 +2,8 @@ package com.fides.sienep.repository;
 
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.InstanciaComun;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,6 +27,17 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             "WHERE ic.estado = :estado")
     List<InstanciaComun> findByEstado(@Param("estado") EstadoLogico estado);
 
+    // H3 — paginado, usado por InstanciaComunService.listarActivas (GET /api/instancias sin filtro).
+    // Los 3 JOIN FETCH son todos @ManyToOne (a-uno), no colecciones, así que
+    // Hibernate pagina en SQL (LIMIT/OFFSET) sin caer al "in-memory paging"
+    // que sí ocurriría si alguno fuera una colección (@OneToMany/@ManyToMany).
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.estado = :estado")
+    Page<InstanciaComun> findByEstado(@Param("estado") EstadoLogico estado, Pageable pageable);
+
     Optional<InstanciaComun> findByCodInstanciaAndEstado(int codInstancia, EstadoLogico estado);
 
     @Query("SELECT ic FROM InstanciaComun ic " +
@@ -35,6 +48,16 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
     List<InstanciaComun> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
                                                    @Param("estado") EstadoLogico estado);
 
+    // H3 — paginado, usado por InstanciaComunService.listarPorEstudiante
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.estudiante.idUsuario = :idEstudiante AND ic.estado = :estado")
+    Page<InstanciaComun> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
+                                                   @Param("estado") EstadoLogico estado,
+                                                   Pageable pageable);
+
     @Query("SELECT ic FROM InstanciaComun ic " +
             "JOIN FETCH ic.estudiante " +
             "JOIN FETCH ic.funcionario " +
@@ -43,6 +66,16 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
     List<InstanciaComun> findByFuncionarioAndEstado(@Param("idFuncionario") int idFuncionario,
                                                     @Param("estado") EstadoLogico estado);
 
+    // H3 — paginado, usado por InstanciaComunService.listarPorFuncionario
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.funcionario.idUsuario = :idFuncionario AND ic.estado = :estado")
+    Page<InstanciaComun> findByFuncionarioAndEstado(@Param("idFuncionario") int idFuncionario,
+                                                    @Param("estado") EstadoLogico estado,
+                                                    Pageable pageable);
+
     @Query("SELECT ic FROM InstanciaComun ic " +
             "JOIN FETCH ic.estudiante " +
             "JOIN FETCH ic.funcionario " +
@@ -50,6 +83,16 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             "WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
     List<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
                                                   @Param("estado") EstadoLogico estado);
+
+    // H3 — paginado, usado por InstanciaComunService.listarPorCategoria
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
+    Page<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
+                                                  @Param("estado") EstadoLogico estado,
+                                                  Pageable pageable);
 
     // ── Queries para Reportes ─────────────────────────────────
     @Query("SELECT ic FROM InstanciaComun ic " +

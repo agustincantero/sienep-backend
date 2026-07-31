@@ -24,6 +24,9 @@ import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -221,11 +224,15 @@ public class InstanciaComunService {
         return nuevaInstancia;
     }
 
+    // H3 — GET /api/instancias sin filtro crece con cada instancia registrada;
+    // se pagina igual que las otras 3 ramas del mismo endpoint para que el
+    // contrato de respuesta sea uniforme sin importar qué filtro se use.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public List<InstanciaComunResponseDTO> listarActivas() {
-        return instanciaComunMapper.toDtoList(
-                instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO));
+    public Page<InstanciaComunResponseDTO> listarActivas(Pageable pageable) {
+        Page<InstanciaComun> pagina = instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO, pageable);
+        List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -236,23 +243,29 @@ public class InstanciaComunService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public List<InstanciaComunResponseDTO> listarPorEstudiante(int idEstudiante) {
-        return instanciaComunMapper.toDtoList(
-                instanciaComunRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
+    public Page<InstanciaComunResponseDTO> listarPorEstudiante(int idEstudiante, Pageable pageable) {
+        Page<InstanciaComun> pagina = instanciaComunRepository.findByEstudianteAndEstado(
+                idEstudiante, EstadoLogico.ACTIVO, pageable);
+        List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public List<InstanciaComunResponseDTO> listarPorFuncionario(int idFuncionario) {
-        return instanciaComunMapper.toDtoList(
-                instanciaComunRepository.findByFuncionarioAndEstado(idFuncionario, EstadoLogico.ACTIVO));
+    public Page<InstanciaComunResponseDTO> listarPorFuncionario(int idFuncionario, Pageable pageable) {
+        Page<InstanciaComun> pagina = instanciaComunRepository.findByFuncionarioAndEstado(
+                idFuncionario, EstadoLogico.ACTIVO, pageable);
+        List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public List<InstanciaComunResponseDTO> listarPorCategoria(int idCategoria) {
-        return instanciaComunMapper.toDtoList(
-                instanciaComunRepository.findByCategoriaAndEstado(idCategoria, EstadoLogico.ACTIVO));
+    public Page<InstanciaComunResponseDTO> listarPorCategoria(int idCategoria, Pageable pageable) {
+        Page<InstanciaComun> pagina = instanciaComunRepository.findByCategoriaAndEstado(
+                idCategoria, EstadoLogico.ACTIVO, pageable);
+        List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @PreAuthorize("hasRole('ESTUDIANTE')")
