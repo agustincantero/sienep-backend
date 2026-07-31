@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -90,14 +91,12 @@ public class GrupoService {
 
         validarGeneracion(dto.getGeneracion());
 
-        grupoRepository.findByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+        Optional<Grupo> grupoExistente = grupoRepository.findByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
                 dto.getNomGrupo(), grupo.getCarrera().getIdCarrera(),
-                dto.getGeneracion(), EstadoLogico.ACTIVO
-        ).ifPresent(grupoExistente -> {
-            if (!grupoExistente.getIdGrupo().equals(id)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe otro grupo activo con ese nombre para esa carrera y generación.");
-            }
-        });
+                dto.getGeneracion(), EstadoLogico.ACTIVO);
+        if (grupoExistente.isPresent() && !grupoExistente.get().getIdGrupo().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe otro grupo activo con ese nombre para esa carrera y generación.");
+        }
 
         grupo.setNomGrupo(dto.getNomGrupo());
         grupo.setGeneracion(dto.getGeneracion());

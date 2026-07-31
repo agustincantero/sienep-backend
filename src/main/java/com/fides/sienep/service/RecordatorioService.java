@@ -107,9 +107,8 @@ public class RecordatorioService {
         String eventIdGoogle = null;
         try {
             Optional<FuncionarioGcal> gcalOpt = funcionarioGcalRepository
-                    .findByFuncionarioIdUsuario(responsable.getIdUsuario())
-                    .filter(FuncionarioGcal::isAutorizado);
-            if (gcalOpt.isPresent()) {
+                    .findByFuncionarioIdUsuario(responsable.getIdUsuario());
+            if (gcalOpt.isPresent() && gcalOpt.get().isAutorizado()) {
                 eventIdGoogle = googleCalendarService.crearEvento(guardado, gcalOpt.get().getRefreshToken());
             }
         } catch (Exception e) {
@@ -286,23 +285,23 @@ public class RecordatorioService {
             // puede "actualizar" con el token del responsable nuevo, hay que borrarlo ahí
             // y (más abajo) crear uno nuevo en el calendario del responsable actual.
             if (cambioResponsable && eventIdAnterior != null) {
-                funcionarioGcalRepository
-                        .findByFuncionarioIdUsuario(responsableAnterior.getIdUsuario())
-                        .filter(FuncionarioGcal::isAutorizado)
-                        .ifPresent(gcal -> googleCalendarService.eliminarEvento(eventIdAnterior, gcal.getRefreshToken()));
+                Optional<FuncionarioGcal> gcalAnteriorOpt = funcionarioGcalRepository
+                        .findByFuncionarioIdUsuario(responsableAnterior.getIdUsuario());
+                if (gcalAnteriorOpt.isPresent() && gcalAnteriorOpt.get().isAutorizado()) {
+                    googleCalendarService.eliminarEvento(eventIdAnterior, gcalAnteriorOpt.get().getRefreshToken());
+                }
                 recordatorio.setEventIdGoogle(null);
                 eventIdParaActualizar = null;
             }
 
-            Optional<FuncionarioGcal> gcalActual = funcionarioGcalRepository
-                    .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario())
-                    .filter(FuncionarioGcal::isAutorizado);
+            Optional<FuncionarioGcal> gcalActualOpt = funcionarioGcalRepository
+                    .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario());
 
-            if (gcalActual.isEmpty()) {
+            if (gcalActualOpt.isEmpty() || !gcalActualOpt.get().isAutorizado()) {
                 return;
             }
 
-            String refreshToken = gcalActual.get().getRefreshToken();
+            String refreshToken = gcalActualOpt.get().getRefreshToken();
             if (eventIdParaActualizar != null) {
                 googleCalendarService.actualizarEvento(recordatorio, eventIdParaActualizar, refreshToken);
             } else {
@@ -335,15 +334,11 @@ public class RecordatorioService {
         // Igualmente no bloqueante.
         if (recordatorio.getEventIdGoogle() != null) {
             try {
-                funcionarioGcalRepository
-                        .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario())
-                        .filter(FuncionarioGcal::isAutorizado)
-                        .ifPresent(gcal ->
-                                googleCalendarService.eliminarEvento(
-                                        recordatorio.getEventIdGoogle(),
-                                        gcal.getRefreshToken()
-                                )
-                        );
+                Optional<FuncionarioGcal> gcalOpt = funcionarioGcalRepository
+                        .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario());
+                if (gcalOpt.isPresent() && gcalOpt.get().isAutorizado()) {
+                    googleCalendarService.eliminarEvento(recordatorio.getEventIdGoogle(), gcalOpt.get().getRefreshToken());
+                }
             } catch (Exception e) {
                 log.warn("[GCAL] No se pudo eliminar el evento {} de Google Calendar: {}",
                         recordatorio.getEventIdGoogle(), e.getMessage());

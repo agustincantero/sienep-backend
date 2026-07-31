@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -197,7 +198,10 @@ public class ReporteService {
     private List<Estudiante> resolverEstudiantes(Integer idCarrera, Integer idGrupo, Integer idEstudiante) {
         if (idEstudiante != null) {
             List<Estudiante> lista = new ArrayList<>();
-            estudianteRepository.findById(idEstudiante).ifPresent(lista::add);
+            Optional<Estudiante> estudianteOpt = estudianteRepository.findById(idEstudiante);
+            if (estudianteOpt.isPresent()) {
+                lista.add(estudianteOpt.get());
+            }
             return lista;
         }
         if (idGrupo != null) {
@@ -213,7 +217,10 @@ public class ReporteService {
                                                           Integer idEstudiante, Pageable pageable) {
         if (idEstudiante != null) {
             List<Estudiante> lista = new ArrayList<>();
-            estudianteRepository.findById(idEstudiante).ifPresent(lista::add);
+            Optional<Estudiante> estudianteOpt = estudianteRepository.findById(idEstudiante);
+            if (estudianteOpt.isPresent()) {
+                lista.add(estudianteOpt.get());
+            }
             return new PageImpl<>(lista, pageable, lista.size());
         }
         if (idGrupo != null) {

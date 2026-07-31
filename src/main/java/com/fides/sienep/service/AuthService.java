@@ -221,11 +221,12 @@ public class AuthService {
     // solo si el token es válido, no vencido y no usado antes.
     @Transactional
     public void restablecerContraseniaConToken(String tokenPlano, String contraseniaNueva) {
-        TokenRestablecimiento token = tokenRestablecimientoRepository
-                .findByTokenHashAndUsadoFalse(hashToken(tokenPlano))
-                .filter(t -> t.getFechaExpiracion().isAfter(LocalDateTime.now()))
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "Token inválido o vencido"));
+        Optional<TokenRestablecimiento> tokenOpt = tokenRestablecimientoRepository
+                .findByTokenHashAndUsadoFalse(hashToken(tokenPlano));
+        if (tokenOpt.isEmpty() || !tokenOpt.get().getFechaExpiracion().isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inválido o vencido");
+        }
+        TokenRestablecimiento token = tokenOpt.get();
 
         Usuario usuario = usuarioRepository.findById(token.getIdUsuario())
                 .orElseThrow(() -> new ResponseStatusException(

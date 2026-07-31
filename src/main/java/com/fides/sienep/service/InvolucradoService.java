@@ -81,11 +81,12 @@ public class InvolucradoService {
     }
 
     private Involucrado buscarInvolucradoOFallar(int codInstancia, String nomInvolucrado) {
-        return involucradoRepository
-                .findByIdCodInstanciaAndIdNomInvolucrado(codInstancia, nomInvolucrado)
-                .filter(i -> i.getEstado() == EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Involucrado no encontrado: " + nomInvolucrado));
+        Optional<Involucrado> involucrado = involucradoRepository
+                .findByIdCodInstanciaAndIdNomInvolucrado(codInstancia, nomInvolucrado);
+        if (involucrado.isEmpty() || involucrado.get().getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Involucrado no encontrado: " + nomInvolucrado);
+        }
+        return involucrado.get();
     }
 }
