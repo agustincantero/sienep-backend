@@ -43,6 +43,11 @@ public class TelefonoService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdUsuario()));
 
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El estudiante con id " + dto.getIdUsuario() + " no está activo");
+        }
+
         Telefono.Id id = new Telefono.Id(dto.getIdUsuario(), dto.getNumero());
         if (telefonoRepository.existsById(id)) {
             throw new ResponseStatusException(

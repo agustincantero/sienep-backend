@@ -114,6 +114,19 @@ class TelefonoServiceTest {
     }
 
     @Test
+    @DisplayName("Agregar teléfono - Estudiante inactivo (422, B7)")
+    void agregar_LanzaUnprocessable_EstudianteInactivo() {
+        estudiante.setEstado(EstadoLogico.INACTIVO);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> telefonoService.agregar(requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(telefonoRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Agregar teléfono - Ya existe para el estudiante (409)")
     void agregar_LanzaConflict_TelefonoYaExiste() {
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
