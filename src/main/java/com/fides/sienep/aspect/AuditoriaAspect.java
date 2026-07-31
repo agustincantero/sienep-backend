@@ -36,6 +36,10 @@ public class AuditoriaAspect {
     @Pointcut("execution(* com.fides.sienep.service.*.*(..))")
     public void serviceMethods() {}
 
+    // Postgres ignora un SET LOCAL fuera de una transacción activa (no-op
+    // silencioso, sin excepción JDBC) — cualquier método de servicio que
+    // escriba en BD necesita @Transactional para que este SET LOCAL (y por
+    // lo tanto la auditoría a nivel de trigger) tenga efecto real.
     @Around("serviceMethods()")
     public Object setPostgresVariables(ProceedingJoinPoint joinPoint) throws Throwable {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -63,9 +67,15 @@ public class AuditoriaAspect {
                     log.warn("El ID de usuario '{}' no es numérico, no se seteará en PostgreSQL.", idUsuarioStr);
                 }
                 
-                // Setear IP si existe y validar formato básico
-                if (ip != null && ip.matches("^[a-zA-Z0-9.:]+$")) {
-                    jdbcTemplate.execute("SET LOCAL sienep.ip_actual = '" + ip + "'");
+                // Setear IP si existe y validar formato básico. Las IPv6 pueden
+                // venir entre corchetes (notación de URI, RFC 3986); se guardan
+                // sin ellos, igual que una IPv4.
+                String ipNormalizada = ip;
+                if (ipNormalizada != null && ipNormalizada.startsWith("[") && ipNormalizada.endsWith("]")) {
+                    ipNormalizada = ipNormalizada.substring(1, ipNormalizada.length() - 1);
+                }
+                if (ipNormalizada != null && ipNormalizada.matches("^[a-zA-Z0-9.:]+$")) {
+                    jdbcTemplate.execute("SET LOCAL sienep.ip_actual = '" + ipNormalizada + "'");
                 } else if (ip != null) {
                     log.warn("La IP '{}' tiene formato inválido, no se seteará en PostgreSQL.", ip);
                 }
