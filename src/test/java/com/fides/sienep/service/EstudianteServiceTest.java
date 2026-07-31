@@ -607,7 +607,7 @@ class EstudianteServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> estudianteService.actualizar(1, dto));
 
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(estudianteRepository, never()).save(any());
     }
 

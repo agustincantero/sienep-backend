@@ -379,8 +379,12 @@ public class EstudianteService {
             Grupo grupo = grupoRepository.findById(idGrupo)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado: " + idGrupo));
             
+            // H10 — 422 (no 400): el JSON de la request es válido, el problema es
+            // que idGrupo referencia un grupo inactivo — mismo código que usan el
+            // resto de los "entidad referenciada inactiva" del proyecto
+            // (RecordatorioService, IncidenciaService, InstanciaComunService).
             if (grupo.getEstado() != EstadoLogico.ACTIVO) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede asignar un grupo que no está ACTIVO: " + idGrupo);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "No se puede asignar un grupo que no está ACTIVO: " + idGrupo);
             }
             
             grupos.add(grupo);
