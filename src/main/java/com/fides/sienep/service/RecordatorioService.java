@@ -327,7 +327,7 @@ public class RecordatorioService {
 
 
     @Transactional
-    @PreAuthorize("hasAuthority('BAJA_RECORDATORIO')")
+    @PreAuthorize("hasAuthority('ELIMINAR_RECORDATORIO')")
     public void darDeBaja(int id) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
 

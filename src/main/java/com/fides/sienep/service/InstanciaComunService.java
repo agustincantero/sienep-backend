@@ -298,7 +298,7 @@ public class InstanciaComunService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('BAJA_INSTANCIA')")
+    @PreAuthorize("hasAuthority('ELIMINAR_INSTANCIA')")
     public void darDeBaja(int codInstancia) {
         InstanciaComun instancia = buscarActivaOFallar(codInstancia);
         instancia.setEstado(EstadoLogico.INACTIVO);

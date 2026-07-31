@@ -66,7 +66,7 @@ public class FrecuenciaService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('BAJA_RECORDATORIO')")
+    @PreAuthorize("hasAuthority('ELIMINAR_RECORDATORIO')")
     public void darDeBaja(int id) {
         Frecuencia frecuencia = buscarActivaOFallar(id);
 
