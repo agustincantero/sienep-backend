@@ -24,12 +24,12 @@ public class ItrCarrera {
 
     @ManyToOne
     @MapsId("idItr")
-    @JoinColumn(name = "id_itr")
+    @JoinColumn(name = "id_itr", nullable = false)
     private Itr itr;
 
     @ManyToOne
     @MapsId("idCarrera")
-    @JoinColumn(name = "id_carrera")
+    @JoinColumn(name = "id_carrera", nullable = false)
     private Carrera carrera;
 
     @Enumerated(EnumType.STRING)

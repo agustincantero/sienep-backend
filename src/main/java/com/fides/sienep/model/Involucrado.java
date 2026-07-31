@@ -23,7 +23,7 @@ public class Involucrado {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("codInstancia")
-    @JoinColumn(name = "cod_instancia")
+    @JoinColumn(name = "cod_instancia", nullable = false)
     private Instancia instancia;
 
     @Enumerated(EnumType.STRING)

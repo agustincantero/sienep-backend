@@ -38,12 +38,12 @@ public class RolPermiso {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("idRol")
-    @JoinColumn(name = "id_rol")
+    @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("idPermiso")
-    @JoinColumn(name = "id_permiso")
+    @JoinColumn(name = "id_permiso", nullable = false)
     private Permiso permiso;
 
     @Enumerated(EnumType.STRING)
