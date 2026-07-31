@@ -114,10 +114,23 @@ public class EstudianteService {
     // CONSULTAS
     // =========================================================
 
+    // H5 — VER_ESTUDIANTE alcanza para ver los datos generales, pero el bloque
+    // de salud/motivo de derivación es un dato más sensible que el schema ya
+    // modela con un permiso propio (VER_BLOQUE_CONFIDENCIAL, asignado hoy a
+    // PSICOPEDAGOGO y LEGALES junto con VER_ESTUDIANTE). Antes ese permiso
+    // nunca se chequeaba en el código: cualquier rol futuro con VER_ESTUDIANTE
+    // pero sin VER_BLOQUE_CONFIDENCIAL vería igual esos datos. Se nulifican acá
+    // en vez de en el mapper para no acoplar MapStruct a SecurityContextHolder.
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public EstudianteResponseDTO obtenerPorId(Integer id) {
-        return estudianteMapper.toDto(buscarOFallar(id));
+        EstudianteResponseDTO dto = estudianteMapper.toDto(buscarOFallar(id));
+        if (!tienePermiso("VER_BLOQUE_CONFIDENCIAL")) {
+            dto.setInformacionSalud(null);
+            dto.setSistemaSalud(null);
+            dto.setMotivoDerivacion(null);
+        }
+        return dto;
     }
 
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")

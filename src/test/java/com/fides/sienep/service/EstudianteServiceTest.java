@@ -105,6 +105,9 @@ class EstudianteServiceTest {
                 .estado(EstadoLogico.ACTIVO)
                 .telefonos(new ArrayList<>())
                 .grupos(new ArrayList<>())
+                .informacionSalud("Diagnóstico reservado")
+                .sistemaSalud("ASSE")
+                .motivoDerivacion("Derivación por departamento académico")
                 .build();
 
         resumenDTO = EstudianteResumenDTO.builder()
@@ -165,8 +168,9 @@ class EstudianteServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Obtener por ID - Éxito")
+    @DisplayName("Obtener por ID - Éxito, con VER_BLOQUE_CONFIDENCIAL muestra datos de salud (H5)")
     void obtenerPorId_DebeRetornarDTO_CuandoElEstudianteExiste() {
+        mockAuthConPermisos("2", "VER_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
         when(estudianteMapper.toDto(estudianteExistente)).thenReturn(responseDTO);
 
@@ -174,8 +178,27 @@ class EstudianteServiceTest {
 
         assertNotNull(resultado);
         assertEquals("Ana", resultado.getNombre());
+        assertEquals("Diagnóstico reservado", resultado.getInformacionSalud());
+        assertEquals("ASSE", resultado.getSistemaSalud());
+        assertEquals("Derivación por departamento académico", resultado.getMotivoDerivacion());
         verify(estudianteRepository).findById(1);
         verify(estudianteMapper).toDto(estudianteExistente);
+    }
+
+    @Test
+    @DisplayName("Obtener por ID - Sin VER_BLOQUE_CONFIDENCIAL oculta datos de salud (H5)")
+    void obtenerPorId_SinVerBloqueConfidencial_OcultaDatosDeSalud() {
+        mockAuthConPermisos("2", "VER_ESTUDIANTE");
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteMapper.toDto(estudianteExistente)).thenReturn(responseDTO);
+
+        EstudianteResponseDTO resultado = estudianteService.obtenerPorId(1);
+
+        assertNotNull(resultado);
+        assertEquals("Ana", resultado.getNombre());
+        assertNull(resultado.getInformacionSalud());
+        assertNull(resultado.getSistemaSalud());
+        assertNull(resultado.getMotivoDerivacion());
     }
 
     @Test
