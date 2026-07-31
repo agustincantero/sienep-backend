@@ -39,6 +39,8 @@ public class AuthService {
     private static final int  MAX_INTENTOS_FALLIDOS  = 5;
     private static final int  VENTANA_MINUTOS        = 10;
     private static final int  TOKEN_VALIDEZ_MINUTOS  = 30;
+    private static final int  MAX_RESET_INTENTOS     = 3;
+    private static final int  RESET_VENTANA_MINUTOS  = 15;
 
     private final AuthenticationManager           authManager;
     private final JwtTokenUtil                    jwtTokenUtil;
@@ -162,6 +164,17 @@ public class AuthService {
         }
 
         Usuario usuario = usuarioOpt.get();
+
+        LocalDateTime ventana = LocalDateTime.now().minusMinutes(RESET_VENTANA_MINUTOS);
+        long intentos = tokenRestablecimientoRepository.contarTokensGeneradosDesde(
+                usuario.getIdUsuario(), ventana);
+
+        if (intentos >= MAX_RESET_INTENTOS) {
+            log.warn("Límite de restablecimiento excedido para id={}", usuario.getIdUsuario());
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Has solicitado restablecer la contraseña demasiadas veces. Por favor, intentá nuevamente más tarde.");
+        }
+
         tokenRestablecimientoRepository.invalidarTokensActivos(usuario.getIdUsuario());
 
         String tokenPlano = UUID.randomUUID().toString();
