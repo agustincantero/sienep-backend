@@ -65,6 +65,7 @@ public class InformeAdjuntoController {
                 .contentType(archivo.contentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + archivo.nombreDescarga() + "\"")
+                .header("X-Content-Type-Options", "nosniff")
                 .body(archivo.recurso());
     }
 

@@ -49,6 +49,11 @@ public class FileStorageService {
                             + String.join(", ", extensionesPermitidas).toUpperCase(Locale.ROOT));
         }
 
+        // Validar que el contenido real coincida con la extensión declarada.
+        // Previene que un HTML o script renombrado a .pdf/.jpg/.png pase la
+        // validación de extensión y sea servido con el Content-Type incorrecto.
+        validarMagicBytes(archivo, extension);
+
         String nombreFisico = UUID.randomUUID() + "." + extension;
         try {
             Path directorio = Path.of(baseDir, subcarpeta);
@@ -78,10 +83,48 @@ public class FileStorageService {
 
     public MediaType mediaTypeDeExtension(String extension) {
         return switch (extension.toLowerCase(Locale.ROOT)) {
-            case "pdf" -> MediaType.APPLICATION_PDF;
+            case "pdf"         -> MediaType.APPLICATION_PDF;
             case "jpg", "jpeg" -> MediaType.IMAGE_JPEG;
-            case "png" -> MediaType.IMAGE_PNG;
-            default -> MediaType.APPLICATION_OCTET_STREAM;
+            case "png"         -> MediaType.IMAGE_PNG;
+            default            -> MediaType.APPLICATION_OCTET_STREAM;
         };
+    }
+
+    // ── Validación de magic bytes ─────────────────────────────────────────────
+    // Solo se validan los primeros bytes del archivo, que son suficientes para
+    // distinguir los tipos soportados. No se usa Files.probeContentType() porque
+    // delega en el sistema operativo y su comportamiento no es consistente entre
+    // entornos (especialmente en contenedores sin libmagic instalada).
+    private void validarMagicBytes(MultipartFile archivo, String extension) {
+        byte[] cabecera;
+        try {
+            cabecera = archivo.getInputStream().readNBytes(8);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No se pudo leer el contenido del archivo para validarlo");
+        }
+
+        boolean valido = switch (extension) {
+            case "pdf"         -> starts(cabecera, 0x25, 0x50, 0x44, 0x46); // %PDF
+            case "jpg", "jpeg" -> starts(cabecera, 0xFF, 0xD8, 0xFF);        // FFD8FF
+            case "png"         -> starts(cabecera, 0x89, 0x50, 0x4E, 0x47,   // 89504E47 0D0A1A0A
+                                                   0x0D, 0x0A, 0x1A, 0x0A);
+            // Tipos sin firma canónica reconocida se aceptan tal cual:
+            // la validación de extensión ya filtró los no permitidos.
+            default            -> true;
+        };
+
+        if (!valido) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El contenido del archivo no corresponde a la extensión declarada (." + extension + ")");
+        }
+    }
+
+    private boolean starts(byte[] data, int... expected) {
+        if (data.length < expected.length) return false;
+        for (int i = 0; i < expected.length; i++) {
+            if ((data[i] & 0xFF) != expected[i]) return false;
+        }
+        return true;
     }
 }

@@ -229,6 +229,7 @@ public class EstudianteController {
                 .contentType(archivo.contentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" + archivo.nombreDescarga() + "\"")
+                .header("X-Content-Type-Options", "nosniff")
                 .body(archivo.recurso());
     }
 }
