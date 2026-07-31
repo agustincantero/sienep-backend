@@ -8,9 +8,11 @@ import com.fides.sienep.mapper.FuncionarioMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.model.PaisDocumento;
+import com.fides.sienep.model.Permiso;
 import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,11 +21,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -92,6 +100,20 @@ class FuncionarioServiceTest {
                 .build();
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void mockAuthConPermisos(String... permisos) {
+        Authentication auth = mock(Authentication.class);
+        List<GrantedAuthority> authorities = Arrays.stream(permisos)
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+        doReturn(authorities).when(auth).getAuthorities();
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
     // =========================================================
     // CREAR
     // =========================================================
@@ -99,6 +121,8 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Crear funcionario - Éxito")
     void crear_Exito() {
+        mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
+
         when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
         when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
@@ -119,6 +143,8 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Crear funcionario - Éxito aunque falle el envío del email (RF05/RF32 no debe ser bloqueante)")
     void crear_Exito_AunqueFalleEmail() {
+        mockAuthConPermisos();
+
         when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
         when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
@@ -134,6 +160,29 @@ class FuncionarioServiceTest {
         assertNotNull(result);
         assertNotNull(result.getAdvertencia());
         verify(funcionarioRepository).save(any(Funcionario.class));
+    }
+
+    @Test
+    @DisplayName("Crear funcionario - Rechaza asignar un rol con permisos que el actor no tiene (403)")
+    void crear_LanzaForbidden_CuandoRolDestinoTienePermisoQueElActorNoTiene() {
+        Rol rolAdmin = new Rol("ADMINISTRADOR");
+        rolAdmin.setIdRol(1);
+        rolAdmin.agregarPermiso(new Permiso("CREAR_FUNCIONARIO", "Permite registrar un nuevo funcionario"));
+        rolAdmin.agregarPermiso(new Permiso("ELIMINAR_ROL", "Permite eliminar roles"));
+
+        // El actor solo tiene CREAR_FUNCIONARIO, no ELIMINAR_ROL — no puede asignar rolAdmin
+        mockAuthConPermisos("CREAR_FUNCIONARIO");
+
+        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
+        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
+        when(rolRepository.findById(1)).thenReturn(Optional.of(rolAdmin));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.crear(requestDTO));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
     }
 
     @Test
@@ -248,6 +297,8 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Actualizar funcionario - Éxito")
     void actualizar_Exito() {
+        mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
+
         FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
         updateDTO.setNombre("Carlos");
         updateDTO.setApellido("González");
@@ -265,6 +316,60 @@ class FuncionarioServiceTest {
         assertNotNull(result);
         assertEquals("González", funcionarioMock.getApellido());
         verify(funcionarioRepository).save(funcionarioMock);
+    }
+
+    @Test
+    @DisplayName("Actualizar funcionario - Éxito cuando el actor ya tiene todos los permisos del rol destino")
+    void actualizar_Exito_CuandoActorTieneLosPermisosDelRolDestino() {
+        Rol rolAdmin = new Rol("ADMINISTRADOR");
+        rolAdmin.setIdRol(2);
+        rolAdmin.agregarPermiso(new Permiso("EDITAR_FUNCIONARIO", "Permite editar funcionarios"));
+
+        mockAuthConPermisos("EDITAR_FUNCIONARIO", "CREAR_FUNCIONARIO");
+
+        FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
+        updateDTO.setNombre("Carlos");
+        updateDTO.setApellido("González");
+        updateDTO.setEmail("carlos.perez@utec.edu.uy");
+        updateDTO.setIdRol(2);
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(rolRepository.findById(2)).thenReturn(Optional.of(rolAdmin));
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
+        when(funcionarioMapper.toDto(any(Funcionario.class))).thenReturn(responseDTO);
+
+        FuncionarioResponseDTO result = funcionarioService.actualizar(1, updateDTO);
+
+        assertNotNull(result);
+        verify(funcionarioRepository).save(funcionarioMock);
+    }
+
+    @Test
+    @DisplayName("Actualizar funcionario - Rechaza asignar un rol con permisos que el actor no tiene (403)")
+    void actualizar_LanzaForbidden_CuandoRolDestinoTienePermisoQueElActorNoTiene() {
+        Rol rolAdmin = new Rol("ADMINISTRADOR");
+        rolAdmin.setIdRol(2);
+        rolAdmin.agregarPermiso(new Permiso("EDITAR_FUNCIONARIO", "Permite editar funcionarios"));
+        rolAdmin.agregarPermiso(new Permiso("ELIMINAR_ROL", "Permite eliminar roles"));
+
+        // El actor solo tiene EDITAR_FUNCIONARIO, no ELIMINAR_ROL — no puede asignar rolAdmin
+        mockAuthConPermisos("EDITAR_FUNCIONARIO");
+
+        FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
+        updateDTO.setNombre("Carlos");
+        updateDTO.setApellido("González");
+        updateDTO.setEmail("carlos.perez@utec.edu.uy");
+        updateDTO.setIdRol(2);
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(rolRepository.findById(2)).thenReturn(Optional.of(rolAdmin));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.actualizar(1, updateDTO));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
     }
 
     @Test
