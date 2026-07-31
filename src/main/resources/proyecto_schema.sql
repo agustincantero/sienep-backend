@@ -917,6 +917,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  ('CREAR_INSTANCIA',         'Permite crear nuevas instancias'),
                                                                  ('EDITAR_INSTANCIA',        'Permite modificar una instancia existente'),
                                                                  ('BAJA_INSTANCIA',          'Permite dar de baja una instancia'),
+                                                                 ('REACTIVAR_INSTANCIA',     'Permite reactivar una instancia dada de baja'),
                                                                  ('CATEGORIZAR_INSTANCIA',   'Permite asignar categorías a las instancias'),
                                                                  ('VER_BLOQUE_CONFIDENCIAL', 'Permite ver el bloque confidencial de una instancia'),
                                                                  -- Recordatorios
@@ -937,6 +938,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  ('HISTORIAL_INCIDENCIAS',   'Permite consultar el historial de incidencias'),
                                                                  ('EDITAR_INCIDENCIAS',      'Permite editar incidencias existentes'),
                                                                  ('ELIMINAR_INCIDENCIAS',    'Permite eliminar incidencias existentes'),
+                                                                 ('REACTIVAR_INCIDENCIA',    'Permite reactivar una incidencia dada de baja'),
                                                                  -- Reportes
                                                                  ('VER_REPORTES',            'Permite acceder al módulo de reportes'),
                                                                  ('EXPORTAR_REPORTES',       'Permite exportar los reportes generados'),
@@ -1018,7 +1020,7 @@ FROM proyecto.roles r
                                                        'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
                                                        'BAJA_RECORDATORIO', 'REACTIVAR_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
                                                        'REGISTRAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
-                                                       'EDITAR_INCIDENCIAS', 'ELIMINAR_INCIDENCIAS',
+                                                       'EDITAR_INCIDENCIAS', 'ELIMINAR_INCIDENCIAS', 'REACTIVAR_INCIDENCIA',
                                                        'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
                                                        'EDITAR_COMENTARIO_NORMAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',
                                                        'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',

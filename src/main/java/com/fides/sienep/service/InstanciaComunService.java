@@ -308,6 +308,26 @@ public class InstanciaComunService {
         instanciaComunRepository.save(instancia);
     }
 
+    // H8 — darDeBaja() usa INACTIVO (estado reversible por diseño), pero no
+    // existía ninguna vía de API para revertirlo, a diferencia del resto de
+    // las entidades con el mismo patrón de baja lógica.
+    @Transactional
+    @PreAuthorize("hasAuthority('REACTIVAR_INSTANCIA')")
+    public InstanciaComunResponseDTO reactivar(int codInstancia) {
+        InstanciaComun instancia = instanciaComunRepository.findById(codInstancia)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No se encontró una instancia con el id " + codInstancia));
+
+        if (instancia.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "La instancia ya se encuentra activa");
+        }
+
+        instancia.setEstado(EstadoLogico.ACTIVO);
+        InstanciaComun guardada = instanciaComunRepository.save(instancia);
+        return instanciaComunMapper.toDto(guardada);
+    }
+
     // ----------------------------------------------------------------
     // Helpers privados
     // ----------------------------------------------------------------

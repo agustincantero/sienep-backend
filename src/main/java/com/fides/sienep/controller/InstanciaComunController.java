@@ -92,6 +92,15 @@ public class InstanciaComunController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Reactivar una instancia")
+    @ApiResponse(responseCode = "200", description = "Instancia reactivada correctamente")
+    @ApiResponse(responseCode = "404", description = "Instancia no encontrada")
+    @ApiResponse(responseCode = "409", description = "La instancia ya está activa")
+    @PatchMapping("/{codInstancia}/reactivar")
+    public ResponseEntity<InstanciaComunResponseDTO> reactivar(@PathVariable int codInstancia) {
+        return ResponseEntity.ok(instanciaComunService.reactivar(codInstancia));
+    }
+
     @Operation(summary = "Ver mis instancias",
             description = "Permite al estudiante autenticado ver sus propias instancias activas.")
     @ApiResponse(responseCode = "200", description = "Instancias obtenidas correctamente")

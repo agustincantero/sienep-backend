@@ -79,6 +79,15 @@ public class IncidenciaController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Reactivar una incidencia")
+    @ApiResponse(responseCode = "200", description = "Incidencia reactivada correctamente")
+    @ApiResponse(responseCode = "404", description = "Incidencia no encontrada")
+    @ApiResponse(responseCode = "409", description = "La incidencia ya está activa")
+    @PatchMapping("/{id}/reactivar")
+    public ResponseEntity<IncidenciaResponseDTO> reactivar(@PathVariable int id) {
+        return ResponseEntity.ok(incidenciaService.reactivar(id));
+    }
+
     @Operation(summary = "Ver mis incidencias",
             description = "Permite al estudiante autenticado ver sus propias incidencias activas.")
     @ApiResponse(responseCode = "200", description = "Incidencias obtenidas correctamente")

@@ -162,6 +162,27 @@ public class IncidenciaService {
         log.info("Baja lógica incidencia: {}", id);
     }
 
+    // H8 — darDeBaja() usa INACTIVO (estado reversible por diseño), pero no
+    // existía ninguna vía de API para revertirlo, a diferencia del resto de
+    // las entidades con el mismo patrón de baja lógica.
+    @Transactional
+    @PreAuthorize("hasAuthority('REACTIVAR_INCIDENCIA')")
+    public IncidenciaResponseDTO reactivar(int id) {
+        Incidencia incidencia = incidenciaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No se encontró una incidencia con el id " + id));
+
+        if (incidencia.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "La incidencia ya se encuentra activa");
+        }
+
+        incidencia.setEstado(EstadoLogico.ACTIVO);
+        Incidencia guardada = incidenciaRepository.save(incidencia);
+        log.info("Incidencia reactivada: {}", id);
+        return incidenciaMapper.toDto(guardada);
+    }
+
     // ----------------------------------------------------------------
     // Helpers privados
     // ----------------------------------------------------------------

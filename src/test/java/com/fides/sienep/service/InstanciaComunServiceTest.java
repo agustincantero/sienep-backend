@@ -633,4 +633,45 @@ class InstanciaComunServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
+
+    // ── Reactivar (H8) ────────────────────────────────────────
+
+    @Test
+    @DisplayName("Reactivar - Éxito (H8)")
+    void reactivar_Exito() {
+        instancia.setEstado(EstadoLogico.INACTIVO);
+        when(instanciaComunRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(instanciaComunRepository.save(instancia)).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        InstanciaComunResponseDTO resultado = instanciaComunService.reactivar(1);
+
+        assertNotNull(resultado);
+        assertEquals(EstadoLogico.ACTIVO, instancia.getEstado());
+        verify(instanciaComunRepository).save(instancia);
+    }
+
+    @Test
+    @DisplayName("Reactivar - No encontrada (404) (H8)")
+    void reactivar_LanzaNotFound() {
+        when(instanciaComunRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.reactivar(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar - Ya está activa (409) (H8)")
+    void reactivar_LanzaConflict_YaActiva() {
+        when(instanciaComunRepository.findById(1)).thenReturn(Optional.of(instancia));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(instanciaComunRepository, never()).save(any());
+    }
 }

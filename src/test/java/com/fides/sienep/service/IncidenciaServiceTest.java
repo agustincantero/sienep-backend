@@ -239,6 +239,45 @@ class IncidenciaServiceTest {
     }
 
     @Test
+    @DisplayName("Reactivar - Éxito (H8)")
+    void reactivar_Exito() {
+        incidencia.setEstado(EstadoLogico.INACTIVO);
+        when(incidenciaRepository.findById(1)).thenReturn(Optional.of(incidencia));
+        when(incidenciaRepository.save(incidencia)).thenReturn(incidencia);
+        when(incidenciaMapper.toDto(incidencia)).thenReturn(responseDTO);
+
+        IncidenciaResponseDTO resultado = incidenciaService.reactivar(1);
+
+        assertNotNull(resultado);
+        assertEquals(EstadoLogico.ACTIVO, incidencia.getEstado());
+        verify(incidenciaRepository).save(incidencia);
+    }
+
+    @Test
+    @DisplayName("Reactivar - No encontrada (404) (H8)")
+    void reactivar_LanzaNotFound() {
+        when(incidenciaRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> incidenciaService.reactivar(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(incidenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar - Ya está activa (409) (H8)")
+    void reactivar_LanzaConflict_YaActiva() {
+        when(incidenciaRepository.findById(1)).thenReturn(Optional.of(incidencia));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> incidenciaService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(incidenciaRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Dar de baja - No encontrada (404)")
     void darDeBaja_LanzaNotFound() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
