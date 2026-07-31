@@ -174,7 +174,7 @@ public class CategoriaInstanciaServiceTest {
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
-    // ── Dar de baja ───────────────────────────────────────────
+    // ── Desactivar ────────────────────────────────────────────
 
     @Test
     @DisplayName("Desactivar categoría - Éxito (baja lógica)")

@@ -83,7 +83,7 @@ public class CategoriaRecordatorioController {
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desactivarCategoria(
-            @Parameter(description = "ID de la categoría a dar de baja", required = true) @PathVariable int id) {
+            @Parameter(description = "ID de la categoría a desactivar", required = true) @PathVariable int id) {
         categoriaService.desactivarCategoria(id);
         return ResponseEntity.noContent().build();
     }

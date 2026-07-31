@@ -608,7 +608,7 @@ class InstanciaComunServiceTest {
         verify(instanciaComunRepository, never()).save(any());
     }
 
-    // ── Dar de baja ───────────────────────────────────────────
+    // ── Desactivar ────────────────────────────────────────────
 
     @Test
     @DisplayName("Desactivar - Éxito")

@@ -115,7 +115,7 @@ public class CategoriaInstanciaService {
         }
 
         if (categoriaRepository.existeInstanciaActivaConCategoria(id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede dar de baja la categoría porque tiene instancias activas asociadas");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede desactivar la categoría porque tiene instancias activas asociadas");
         }
 
         categoria.setEstado(EstadoLogico.INACTIVO);

@@ -111,7 +111,7 @@ public class CategoriaRecordatorioService {
         }
 
         if (categoriaRepository.existeRecordatorioActivoConCategoria(id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede dar de baja la categoría porque tiene recordatorios activos asociados");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede desactivar la categoría porque tiene recordatorios activos asociados");
         }
 
         categoria.setEstado(EstadoLogico.INACTIVO);

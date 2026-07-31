@@ -49,7 +49,7 @@ public class RolService {
     // --- Validaciones Internas ---
     private void validarRolProtegido(Rol rol) {
         if ("ADMINISTRADOR".equalsIgnoreCase(rol.getNombre())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acción denegada: No se puede modificar ni dar de baja el rol base ADMINISTRADOR.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acción denegada: No se puede modificar ni desactivar el rol base ADMINISTRADOR.");
         }
     }
 
@@ -145,11 +145,11 @@ public class RolService {
         rol.setDescripcion(requestDTO.getDescripcion());
 
         // Lógica para actualizar permisos (Manejo de altas y bajas lógicas)
-        // Si el cliente envía una lista vacía ([]), significa que desea revocar (dar de baja lógica) TODOS los permisos del rol.
+        // Si el cliente envía una lista vacía ([]), significa que desea revocar (desactivación lógica) TODOS los permisos del rol.
         if (requestDTO.getPermisosIds() != null) {
             List<Integer> nuevosPermisosIds = requestDTO.getPermisosIds();
 
-            // 1. Dar de baja (INACTIVO) a los permisos que ya no están en la lista
+            // 1. Desactivar (INACTIVO) los permisos que ya no están en la lista
             for (RolPermiso rp : rol.getRolPermisos()) {
                 if (rp.getEstado() == EstadoLogico.ACTIVO && !nuevosPermisosIds.contains(rp.getPermiso().getIdPermiso())) {
                     rp.setEstado(EstadoLogico.INACTIVO);

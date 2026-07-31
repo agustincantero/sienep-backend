@@ -75,7 +75,7 @@ public class RolController {
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desactivarRol(
-            @Parameter(description = "ID del rol a dar de baja", required = true) @PathVariable int id) {
+            @Parameter(description = "ID del rol a desactivar", required = true) @PathVariable int id) {
         rolService.desactivarRol(id);
         return ResponseEntity.noContent().build();
     }

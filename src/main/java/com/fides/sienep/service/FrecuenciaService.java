@@ -75,7 +75,7 @@ public class FrecuenciaService {
         // de esos recordatorios a partir de un catálogo dado de baja.
         if (recordatorioRepository.existsByFrecuencia_IdFrecuenciaAndEstado(id, EstadoLogico.ACTIVO)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede dar de baja una frecuencia en uso por recordatorios activos");
+                    "No se puede desactivar una frecuencia en uso por recordatorios activos");
         }
 
         frecuencia.setEstado(EstadoLogico.INACTIVO);
