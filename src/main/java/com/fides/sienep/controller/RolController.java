@@ -1,6 +1,6 @@
 package com.fides.sienep.controller;
 
-import com.fides.sienep.dto.RolCreateDTO;
+import com.fides.sienep.dto.RolRequestDTO;
 import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.dto.RolResponseDTO;
 import com.fides.sienep.service.RolService;
@@ -50,7 +50,7 @@ public class RolController {
     })
     @PostMapping
     public ResponseEntity<RolResponseDTO> crearRol(
-            @Parameter(description = "Objeto con los datos del nuevo rol", required = true) @Valid @RequestBody RolCreateDTO requestDTO) {
+            @Parameter(description = "Objeto con los datos del nuevo rol", required = true) @Valid @RequestBody RolRequestDTO requestDTO) {
         RolResponseDTO nuevoRol = rolService.crearRol(requestDTO);
         return new ResponseEntity<>(nuevoRol, HttpStatus.CREATED);
     }

@@ -1,6 +1,6 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.CategoriaRecordatorioCreateDTO;
+import com.fides.sienep.dto.CategoriaRecordatorioRequestDTO;
 import com.fides.sienep.dto.CategoriaRecordatorioResponseDTO;
 import com.fides.sienep.dto.CategoriaRecordatorioUpdateDTO;
 import com.fides.sienep.model.CategoriaRecordatorio;
@@ -97,7 +97,7 @@ public class CategoriaRecordatorioServiceTest {
     @Test
     @DisplayName("Crear categoría - Éxito")
     void crearCategoria_Exito() {
-        CategoriaRecordatorioCreateDTO dto = new CategoriaRecordatorioCreateDTO();
+        CategoriaRecordatorioRequestDTO dto = new CategoriaRecordatorioRequestDTO();
         dto.setNomCategoria("  Categoria Nueva  ");
         dto.setDescripcion("Una descripcion");
 
@@ -119,7 +119,7 @@ public class CategoriaRecordatorioServiceTest {
     @Test
     @DisplayName("Crear categoría - Conflicto si nombre ya existe (409)")
     void crearCategoria_LanzaConflict_CuandoNombreYaExiste() {
-        CategoriaRecordatorioCreateDTO dto = new CategoriaRecordatorioCreateDTO();
+        CategoriaRecordatorioRequestDTO dto = new CategoriaRecordatorioRequestDTO();
         dto.setNomCategoria("Existente");
 
         when(categoriaRepository.existsByNomCategoria("EXISTENTE")).thenReturn(true);

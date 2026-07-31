@@ -1,6 +1,6 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.CategoriaRecordatorioCreateDTO;
+import com.fides.sienep.dto.CategoriaRecordatorioRequestDTO;
 import com.fides.sienep.dto.CategoriaRecordatorioResponseDTO;
 import com.fides.sienep.dto.CategoriaRecordatorioUpdateDTO;
 import com.fides.sienep.model.CategoriaRecordatorio;
@@ -59,7 +59,7 @@ public class CategoriaRecordatorioService {
     @PreAuthorize("hasAuthority('CREAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     @CacheEvict(value = "categoriasRecordatorio", allEntries = true)
-    public CategoriaRecordatorioResponseDTO crearCategoria(CategoriaRecordatorioCreateDTO requestDTO) {
+    public CategoriaRecordatorioResponseDTO crearCategoria(CategoriaRecordatorioRequestDTO requestDTO) {
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
 
         if (categoriaRepository.existsByNomCategoria(nombreNormalizado)) {

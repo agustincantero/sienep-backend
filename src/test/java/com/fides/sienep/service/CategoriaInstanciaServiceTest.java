@@ -1,6 +1,6 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.CategoriaInstanciaCreateDTO;
+import com.fides.sienep.dto.CategoriaInstanciaRequestDTO;
 import com.fides.sienep.dto.CategoriaInstanciaResponseDTO;
 import com.fides.sienep.dto.CategoriaInstanciaUpdateDTO;
 import com.fides.sienep.model.CategoriaInstancia;
@@ -97,7 +97,7 @@ public class CategoriaInstanciaServiceTest {
     @Test
     @DisplayName("Crear categoría - Éxito")
     void crearCategoria_Exito() {
-        CategoriaInstanciaCreateDTO dto = new CategoriaInstanciaCreateDTO();
+        CategoriaInstanciaRequestDTO dto = new CategoriaInstanciaRequestDTO();
         dto.setNomCategoria("  Categoria Nueva  ");
         dto.setDescripcion("Una descripcion");
 
@@ -119,7 +119,7 @@ public class CategoriaInstanciaServiceTest {
     @Test
     @DisplayName("Crear categoría - Conflicto si nombre ya existe (409)")
     void crearCategoria_LanzaConflict_CuandoNombreYaExiste() {
-        CategoriaInstanciaCreateDTO dto = new CategoriaInstanciaCreateDTO();
+        CategoriaInstanciaRequestDTO dto = new CategoriaInstanciaRequestDTO();
         dto.setNomCategoria("Existente");
 
         when(categoriaRepository.existsByNomCategoria("EXISTENTE")).thenReturn(true);

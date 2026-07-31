@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Data
 @Schema(description = "DTO para la creación de una nueva Categoría de Instancia Común. No requiere estado ni ID.")
-public class CategoriaInstanciaCreateDTO {
+public class CategoriaInstanciaRequestDTO {
 
     @Schema(description = "Nombre único de la categoría de instancia", example = "ENTREVISTA_INICIAL", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "El nombre de la categoría no puede estar vacío")

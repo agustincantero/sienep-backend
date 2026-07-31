@@ -1,6 +1,6 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.RolCreateDTO;
+import com.fides.sienep.dto.RolRequestDTO;
 import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.dto.RolResponseDTO;
 import com.fides.sienep.model.EstadoLogico;
@@ -74,7 +74,7 @@ public class RolService {
     @PreAuthorize("hasAuthority('CREAR_ROL')")
     @Transactional
     @CacheEvict(value = "roles", allEntries = true)
-    public RolResponseDTO crearRol(RolCreateDTO requestDTO) {
+    public RolResponseDTO crearRol(RolRequestDTO requestDTO) {
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
 

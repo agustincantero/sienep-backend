@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Data
 @Schema(description = "DTO para la creación de una nueva Categoría de Recordatorio. No requiere estado ni ID.")
-public class CategoriaRecordatorioCreateDTO {
+public class CategoriaRecordatorioRequestDTO {
 
     @Schema(description = "Nombre único de la categoría de recordatorio", example = "FALTA_INJUSTIFICADA", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "El nombre de la categoría no puede estar vacío")

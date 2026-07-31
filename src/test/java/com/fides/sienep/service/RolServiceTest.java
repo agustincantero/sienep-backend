@@ -1,6 +1,6 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.RolCreateDTO;
+import com.fides.sienep.dto.RolRequestDTO;
 import com.fides.sienep.dto.RolResponseDTO;
 import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.model.EstadoLogico;
@@ -116,7 +116,7 @@ class RolServiceTest {
     @DisplayName("Crear Rol - Éxito (Guarda y formatea el nombre)")
     void crearRol_DebeGuardarYRetornarDTO_CuandoDatosSonValidos() {
         // Arrange
-        RolCreateDTO requestDTO = new RolCreateDTO();
+        RolRequestDTO requestDTO = new RolRequestDTO();
         requestDTO.setNombre("nuevo rol  "); // Lo mandamos con espacios y minúsculas
         requestDTO.setDescripcion("Rol nuevo");
         requestDTO.setPermisosIds(List.of(1, 2));
@@ -153,7 +153,7 @@ class RolServiceTest {
     @Test
     @DisplayName("Crear Rol - Rechaza si el rol nuevo tiene un permiso que el actor no tiene (403)")
     void crearRol_DebeLanzarForbidden_CuandoActorNoTieneAlgunPermiso() {
-        RolCreateDTO requestDTO = new RolCreateDTO();
+        RolRequestDTO requestDTO = new RolRequestDTO();
         requestDTO.setNombre("rol nuevo");
         requestDTO.setPermisosIds(List.of(1, 2));
 
@@ -181,7 +181,7 @@ class RolServiceTest {
     @DisplayName("Crear Rol - Conflicto si el nombre ya existe (409)")
     void crearRol_DebeLanzarExcepcion_CuandoNombreYaExiste() {
         // Arrange
-        RolCreateDTO requestDTO = new RolCreateDTO();
+        RolRequestDTO requestDTO = new RolRequestDTO();
         requestDTO.setNombre("TUTOR");
 
         when(rolRepository.existsByNombre("TUTOR")).thenReturn(true);

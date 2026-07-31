@@ -1,6 +1,6 @@
 package com.fides.sienep.controller;
 
-import com.fides.sienep.dto.CategoriaInstanciaCreateDTO;
+import com.fides.sienep.dto.CategoriaInstanciaRequestDTO;
 import com.fides.sienep.dto.CategoriaInstanciaResponseDTO;
 import com.fides.sienep.dto.CategoriaInstanciaUpdateDTO;
 import com.fides.sienep.model.EstadoLogico;
@@ -59,7 +59,7 @@ public class CategoriaInstanciaController {
     })
     @PostMapping
     public ResponseEntity<CategoriaInstanciaResponseDTO> crearCategoria(
-            @Parameter(description = "Objeto con los datos de la nueva categoría", required = true) @Valid @RequestBody CategoriaInstanciaCreateDTO requestDTO) {
+            @Parameter(description = "Objeto con los datos de la nueva categoría", required = true) @Valid @RequestBody CategoriaInstanciaRequestDTO requestDTO) {
         CategoriaInstanciaResponseDTO nueva = categoriaService.crearCategoria(requestDTO);
         return new ResponseEntity<>(nueva, HttpStatus.CREATED);
     }

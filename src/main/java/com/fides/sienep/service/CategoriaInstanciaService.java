@@ -1,6 +1,6 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.CategoriaInstanciaCreateDTO;
+import com.fides.sienep.dto.CategoriaInstanciaRequestDTO;
 import com.fides.sienep.dto.CategoriaInstanciaResponseDTO;
 import com.fides.sienep.dto.CategoriaInstanciaUpdateDTO;
 import com.fides.sienep.model.CategoriaInstancia;
@@ -60,7 +60,7 @@ public class CategoriaInstanciaService {
     @PreAuthorize("hasAuthority('CREAR_CATEGORIA_INSTANCIA')")
     @Transactional
     @CacheEvict(value = "categoriasInstancia", allEntries = true)
-    public CategoriaInstanciaResponseDTO crearCategoria(CategoriaInstanciaCreateDTO requestDTO) {
+    public CategoriaInstanciaResponseDTO crearCategoria(CategoriaInstanciaRequestDTO requestDTO) {
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
 

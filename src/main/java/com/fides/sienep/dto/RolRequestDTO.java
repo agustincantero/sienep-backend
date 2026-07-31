@@ -9,7 +9,7 @@ import java.util.List;
 
 @Data
 @Schema(description = "DTO para la creación de un nuevo Rol. No requiere estado ni ID.")
-public class RolCreateDTO {
+public class RolRequestDTO {
 
     @Schema(description = "Nombre único del rol", example = "COORDINADOR", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "El nombre del rol no puede estar vacío")
