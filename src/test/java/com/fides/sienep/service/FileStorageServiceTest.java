@@ -37,7 +37,8 @@ class FileStorageServiceTest {
     @DisplayName("Guardar - Éxito, crea el subdirectorio y devuelve un nombre físico con la extensión correcta")
     void guardar_Exito() {
         MultipartFile archivo = new MockMultipartFile(
-                "archivo", "informe.pdf", "application/pdf", "contenido".getBytes());
+                "archivo", "informe.pdf", "application/pdf", 
+                new byte[]{0x25, 0x50, 0x44, 0x46, 0x00, 0x00, 0x00, 0x00});
 
         String nombreFisico = fileStorageService.guardar(archivo, "informes/1", EXTENSIONES, MAX_TAMANIO);
 
@@ -49,7 +50,8 @@ class FileStorageServiceTest {
     @DisplayName("Guardar - Éxito con extensión en mayúsculas, normaliza a minúsculas")
     void guardar_Exito_ExtensionMayuscula() {
         MultipartFile archivo = new MockMultipartFile(
-                "archivo", "imagen.JPG", "image/jpeg", "contenido".getBytes());
+                "archivo", "imagen.JPG", "image/jpeg", 
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00});
 
         String nombreFisico = fileStorageService.guardar(archivo, "fotos/1", EXTENSIONES, MAX_TAMANIO);
 

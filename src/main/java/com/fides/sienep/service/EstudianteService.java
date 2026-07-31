@@ -327,13 +327,36 @@ public class EstudianteService {
         asignarTelefonos(estudiante, dto.getTelefonos());
     }
 
-    private void asignarTelefonos(Estudiante estudiante, List<String> numeros) {
-        if (numeros == null) return;
-        List<Telefono> telefonos = new ArrayList<>();
-        for (String numero : numeros) {
-            telefonos.add(new Telefono(estudiante, numero));
+    private void asignarTelefonos(Estudiante estudiante, List<String> numerosNuevos) {
+        if (numerosNuevos == null) return;
+
+        List<Telefono> actuales = estudiante.getTelefonos();
+        if (actuales == null) {
+            actuales = new ArrayList<>();
+            estudiante.setTelefonos(actuales);
         }
-        estudiante.setTelefonos(telefonos);
+
+        // Marcar como ELIMINADO los que ya no están en la lista
+        for (Telefono tel : actuales) {
+            if (!numerosNuevos.contains(tel.getId().getNumero())) {
+                tel.setEstado(EstadoLogico.ELIMINADO);
+            }
+        }
+
+        // Agregar los nuevos o reactivar los eliminados
+        for (String numero : numerosNuevos) {
+            boolean encontrado = false;
+            for (Telefono tel : actuales) {
+                if (tel.getId().getNumero().equals(numero)) {
+                    tel.setEstado(EstadoLogico.ACTIVO);
+                    encontrado = true;
+                    break;
+                }
+            }
+            if (!encontrado) {
+                actuales.add(new Telefono(estudiante, numero));
+            }
+        }
     }
 
     private void asignarGrupos(Estudiante estudiante, List<Integer> idGrupos) {
