@@ -130,8 +130,8 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Login - Usuario bloqueado (403), ni siquiera valida contraseña")
-    void login_LanzaForbidden_UsuarioBloqueado() {
+    @DisplayName("Login - Usuario bloqueado (401 igual que credenciales inválidas, B20), ni siquiera valida contraseña")
+    void login_LanzaUnauthorized_UsuarioBloqueado() {
         funcionario.setBloqueado(true);
         when(funcionarioRepository.findByEmail(any())).thenReturn(Optional.of(funcionario));
         when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
@@ -139,7 +139,9 @@ class AuthServiceTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> authService.login(loginDto, IP));
 
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        // Mismo status que "no existe"/"contraseña incorrecta": no debe distinguirse
+        // una cuenta bloqueada de una inexistente solo mirando el código de respuesta.
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
         verifyNoInteractions(authManager);
         verifyNoInteractions(jwtTokenUtil);
     }

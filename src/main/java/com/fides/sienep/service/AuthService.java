@@ -86,9 +86,17 @@ public class AuthService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
 
+        // B20 — mismo status y mensaje que "credenciales inválidas" (no un 403 con
+        // mensaje explícito): de lo contrario, un atacante puede distinguir "el email
+        // no existe / la contraseña está mal" de "el email existe y está bloqueado"
+        // con solo mirar el código de respuesta — un oráculo de enumeración de
+        // cuentas, mismo criterio que ya se aplicó en A6 para "olvidé mi contraseña".
+        // La recomendación de "Olvidé mi contraseña" para desbloquear puede mostrarse
+        // como texto estático en el formulario de login del frontend, no depender de
+        // si ESTE email puntual está bloqueado.
         if (usuario.isBloqueado()) {
             log.warn("Login denegado — usuario bloqueado id={}", idUsuario);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tu cuenta ha sido bloqueada por demasiados intentos fallidos. Utilizá la opción 'Olvidé mi contraseña' para desbloquearla.");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
         }
 
         // 3. Validar contraseña
