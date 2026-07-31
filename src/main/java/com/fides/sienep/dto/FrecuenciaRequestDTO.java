@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,7 +16,11 @@ import lombok.Setter;
 @NoArgsConstructor
 public class FrecuenciaRequestDTO {
 
+    // H9 — la columna es VARCHAR(50); sin este límite, un texto más largo
+    // pasaba la validación de Bean Validation (400) y fallaba recién en el
+    // INSERT con un DataIntegrityViolationException sin manejar (500).
     @NotBlank(message = "La descripción no puede estar vacía")
+    @Size(max = 50, message = "La descripción no puede superar los 50 caracteres")
     private String descripcion;
 
     @NotNull(message = "El tipo de frecuencia no puede ser nulo")
