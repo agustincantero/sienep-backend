@@ -177,8 +177,12 @@ public class InstanciaComunService {
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
     public InstanciaComunResponseDTO crearDesdeRecordatorio(int codRecordatorio, InstanciaDesdeRecordatorioDTO dto) {
+        // Lock pesimista: evita que dos requests concurrentes para el mismo
+        // recordatorio pasen ambas el chequeo de "no cumplido" de abajo antes de
+        // que cualquiera lo marque, lo que generaría instancias de seguimiento
+        // duplicadas (ver comentario en RecordatorioRepository).
         Recordatorio recordatorio = recordatorioRepository
-                .findByCodRecordatorioAndEstado(codRecordatorio, EstadoLogico.ACTIVO)
+                .findByCodRecordatorioAndEstadoParaActualizar(codRecordatorio, EstadoLogico.ACTIVO)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un recordatorio activo con el id " + codRecordatorio));

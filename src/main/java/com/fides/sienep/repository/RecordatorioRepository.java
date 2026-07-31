@@ -2,7 +2,9 @@ package com.fides.sienep.repository;
 
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Recordatorio;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,6 +19,18 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
     List<Recordatorio> findByEstado(EstadoLogico estado);
 
     Optional<Recordatorio> findByCodRecordatorioAndEstado(int codRecordatorio, EstadoLogico estado);
+
+    // RF27 — lock pesimista (SELECT ... FOR UPDATE) usado por
+    // InstanciaComunService.crearDesdeRecordatorio(): sin esto, dos requests
+    // concurrentes para el mismo recordatorio podrían leer "cumplido=false" antes
+    // de que cualquiera de las dos lo marque, generando instancias de seguimiento
+    // duplicadas. Con el lock, la segunda transacción queda bloqueada en esta
+    // consulta hasta que la primera commitee, y al desbloquearse ve cumplido=true.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Recordatorio r WHERE r.codRecordatorio = :codRecordatorio AND r.estado = :estado")
+    Optional<Recordatorio> findByCodRecordatorioAndEstadoParaActualizar(
+            @Param("codRecordatorio") int codRecordatorio,
+            @Param("estado") EstadoLogico estado);
 
     @Query("SELECT r FROM Recordatorio r WHERE r.instancia.codInstancia = :codInstancia AND r.estado = :estado")
     List<Recordatorio> findByInstanciaAndEstado(@Param("codInstancia") int codInstancia,

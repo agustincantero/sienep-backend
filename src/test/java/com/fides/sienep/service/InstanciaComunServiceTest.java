@@ -360,7 +360,7 @@ class InstanciaComunServiceTest {
         dto.setIdCategoria(1);
 
         mockSecurityContext(2);
-        when(recordatorioRepository.findByCodRecordatorioAndEstado(5, EstadoLogico.ACTIVO))
+        when(recordatorioRepository.findByCodRecordatorioAndEstadoParaActualizar(5, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
         when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
@@ -395,7 +395,7 @@ class InstanciaComunServiceTest {
         dto.setTitulo("Seguimiento post-llamada");
 
         mockSecurityContext(2);
-        when(recordatorioRepository.findByCodRecordatorioAndEstado(5, EstadoLogico.ACTIVO))
+        when(recordatorioRepository.findByCodRecordatorioAndEstadoParaActualizar(5, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
         when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
@@ -414,7 +414,7 @@ class InstanciaComunServiceTest {
     @Test
     @DisplayName("Crear desde recordatorio - Recordatorio no encontrado (404)")
     void crearDesdeRecordatorio_LanzaNotFound_RecordatorioNoExiste() {
-        when(recordatorioRepository.findByCodRecordatorioAndEstado(99, EstadoLogico.ACTIVO))
+        when(recordatorioRepository.findByCodRecordatorioAndEstadoParaActualizar(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -433,7 +433,7 @@ class InstanciaComunServiceTest {
         recordatorio.setInstancia(instancia);
         recordatorio.setCumplido(true);
 
-        when(recordatorioRepository.findByCodRecordatorioAndEstado(5, EstadoLogico.ACTIVO))
+        when(recordatorioRepository.findByCodRecordatorioAndEstadoParaActualizar(5, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
