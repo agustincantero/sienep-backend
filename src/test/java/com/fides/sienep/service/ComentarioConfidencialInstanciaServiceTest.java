@@ -196,7 +196,7 @@ class ComentarioConfidencialInstanciaServiceTest {
 
         comentarioService.darDeBaja(1);
 
-        assertEquals(EstadoLogico.INACTIVO, comentario.getEstado());
+        assertEquals(EstadoLogico.ELIMINADO, comentario.getEstado());
         verify(comentarioRepository).save(comentario);
     }
 

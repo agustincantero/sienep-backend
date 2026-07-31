@@ -71,11 +71,14 @@ public class ComentarioConfidencialInstanciaService {
         return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
+    // M13 — ELIMINADO (no INACTIVO): mismo criterio que ComentarioNormalInstanciaService
+    // (ver comentario ahí) — unificado con el estado que ya usan los comentarios de
+    // Estudiante.
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
     public void darDeBaja(int idComConfidencial) {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
-        comentario.setEstado(EstadoLogico.INACTIVO);
+        comentario.setEstado(EstadoLogico.ELIMINADO);
         comentarioRepository.save(comentario);
     }
 

@@ -70,11 +70,16 @@ public class ComentarioNormalInstanciaService {
         return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
+    // M13 — ELIMINADO (no INACTIVO): a diferencia de los catálogos (Carrera, Grupo,
+    // etc.), ningún comentario tiene reactivar(); el permiso que protege este método
+    // ya se llama ELIMINAR_COMENTARIO_NORMAL_INSTANCIA, no BAJA_. Unificado con el
+    // estado que ya usan los comentarios de Estudiante (ComentarioNormalEstudiante/
+    // ComentarioConfidencialEstudiante.eliminar()).
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA')")
     public void darDeBaja(int idComentario) {
         ComentarioNormalInstancia comentario = buscarActivoOFallar(idComentario);
-        comentario.setEstado(EstadoLogico.INACTIVO);
+        comentario.setEstado(EstadoLogico.ELIMINADO);
         comentarioRepository.save(comentario);
     }
 
