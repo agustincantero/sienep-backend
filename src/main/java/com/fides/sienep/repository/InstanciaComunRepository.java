@@ -14,19 +14,40 @@ import java.util.Optional;
 @Repository
 public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, Integer> {
 
-    List<InstanciaComun> findByEstado(EstadoLogico estado);
+    // M9 — JOIN FETCH de estudiante/funcionario/categoria: InstanciaComunMapper
+    // accede a los tres en cada fila (nombreEstudiante, nombreFuncionario,
+    // nombreCategoria); sin el fetch, listar N instancias dispara 3N SELECTs
+    // adicionales (uno lazy por asociación y por fila).
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.estado = :estado")
+    List<InstanciaComun> findByEstado(@Param("estado") EstadoLogico estado);
 
     Optional<InstanciaComun> findByCodInstanciaAndEstado(int codInstancia, EstadoLogico estado);
 
-    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.estudiante.idUsuario = :idEstudiante AND ic.estado = :estado")
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.estudiante.idUsuario = :idEstudiante AND ic.estado = :estado")
     List<InstanciaComun> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
                                                    @Param("estado") EstadoLogico estado);
 
-    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.funcionario.idUsuario = :idFuncionario AND ic.estado = :estado")
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.funcionario.idUsuario = :idFuncionario AND ic.estado = :estado")
     List<InstanciaComun> findByFuncionarioAndEstado(@Param("idFuncionario") int idFuncionario,
                                                     @Param("estado") EstadoLogico estado);
 
-    @Query("SELECT ic FROM InstanciaComun ic WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
+    @Query("SELECT ic FROM InstanciaComun ic " +
+            "JOIN FETCH ic.estudiante " +
+            "JOIN FETCH ic.funcionario " +
+            "JOIN FETCH ic.categoria " +
+            "WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
     List<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
                                                   @Param("estado") EstadoLogico estado);
 

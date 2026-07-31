@@ -16,7 +16,18 @@ import java.util.Optional;
 @Repository
 public interface RecordatorioRepository extends JpaRepository<Recordatorio, Integer> {
 
-    List<Recordatorio> findByEstado(EstadoLogico estado);
+    // M9 — JOIN FETCH de instancia/categoria/responsable: RecordatorioMapper accede
+    // a las tres en cada fila, más frecuencia si no es null. Sin el fetch, listar N
+    // recordatorios dispara SELECTs lazy adicionales por cada asociación y fila.
+    // frecuencia es LEFT JOIN porque es opcional (id_frecuencia admite NULL); un
+    // JOIN FETCH normal excluiría de los resultados los recordatorios sin frecuencia.
+    @Query("SELECT r FROM Recordatorio r " +
+            "JOIN FETCH r.instancia " +
+            "JOIN FETCH r.categoria " +
+            "JOIN FETCH r.responsable " +
+            "LEFT JOIN FETCH r.frecuencia " +
+            "WHERE r.estado = :estado")
+    List<Recordatorio> findByEstado(@Param("estado") EstadoLogico estado);
 
     Optional<Recordatorio> findByCodRecordatorioAndEstado(int codRecordatorio, EstadoLogico estado);
 
@@ -37,11 +48,21 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             @Param("codRecordatorio") int codRecordatorio,
             @Param("estado") EstadoLogico estado);
 
-    @Query("SELECT r FROM Recordatorio r WHERE r.instancia.codInstancia = :codInstancia AND r.estado = :estado")
+    @Query("SELECT r FROM Recordatorio r " +
+            "JOIN FETCH r.instancia " +
+            "JOIN FETCH r.categoria " +
+            "JOIN FETCH r.responsable " +
+            "LEFT JOIN FETCH r.frecuencia " +
+            "WHERE r.instancia.codInstancia = :codInstancia AND r.estado = :estado")
     List<Recordatorio> findByInstanciaAndEstado(@Param("codInstancia") int codInstancia,
                                                 @Param("estado") EstadoLogico estado);
 
-    @Query("SELECT r FROM Recordatorio r WHERE r.responsable.idUsuario = :idResponsable AND r.estado = :estado")
+    @Query("SELECT r FROM Recordatorio r " +
+            "JOIN FETCH r.instancia " +
+            "JOIN FETCH r.categoria " +
+            "JOIN FETCH r.responsable " +
+            "LEFT JOIN FETCH r.frecuencia " +
+            "WHERE r.responsable.idUsuario = :idResponsable AND r.estado = :estado")
     List<Recordatorio> findByResponsableAndEstado(@Param("idResponsable") int idResponsable,
                                                   @Param("estado") EstadoLogico estado);
 
@@ -60,6 +81,13 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
     Optional<Recordatorio> findByCodRecordatorio(int codRecordatorio);
 
     // ── RF23: recordatorios próximos a vencer, aún no notificados ──
+    // M9 — JOIN FETCH de responsable: RecordatorioNotificacionScheduler accede a
+    // getResponsable().getEmail()/getNombre() por cada recordatorio de la lista.
+    @Query("SELECT r FROM Recordatorio r JOIN FETCH r.responsable " +
+            "WHERE r.estado = :estado AND r.notificadoProximidad = false " +
+            "AND r.fechaHora BETWEEN :desde AND :hasta")
     List<Recordatorio> findByEstadoAndNotificadoProximidadFalseAndFechaHoraBetween(
-            EstadoLogico estado, LocalDateTime desde, LocalDateTime hasta);
+            @Param("estado") EstadoLogico estado,
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta);
 }
