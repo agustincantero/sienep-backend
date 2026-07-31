@@ -112,6 +112,14 @@ public class GrupoService {
         grupoRepository.save(grupo);
     }
 
+    @PreAuthorize("hasAuthority('REACTIVAR_GRUPOS')")
+    @Transactional
+    public void reactivar(Integer id) {
+        Grupo grupo = buscarOFallar(id);
+        grupo.setEstado(EstadoLogico.ACTIVO);
+        grupoRepository.save(grupo);
+    }
+
     private void validarGeneracion(Integer generacion) {
         int anioActual = LocalDate.now().getYear();
         if (generacion <= 1900 || generacion > anioActual) {

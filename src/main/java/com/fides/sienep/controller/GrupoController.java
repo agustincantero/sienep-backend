@@ -93,4 +93,17 @@ public class GrupoController {
         grupoService.darDeBaja(id);
         return ResponseEntity.noContent().build();
     }
+
+    // REACTIVAR
+
+    @PatchMapping("/{id}/reactivar")
+    @Operation(summary = "Reactivar un grupo", description = "Cambia el estado del grupo a ACTIVO.")
+    @ApiResponse(responseCode = "204", description = "Grupo reactivado")
+    @ApiResponse(responseCode = "404", description = "Grupo no encontrado")
+    public ResponseEntity<Void> reactivar(
+            @PathVariable Integer id) {
+
+        grupoService.reactivar(id);
+        return ResponseEntity.noContent().build();
+    }
 }

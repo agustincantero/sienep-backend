@@ -979,6 +979,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  ('VER_GRUPOS', 'Permite visualizar grupos existentes'),
                                                                  ('EDITAR_GRUPOS', 'Permite editar grupos existentes'),
                                                                  ('ELIMINAR_GRUPOS', 'Permite eliminar grupos'),
+                                                                 ('REACTIVAR_GRUPOS', 'Permite reactivar grupos'),
                                                                  -- Carreras
                                                                  ('VER_CARRERAS', 'Permite ver la lista de carreras del sistema'),
                                                                  ('CREAR_CARRERA', 'Permite registrar una nueva carrera'),
@@ -1017,6 +1018,7 @@ FROM proyecto.roles r
                                                        'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
                                                        'BAJA_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
                                                        'REGISTRAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
+                                                       'EDITAR_INCIDENCIAS', 'ELIMINAR_INCIDENCIAS',
                                                        'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
                                                        'EDITAR_COMENTARIO_NORMAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',
                                                        'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
