@@ -54,7 +54,7 @@ public class InformeAdjuntoService {
     @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
     public InformeAdjuntoResponseDTO obtenerPorId(Integer id) {
-        return informeMapper.toDto(buscarOFallar(id));
+        return informeMapper.toDto(buscarActivoOFallar(id));
     }
 
     @PreAuthorize("hasAuthority('ADJUNTAR_INFORME')")
@@ -89,7 +89,7 @@ public class InformeAdjuntoService {
     @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
     public ArchivoDescargaDTO descargar(Integer id) {
-        InformeAdjunto informe = buscarOFallar(id);
+        InformeAdjunto informe = buscarActivoOFallar(id);
 
         Resource recurso = fileStorageService.cargar(informe.getRuta() + "/" + informe.getUrlArchivo());
         String extension = fileStorageService.extraerExtension(informe.getUrlArchivo());
@@ -102,14 +102,16 @@ public class InformeAdjuntoService {
     @PreAuthorize("hasAuthority('ELIMINAR_INFORME')")
     @Transactional
     public void eliminar(Integer id) {
-        InformeAdjunto informe = buscarOFallar(id);
+        InformeAdjunto informe = buscarActivoOFallar(id);
         informe.setEstado(EstadoLogico.ELIMINADO);
         informeRepository.save(informe);
         log.info("[AUDIT] Informe {} dado de baja lógica", id);
     }
 
-    private InformeAdjunto buscarOFallar(Integer id) {
-        return informeRepository.findById(id)
+    // M16 — antes buscaba por findById() a secas, sin filtrar por ACTIVO: se podía
+    // descargar o volver a "eliminar" un informe ya dado de baja lógica.
+    private InformeAdjunto buscarActivoOFallar(Integer id) {
+        return informeRepository.findByIdInformeAndEstado(id, EstadoLogico.ACTIVO)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
     }

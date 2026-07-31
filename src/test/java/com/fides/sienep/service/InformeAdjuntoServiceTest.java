@@ -169,7 +169,7 @@ class InformeAdjuntoServiceTest {
     @Test
     @DisplayName("Obtener por ID - Éxito")
     void obtenerPorId_Exito() {
-        when(informeRepository.findById(1)).thenReturn(Optional.of(informeMock));
+        when(informeRepository.findByIdInformeAndEstado(1, EstadoLogico.ACTIVO)).thenReturn(Optional.of(informeMock));
         when(informeMapper.toDto(informeMock)).thenReturn(responseDTO);
 
         InformeAdjuntoResponseDTO result = informeService.obtenerPorId(1);
@@ -182,7 +182,7 @@ class InformeAdjuntoServiceTest {
     @Test
     @DisplayName("Obtener por ID - No encontrado (404)")
     void obtenerPorId_LanzaExcepcion_NoEncontrado() {
-        when(informeRepository.findById(99)).thenReturn(Optional.empty());
+        when(informeRepository.findByIdInformeAndEstado(99, EstadoLogico.ACTIVO)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.obtenerPorId(99));
@@ -197,7 +197,7 @@ class InformeAdjuntoServiceTest {
     @DisplayName("Descargar - Éxito")
     void descargar_Exito() {
         Resource recursoMock = mock(Resource.class);
-        when(informeRepository.findById(1)).thenReturn(Optional.of(informeMock));
+        when(informeRepository.findByIdInformeAndEstado(1, EstadoLogico.ACTIVO)).thenReturn(Optional.of(informeMock));
         when(fileStorageService.cargar("informes/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf"))
                 .thenReturn(recursoMock);
         when(fileStorageService.extraerExtension(informeMock.getUrlArchivo())).thenReturn("pdf");
@@ -214,7 +214,7 @@ class InformeAdjuntoServiceTest {
     @Test
     @DisplayName("Descargar - Informe no encontrado (404)")
     void descargar_LanzaExcepcion_InformeNoEncontrado() {
-        when(informeRepository.findById(99)).thenReturn(Optional.empty());
+        when(informeRepository.findByIdInformeAndEstado(99, EstadoLogico.ACTIVO)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.descargar(99));
@@ -226,7 +226,7 @@ class InformeAdjuntoServiceTest {
     @Test
     @DisplayName("Descargar - Archivo físico faltante (404)")
     void descargar_LanzaExcepcion_ArchivoFisicoFaltante() {
-        when(informeRepository.findById(1)).thenReturn(Optional.of(informeMock));
+        when(informeRepository.findByIdInformeAndEstado(1, EstadoLogico.ACTIVO)).thenReturn(Optional.of(informeMock));
         when(fileStorageService.cargar(anyString()))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "El archivo físico no se encuentra disponible"));
 
@@ -241,7 +241,7 @@ class InformeAdjuntoServiceTest {
     @Test
     @DisplayName("Eliminar informe - Estado pasa a ELIMINADO")
     void eliminar_DebePonerEstadoEliminado() {
-        when(informeRepository.findById(1)).thenReturn(Optional.of(informeMock));
+        when(informeRepository.findByIdInformeAndEstado(1, EstadoLogico.ACTIVO)).thenReturn(Optional.of(informeMock));
         when(informeRepository.save(any(InformeAdjunto.class))).thenReturn(informeMock);
 
         informeService.eliminar(1);
@@ -254,7 +254,7 @@ class InformeAdjuntoServiceTest {
     @Test
     @DisplayName("Eliminar informe - No encontrado (404)")
     void eliminar_LanzaExcepcion_NoEncontrado() {
-        when(informeRepository.findById(99)).thenReturn(Optional.empty());
+        when(informeRepository.findByIdInformeAndEstado(99, EstadoLogico.ACTIVO)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.eliminar(99));
