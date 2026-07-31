@@ -67,16 +67,16 @@ public class ComentarioConfidencialInstanciaController {
     }
 
     @DeleteMapping("/{idComConfidencial}")
-    @Operation(summary = "Dar de baja comentario confidencial", description = "Baja lógica de un comentario confidencial.")
+    @Operation(summary = "Eliminar comentario confidencial", description = "Baja lógica de un comentario confidencial.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Comentario dado de baja"),
             @ApiResponse(responseCode = "404", description = "Comentario no encontrado"),
             @ApiResponse(responseCode = "403", description = "Sin permisos")
     })
-    public ResponseEntity<Void> darDeBaja(
+    public ResponseEntity<Void> eliminar(
             @PathVariable int codInstancia,
             @PathVariable int idComConfidencial) {
-        comentarioService.darDeBaja(codInstancia, idComConfidencial);
+        comentarioService.eliminar(codInstancia, idComConfidencial);
         return ResponseEntity.noContent().build();
     }
 }

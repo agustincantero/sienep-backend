@@ -66,16 +66,16 @@ public class ComentarioNormalInstanciaController {
     }
 
     @DeleteMapping("/{idComentario}")
-    @Operation(summary = "Dar de baja comentario normal", description = "Baja lógica de un comentario normal.")
+    @Operation(summary = "Eliminar comentario normal", description = "Baja lógica de un comentario normal.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Comentario dado de baja"),
             @ApiResponse(responseCode = "404", description = "Comentario no encontrado"),
             @ApiResponse(responseCode = "403", description = "Sin permisos")
     })
-    public ResponseEntity<Void> darDeBaja(
+    public ResponseEntity<Void> eliminar(
             @PathVariable int codInstancia,
             @PathVariable int idComentario) {
-        comentarioService.darDeBaja(codInstancia, idComentario);
+        comentarioService.eliminar(codInstancia, idComentario);
         return ResponseEntity.noContent().build();
     }
 }

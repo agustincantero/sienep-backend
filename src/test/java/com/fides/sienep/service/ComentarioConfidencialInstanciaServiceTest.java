@@ -208,37 +208,37 @@ class ComentarioConfidencialInstanciaServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja comentario confidencial - Éxito")
-    void darDeBaja_Exito() {
+    @DisplayName("Eliminar comentario confidencial - Éxito")
+    void eliminar_Exito() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
-        comentarioService.darDeBaja(1, 1);
+        comentarioService.eliminar(1, 1);
 
         assertEquals(EstadoLogico.ELIMINADO, comentario.getEstado());
         verify(comentarioRepository).save(comentario);
     }
 
     @Test
-    @DisplayName("Dar de baja comentario confidencial - No encontrado (404)")
-    void darDeBaja_LanzaNotFound() {
+    @DisplayName("Eliminar comentario confidencial - No encontrado (404)")
+    void eliminar_LanzaNotFound() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> comentarioService.darDeBaja(1, 99));
+                () -> comentarioService.eliminar(1, 99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
-    @DisplayName("Dar de baja comentario confidencial - Pertenece a otra instancia (404, M14)")
-    void darDeBaja_LanzaNotFound_PerteneceAOtraInstancia() {
+    @DisplayName("Eliminar comentario confidencial - Pertenece a otra instancia (404, M14)")
+    void eliminar_LanzaNotFound_PerteneceAOtraInstancia() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> comentarioService.darDeBaja(2, 1));
+                () -> comentarioService.eliminar(2, 1));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());

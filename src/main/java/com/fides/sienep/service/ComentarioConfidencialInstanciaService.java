@@ -83,10 +83,10 @@ public class ComentarioConfidencialInstanciaService {
     }
 
     // ELIMINADO (no INACTIVO): unificado con el estado que ya usan los
-    // comentarios de Estudiante, ver ComentarioNormalInstanciaService.darDeBaja.
+    // comentarios de Estudiante, ver ComentarioNormalInstanciaService.eliminar.
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
-    public void darDeBaja(int codInstancia, int idComConfidencial) {
+    public void eliminar(int codInstancia, int idComConfidencial) {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
         validarPerteneceAInstancia(comentario, codInstancia);
         comentario.setEstado(EstadoLogico.ELIMINADO);

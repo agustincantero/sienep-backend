@@ -87,7 +87,7 @@ public class ComentarioNormalInstanciaService {
     // ComentarioConfidencialEstudiante.eliminar()).
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA')")
-    public void darDeBaja(int codInstancia, int idComentario) {
+    public void eliminar(int codInstancia, int idComentario) {
         ComentarioNormalInstancia comentario = buscarActivoOFallar(idComentario);
         validarPerteneceAInstancia(comentario, codInstancia);
         comentario.setEstado(EstadoLogico.ELIMINADO);
