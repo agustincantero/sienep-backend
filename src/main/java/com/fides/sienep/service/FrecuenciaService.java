@@ -76,6 +76,9 @@ public class FrecuenciaService {
                         HttpStatus.NOT_FOUND, "No se encontró una frecuencia activa con el id " + id));
     }
 
+    // RecurrenceRuleBuilder es la fuente de verdad de qué campo usa cada tipo:
+    // DIARIA/MENSUAL no usan intDias ni diaSemana; SEMANAL usa diaSemana;
+    // PERSONALIZADA usa intDias (como INTERVAL sobre FREQ=DAILY).
     private void validarCoherenciaFrecuencia(FrecuenciaRequestDTO dto) {
         switch (dto.getTipo()) {
             case DIARIA -> {
@@ -89,9 +92,14 @@ public class FrecuenciaService {
                             HttpStatus.BAD_REQUEST, "Por favor indicá el día de la semana para la frecuencia semanal");
             }
             case MENSUAL -> {
+                if (dto.getIntDias() != null || dto.getDiaSemana() != null)
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, "La frecuencia mensual no requiere intervalo de días ni día de la semana");
+            }
+            case PERSONALIZADA -> {
                 if (dto.getIntDias() == null)
                     throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST, "Por favor indicá el intervalo de días para la frecuencia mensual");
+                            HttpStatus.BAD_REQUEST, "Por favor indicá el intervalo de días para la frecuencia personalizada");
             }
         }
     }

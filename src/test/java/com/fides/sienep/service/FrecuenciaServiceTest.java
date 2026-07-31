@@ -110,9 +110,25 @@ class FrecuenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Crear frecuencia mensual sin intervalo - Error (400)")
-    void crear_Mensual_SinIntervalo_LanzaBadRequest() {
+    @DisplayName("Crear frecuencia mensual sin campos extra - Éxito (M7: mensual no usa intDias ni diaSemana)")
+    void crear_Mensual_Exito() {
         requestDTO.setTipo(TipoFrecuencia.MENSUAL);
+        frecuencia.setTipo(TipoFrecuencia.MENSUAL);
+
+        when(frecuenciaRepository.save(any(Frecuencia.class))).thenReturn(frecuencia);
+        when(frecuenciaMapper.toDto(frecuencia)).thenReturn(responseDTO);
+
+        FrecuenciaResponseDTO resultado = frecuenciaService.crear(requestDTO);
+
+        assertNotNull(resultado);
+        verify(frecuenciaRepository).save(any(Frecuencia.class));
+    }
+
+    @Test
+    @DisplayName("Crear frecuencia mensual con intervalo de días - Error (400, M7: el campo no se usa)")
+    void crear_Mensual_ConIntDias_LanzaBadRequest() {
+        requestDTO.setTipo(TipoFrecuencia.MENSUAL);
+        requestDTO.setIntDias(15);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> frecuenciaService.crear(requestDTO));
@@ -122,11 +138,36 @@ class FrecuenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Crear frecuencia mensual con intervalo - Éxito")
-    void crear_Mensual_ConIntervalo_Exito() {
+    @DisplayName("Crear frecuencia mensual con día de la semana - Error (400, M7: el campo no se usa)")
+    void crear_Mensual_ConDiaSemana_LanzaBadRequest() {
         requestDTO.setTipo(TipoFrecuencia.MENSUAL);
+        requestDTO.setDiaSemana(DiaSemana.LUNES);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> frecuenciaService.crear(requestDTO));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(frecuenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear frecuencia personalizada sin intervalo - Error (400, M7: el campo que sí se usa)")
+    void crear_Personalizada_SinIntervalo_LanzaBadRequest() {
+        requestDTO.setTipo(TipoFrecuencia.PERSONALIZADA);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> frecuenciaService.crear(requestDTO));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(frecuenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear frecuencia personalizada con intervalo - Éxito")
+    void crear_Personalizada_ConIntervalo_Exito() {
+        requestDTO.setTipo(TipoFrecuencia.PERSONALIZADA);
         requestDTO.setIntDias(15);
-        frecuencia.setTipo(TipoFrecuencia.MENSUAL);
+        frecuencia.setTipo(TipoFrecuencia.PERSONALIZADA);
         frecuencia.setIntDias(15);
 
         when(frecuenciaRepository.save(any(Frecuencia.class))).thenReturn(frecuencia);
