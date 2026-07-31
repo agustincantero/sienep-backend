@@ -162,6 +162,13 @@ public class ItrService {
             for (ItrCarrera itrCarrera : itr.getCarreras()) {
                 if (itrCarrera.getCarrera().getIdCarrera().equals(idCarrera)) {
                     if (itrCarrera.getEstado() == EstadoLogico.INACTIVO) {
+                        // H13 — mismo chequeo que abajo para asociaciones nuevas:
+                        // reactivar el vínculo no debería saltearse la validación
+                        // de que la carrera referenciada siga ACTIVA.
+                        if (itrCarrera.getCarrera().getEstado() != EstadoLogico.ACTIVO) {
+                            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                                    "No se puede asociar una carrera que no está ACTIVA: " + idCarrera);
+                        }
                         itrCarrera.setEstado(EstadoLogico.ACTIVO);
                     }
                     existeAsociacion = true;
@@ -172,6 +179,12 @@ public class ItrService {
             if (!existeAsociacion) {
                 Carrera carrera = carreraRepository.findById(idCarrera)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera con ID " + idCarrera + " no encontrada."));
+                // H13 — mismo bug que M2 (Grupo↔Estudiante): faltaba validar que
+                // la carrera referenciada esté ACTIVA antes de asociarla al ITR.
+                if (carrera.getEstado() != EstadoLogico.ACTIVO) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                            "No se puede asociar una carrera que no está ACTIVA: " + idCarrera);
+                }
                 ItrCarrera nuevaAsociacion = new ItrCarrera(itr, carrera);
                 nuevaAsociacion.setEstado(EstadoLogico.ACTIVO);
                 itr.getCarreras().add(nuevaAsociacion);

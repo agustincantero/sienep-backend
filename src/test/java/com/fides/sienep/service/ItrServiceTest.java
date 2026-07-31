@@ -236,6 +236,55 @@ class ItrServiceTest {
     }
 
     @Test
+    @DisplayName("actualizar: Lanza 422 si la nueva carrera a asociar no está ACTIVA (H13)")
+    void actualizar_LanzaUnprocessable_CarreraNuevaInactiva() {
+        Itr itr = new Itr("Norte");
+        when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
+
+        Carrera carreraInactiva = new Carrera();
+        carreraInactiva.setIdCarrera(2);
+        carreraInactiva.setEstado(EstadoLogico.INACTIVO);
+        when(carreraRepository.findById(2)).thenReturn(Optional.of(carreraInactiva));
+
+        ItrRequestDTO dto = new ItrRequestDTO();
+        dto.setNomItr("Norte");
+        dto.setCarrerasIds(List.of(2));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> itrService.actualizar(1, dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(itrRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("actualizar: Lanza 422 al reactivar un vínculo si la carrera ya no está ACTIVA (H13)")
+    void actualizar_LanzaUnprocessable_AlReactivarVinculoConCarreraInactiva() {
+        Itr itr = new Itr("Norte");
+        itr.setIdItr(1);
+
+        Carrera carrera = new Carrera();
+        carrera.setIdCarrera(1);
+        carrera.setEstado(EstadoLogico.INACTIVO);
+
+        ItrCarrera asociacionInactiva = new ItrCarrera(itr, carrera);
+        asociacionInactiva.setEstado(EstadoLogico.INACTIVO);
+        itr.getCarreras().add(asociacionInactiva);
+
+        when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
+
+        ItrRequestDTO dto = new ItrRequestDTO();
+        dto.setNomItr("Norte");
+        dto.setCarrerasIds(List.of(1)); // intenta reactivar el vínculo con la carrera 1
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> itrService.actualizar(1, dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(itrRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("darDeBaja: Modifica el estado a INACTIVO")
     void darDeBaja_Exito() {
         Itr itr = new Itr("Norte");
