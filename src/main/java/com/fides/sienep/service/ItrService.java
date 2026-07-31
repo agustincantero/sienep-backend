@@ -116,11 +116,15 @@ public class ItrService {
     /**
      * Da de baja lógica un ITR. Evict de caché requerido para actualizar catálogo.
      */
+    // H11 — guarda idempotente, ver misma nota en CarreraService.
     @PreAuthorize("hasAuthority('ELIMINAR_ITR')")
     @CacheEvict(value = "itrs", allEntries = true)
     @Transactional
     public void darDeBaja(Integer id) {
         Itr itr = buscarOFallar(id);
+        if (itr.getEstado() == EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El ITR ya se encuentra inactivo");
+        }
         itr.setEstado(EstadoLogico.INACTIVO);
         itrRepository.save(itr);
     }
@@ -133,6 +137,9 @@ public class ItrService {
     @Transactional
     public void reactivar(Integer id) {
         Itr itr = buscarOFallar(id);
+        if (itr.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El ITR ya se encuentra activo");
+        }
         itr.setEstado(EstadoLogico.ACTIVO);
         itrRepository.save(itr);
     }

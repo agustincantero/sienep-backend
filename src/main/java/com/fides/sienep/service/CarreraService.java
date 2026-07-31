@@ -76,11 +76,17 @@ public class CarreraService {
         return carreraMapper.toDto(carreraRepository.save(carrera));
     }
 
+    // H11 — guarda idempotente, igual que CategoriaInstanciaService/RolService/
+    // RecordatorioService/FrecuenciaService: sin esto, dar de baja/reactivar
+    // una carrera que ya está en ese estado no fallaba (no-op silencioso).
     @PreAuthorize("hasAuthority('ELIMINAR_CARRERA')")
     @Transactional
     @CacheEvict(value = "carreras", allEntries = true)
     public void eliminar(Integer id) {
         Carrera carrera = buscarOFallar(id);
+        if (carrera.getEstado() == EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La carrera ya se encuentra inactiva");
+        }
         carrera.setEstado(EstadoLogico.INACTIVO);
         carreraRepository.save(carrera);
     }
@@ -90,6 +96,9 @@ public class CarreraService {
     @CacheEvict(value = "carreras", allEntries = true)
     public void reactivar(Integer id) {
         Carrera carrera = buscarOFallar(id);
+        if (carrera.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La carrera ya se encuentra activa");
+        }
         carrera.setEstado(EstadoLogico.ACTIVO);
         carreraRepository.save(carrera);
     }

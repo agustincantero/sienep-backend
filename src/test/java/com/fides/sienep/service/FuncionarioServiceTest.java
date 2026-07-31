@@ -424,6 +424,33 @@ class FuncionarioServiceTest {
         verify(funcionarioRepository, never()).deleteById(any());
     }
 
+    @Test
+    @DisplayName("Dar de baja - Ya está inactivo (409) (H11)")
+    void darDeBaja_LanzaConflict_YaInactivo() {
+        funcionarioMock.setEstado(EstadoLogico.INACTIVO);
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.darDeBaja(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar funcionario - Ya está activo (409) (H11)")
+    void reactivar_LanzaConflict_YaActivo() {
+        // El constructor "alta" de Funcionario arranca en PENDIENTE_DE_ACTIVACION, no ACTIVO
+        funcionarioMock.setEstado(EstadoLogico.ACTIVO);
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
     // =========================================================
     // RESTABLECER CONTRASEÑA
     // =========================================================

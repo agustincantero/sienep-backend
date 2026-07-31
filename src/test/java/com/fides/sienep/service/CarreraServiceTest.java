@@ -183,4 +183,29 @@ class CarreraServiceTest {
         assertEquals(EstadoLogico.ACTIVO, carreraMock.getEstado()); // Comprueba que lo volvió a poner en ACTIVO
         verify(carreraRepository).save(carreraMock);
     }
+
+    @Test
+    @DisplayName("Eliminar - Ya está inactiva (409) (H11)")
+    void eliminar_LanzaConflict_YaInactiva() {
+        carreraMock.setEstado(EstadoLogico.INACTIVO);
+        when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> carreraService.eliminar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(carreraRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar - Ya está activa (409) (H11)")
+    void reactivar_LanzaConflict_YaActiva() {
+        when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> carreraService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(carreraRepository, never()).save(any());
+    }
 }

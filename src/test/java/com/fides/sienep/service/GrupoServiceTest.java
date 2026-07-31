@@ -308,6 +308,19 @@ class GrupoServiceTest {
         verify(grupoRepository, never()).deleteById(any());
     }
 
+    @Test
+    @DisplayName("Dar de baja - Ya está inactivo (409) (H11)")
+    void darDeBaja_LanzaConflict_YaInactivo() {
+        grupoMock.setEstado(EstadoLogico.INACTIVO);
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.darDeBaja(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(grupoRepository, never()).save(any());
+    }
+
     // =========================================================
     // REACTIVAR (M4)
     // =========================================================
@@ -335,6 +348,18 @@ class GrupoServiceTest {
                 () -> grupoService.reactivar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(grupoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar - Ya está activo (409) (H11)")
+    void reactivar_LanzaConflict_YaActivo() {
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(grupoRepository, never()).save(any());
     }
 }

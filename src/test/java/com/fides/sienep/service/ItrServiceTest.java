@@ -259,4 +259,31 @@ class ItrServiceTest {
         assertEquals(EstadoLogico.ACTIVO, itr.getEstado());
         verify(itrRepository, times(1)).save(itr);
     }
+
+    @Test
+    @DisplayName("darDeBaja: Ya está inactivo (409) (H11)")
+    void darDeBaja_LanzaConflict_YaInactivo() {
+        Itr itr = new Itr("Norte");
+        itr.setEstado(EstadoLogico.INACTIVO);
+        when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> itrService.darDeBaja(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(itrRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("reactivar: Ya está activo (409) (H11)")
+    void reactivar_LanzaConflict_YaActivo() {
+        Itr itr = new Itr("Norte");
+        when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> itrService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(itrRepository, never()).save(any());
+    }
 }

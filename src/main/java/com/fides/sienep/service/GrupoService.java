@@ -104,10 +104,14 @@ public class GrupoService {
         return grupoMapper.toDto(grupoRepository.save(grupo));
     }
 
+    // H11 — guarda idempotente, ver misma nota en CarreraService.
     @PreAuthorize("hasAuthority('ELIMINAR_GRUPO')")
     @Transactional
     public void darDeBaja(Integer id) {
         Grupo grupo = buscarOFallar(id);
+        if (grupo.getEstado() == EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El grupo ya se encuentra inactivo");
+        }
         grupo.setEstado(EstadoLogico.INACTIVO);
         grupoRepository.save(grupo);
     }
@@ -116,6 +120,9 @@ public class GrupoService {
     @Transactional
     public void reactivar(Integer id) {
         Grupo grupo = buscarOFallar(id);
+        if (grupo.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El grupo ya se encuentra activo");
+        }
         grupo.setEstado(EstadoLogico.ACTIVO);
         grupoRepository.save(grupo);
     }

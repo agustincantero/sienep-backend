@@ -143,10 +143,14 @@ public class FuncionarioService {
         log.info("[AUDIT] Admin restableció contraseña del funcionario id={}", id);
     }
 
+    // H11 — guarda idempotente, ver misma nota en CarreraService.
     @PreAuthorize("hasAuthority('ELIMINAR_FUNCIONARIO')")
     @Transactional
     public void darDeBaja(Integer id) {
         Funcionario funcionario = buscarOFallar(id);
+        if (funcionario.getEstado() == EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra inactivo");
+        }
         funcionario.setEstado(EstadoLogico.INACTIVO);
         funcionarioRepository.save(funcionario);
     }
@@ -155,6 +159,9 @@ public class FuncionarioService {
     @Transactional
     public FuncionarioResponseDTO reactivar(Integer id) {
         Funcionario funcionario = buscarOFallar(id);
+        if (funcionario.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra activo");
+        }
         funcionario.setEstado(EstadoLogico.ACTIVO);
         funcionarioRepository.save(funcionario);
         return funcionarioMapper.toDto(funcionario);
