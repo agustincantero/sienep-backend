@@ -33,6 +33,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,6 +48,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -145,6 +148,18 @@ class EstudianteServiceTest {
         return auth;
     }
 
+    private Authentication mockAuthConPermisos(String idUsuario, String... permisos) {
+        Authentication auth = mock(Authentication.class);
+        lenient().when(auth.getName()).thenReturn(idUsuario);
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        for (String permiso : permisos) {
+            authorities.add(new SimpleGrantedAuthority(permiso));
+        }
+        lenient().doReturn(authorities).when(auth).getAuthorities();
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        return auth;
+    }
+
     // =========================================================
     // OBTENER POR ID
     // =========================================================
@@ -225,6 +240,141 @@ class EstudianteServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Listar - Con filtro de texto sin BUSCAR_ESTUDIANTE lanza 403 (B5)")
+    void listar_ConFiltroTexto_SinBuscarEstudiante_LanzaForbidden() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO");
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.listar("Ana", null, null, null, null, PageRequest.of(0, 10)));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verifyNoInteractions(estudianteRepository);
+    }
+
+    @Test
+    @DisplayName("Listar - Sin filtros no exige BUSCAR_ESTUDIANTE (B5)")
+    void listar_SinFiltros_NoExigeBuscarEstudiante() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        Page<EstudianteResumenDTO> resultado = estudianteService.listar(
+                null, null, null, null, null, PageRequest.of(0, 10));
+
+        assertNotNull(resultado);
+    }
+
+    @Test
+    @DisplayName("Listar - Sin VER_ESTUDIANTE fuerza estado ACTIVO aunque se pida otro (B5)")
+    void listar_SinVerEstudiante_FuerzaEstadoActivo() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        // Pide INACTIVO explícitamente, pero sin VER_ESTUDIANTE el service lo ignora
+        estudianteService.listar(null, null, null, null, EstadoLogico.INACTIVO, PageRequest.of(0, 10));
+
+        verify(estudianteRepository).findByEstado(EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+        verify(estudianteRepository, never()).findByEstado(eq(EstadoLogico.INACTIVO), any());
+    }
+
+    @Test
+    @DisplayName("Listar - Con VER_ESTUDIANTE y estado null lista todos los estados (B5)")
+    void listar_ConVerEstudiante_EstadoNull_ListaTodos() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "VER_ESTUDIANTE");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findAll(PageRequest.of(0, 10))).thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        estudianteService.listar(null, null, null, null, null, PageRequest.of(0, 10));
+
+        verify(estudianteRepository).findAll(PageRequest.of(0, 10));
+        verify(estudianteRepository, never()).findByEstado(any(), any());
+    }
+
+    @Test
+    @DisplayName("Listar - Con VER_ESTUDIANTE respeta el estado pedido (B5)")
+    void listar_ConVerEstudiante_RespetaEstadoPedido() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "VER_ESTUDIANTE");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByEstado(EstadoLogico.INACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        estudianteService.listar(null, null, null, null, EstadoLogico.INACTIVO, PageRequest.of(0, 10));
+
+        verify(estudianteRepository).findByEstado(EstadoLogico.INACTIVO, PageRequest.of(0, 10));
+    }
+
+    @Test
+    @DisplayName("Listar - Filtro por texto con BUSCAR_ESTUDIANTE usa buscarPorNombreYEstado (B5)")
+    void listar_ConFiltroTexto_UsaBuscarPorNombreYEstado() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "BUSCAR_ESTUDIANTE");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.buscarPorNombreYEstado("Ana", EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        estudianteService.listar("Ana", null, null, null, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+
+        verify(estudianteRepository).buscarPorNombreYEstado("Ana", EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+    }
+
+    @Test
+    @DisplayName("Listar - Filtro por grupo con BUSCAR_ESTUDIANTE usa findByGrupoAndEstado (B5)")
+    void listar_ConFiltroGrupo_UsaFindByGrupoAndEstado() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "BUSCAR_ESTUDIANTE");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByGrupoAndEstado(1, EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        estudianteService.listar(null, 1, null, null, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+
+        verify(estudianteRepository).findByGrupoAndEstado(1, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+    }
+
+    @Test
+    @DisplayName("Listar - Filtro por carrera con BUSCAR_ESTUDIANTE usa findByCarreraAndEstado (B5)")
+    void listar_ConFiltroCarrera_UsaFindByCarreraAndEstado() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "BUSCAR_ESTUDIANTE");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByCarreraAndEstado(1, EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        estudianteService.listar(null, null, 1, null, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+
+        verify(estudianteRepository).findByCarreraAndEstado(1, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+    }
+
+    @Test
+    @DisplayName("Listar - Filtro por ITR con BUSCAR_ESTUDIANTE usa findByItrAndEstado (B5)")
+    void listar_ConFiltroItr_UsaFindByItrAndEstado() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "BUSCAR_ESTUDIANTE");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByItrAndEstado(1, EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        estudianteService.listar(null, null, null, 1, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+
+        verify(estudianteRepository).findByItrAndEstado(1, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
     }
 
     // =========================================================
