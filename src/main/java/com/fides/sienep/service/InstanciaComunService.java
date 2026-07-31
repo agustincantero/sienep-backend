@@ -155,7 +155,18 @@ public class InstanciaComunService {
                 origen.getIdResponsable() != null ? origen.getIdResponsable() : idFuncionarioCreador);
         dto.setIdFrecuencia(origen.getIdFrecuencia());
         dto.setFechaFin(origen.getFechaFin());
-        dto.setNroOcurrencias(origen.getNroOcurrencias());
+
+        // Defensa en profundidad: este DTO se construye a mano y nunca pasa por @Valid,
+        // así que el @Min(1) del RecordatorioInicialDTO no protege este camino.
+        // nroOcurrencias=0 junto con una frecuencia produciría una recurrencia sin límite
+        // en Google Calendar (regresión vía RF13).
+        Integer nroOcurrencias = origen.getNroOcurrencias();
+        if (nroOcurrencias != null && nroOcurrencias < 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El número de ocurrencias del recordatorio inicial debe ser al menos 1");
+        }
+        dto.setNroOcurrencias(nroOcurrencias);
         return dto;
     }
 

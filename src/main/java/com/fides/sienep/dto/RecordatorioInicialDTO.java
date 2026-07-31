@@ -43,7 +43,7 @@ public class RecordatorioInicialDTO {
 
     private LocalDate fechaFin;
 
-    @Min(value = 0, message = "El número de ocurrencias no puede ser negativo")
+    @Min(value = 1, message = "El número de ocurrencias debe ser al menos 1")
     @Max(value = 5, message = "El número de ocurrencias no puede superar 5")
     private Integer nroOcurrencias;
 }
