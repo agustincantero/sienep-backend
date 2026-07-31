@@ -244,6 +244,23 @@ class GrupoServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar grupo - Rechaza editar un grupo inactivo (M3)")
+    void actualizar_LanzaConflicto_GrupoInactivo() {
+        grupoMock.setEstado(EstadoLogico.INACTIVO);
+        GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
+        updateDTO.setNomGrupo("Grupo B");
+        updateDTO.setGeneracion(LocalDate.now().getYear());
+
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.actualizar(1, updateDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(grupoRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Actualizar grupo - No encontrado → 404")
     void actualizar_LanzaExcepcion_NoEncontrado() {
         GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
@@ -289,5 +306,35 @@ class GrupoServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(grupoRepository, never()).save(any());
         verify(grupoRepository, never()).deleteById(any());
+    }
+
+    // =========================================================
+    // REACTIVAR (M4)
+    // =========================================================
+
+    @Test
+    @DisplayName("Reactivar - Estado pasa a ACTIVO")
+    void reactivar_DebePonerEstadoActivo() {
+        grupoMock.setEstado(EstadoLogico.INACTIVO);
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+        when(grupoRepository.save(any(Grupo.class))).thenReturn(grupoMock);
+
+        grupoService.reactivar(1);
+
+        assertEquals(EstadoLogico.ACTIVO, grupoMock.getEstado());
+        verify(grupoRepository).save(grupoMock);
+    }
+
+    @Test
+    @DisplayName("Reactivar - No encontrado → 404")
+    void reactivar_LanzaExcepcion_NoEncontrado() {
+        when(grupoRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> grupoService.reactivar(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(grupoRepository, never()).save(any());
     }
 }

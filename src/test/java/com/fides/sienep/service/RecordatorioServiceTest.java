@@ -151,6 +151,28 @@ class RecordatorioServiceTest {
     }
 
     @Test
+    @DisplayName("Crear recordatorio - Evento creado en Google pero falla el guardado local del eventIdGoogle, no propaga (M5)")
+    void crear_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
+        FuncionarioGcal gcal = new FuncionarioGcal(responsable, "refresh-token", "juan@gmail.com");
+
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
+        when(recordatorioIdGenerator.generarIdNeg()).thenReturn("REC-2026-000001");
+        when(recordatorioRepository.save(any(Recordatorio.class)))
+                .thenReturn(recordatorio)
+                .thenThrow(new RuntimeException("DB caída"));
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcal));
+        when(googleCalendarService.crearEvento(any(), eq("refresh-token"))).thenReturn("evento-nuevo-id");
+
+        RecordatorioResponseDTO resultado = assertDoesNotThrow(() -> recordatorioService.crear(requestDTO));
+
+        assertNotNull(resultado);
+        verify(recordatorioRepository, times(2)).save(any(Recordatorio.class));
+    }
+
+    @Test
     @DisplayName("Crear recordatorio - Instancia no encontrada (404)")
     void crear_LanzaNotFound_InstanciaNoExiste() {
         when(instanciaRepository.findById(1)).thenReturn(Optional.empty());
@@ -534,6 +556,43 @@ class RecordatorioServiceTest {
         verify(googleCalendarService).crearEvento(recordatorio, "refresh-token-nuevo");
         verify(googleCalendarService, never()).actualizarEvento(any(), any(), any());
         assertEquals("evento-nuevo-id", recordatorio.getEventIdGoogle());
+    }
+
+    @Test
+    @DisplayName("Actualizar recordatorio - Evento nuevo creado en Google pero falla el guardado local, no propaga (M5)")
+    void actualizar_CambiaResponsable_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
+        recordatorio.setEventIdGoogle("evento-viejo-id");
+
+        Funcionario responsableNuevo = new Funcionario();
+        responsableNuevo.setIdUsuario(3);
+        responsableNuevo.setNombre("María");
+        responsableNuevo.setApellido("López");
+        responsableNuevo.setEmail("maria.lopez@utec.edu.uy");
+        responsableNuevo.setEstado(EstadoLogico.ACTIVO);
+        requestDTO.setIdResponsable(3);
+
+        FuncionarioGcal gcalViejo = new FuncionarioGcal(responsable, "refresh-token-viejo", "juan@gmail.com");
+        FuncionarioGcal gcalNuevo = new FuncionarioGcal(responsableNuevo, "refresh-token-nuevo", "maria@gmail.com");
+
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(3)).thenReturn(Optional.of(responsableNuevo));
+        when(recordatorioRepository.save(any(Recordatorio.class)))
+                .thenReturn(recordatorio)
+                .thenThrow(new RuntimeException("DB caída"));
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcalViejo));
+        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(3)).thenReturn(Optional.of(gcalNuevo));
+        when(googleCalendarService.crearEvento(any(), eq("refresh-token-nuevo"))).thenReturn("evento-nuevo-id");
+
+        RecordatorioResponseDTO resultado = assertDoesNotThrow(
+                () -> recordatorioService.actualizar(1, requestDTO));
+
+        assertNotNull(resultado);
+        verify(googleCalendarService).crearEvento(recordatorio, "refresh-token-nuevo");
+        verify(recordatorioRepository, times(2)).save(any(Recordatorio.class));
     }
 
     @Test

@@ -83,6 +83,21 @@ class FileStorageServiceTest {
     }
 
     @Test
+    @DisplayName("Guardar - Contenido no coincide con la extensión declarada (400)")
+    void guardar_LanzaExcepcion_MagicBytesNoCoinciden() {
+        // Un archivo de texto plano renombrado a .pdf: la extensión pasa el primer
+        // filtro, pero el contenido real no tiene la firma %PDF esperada.
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "informe.pdf", "application/pdf",
+                "<html>no soy un pdf</html>".getBytes());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> fileStorageService.guardar(archivo, "informes/1", EXTENSIONES, MAX_TAMANIO));
+
+        assertEquals(org.springframework.http.HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
     @DisplayName("Guardar - Supera el tamaño máximo (400)")
     void guardar_LanzaExcepcion_TamanioExcedido() {
         MultipartFile archivo = new MockMultipartFile(

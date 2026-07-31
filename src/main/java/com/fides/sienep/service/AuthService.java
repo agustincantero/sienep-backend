@@ -39,8 +39,6 @@ public class AuthService {
     private static final int  MAX_INTENTOS_FALLIDOS  = 5;
     private static final int  VENTANA_MINUTOS        = 10;
     private static final int  TOKEN_VALIDEZ_MINUTOS  = 30;
-    private static final int  MAX_RESET_INTENTOS     = 3;
-    private static final int  RESET_VENTANA_MINUTOS  = 15;
 
     private final AuthenticationManager           authManager;
     private final JwtTokenUtil                    jwtTokenUtil;
@@ -52,6 +50,7 @@ public class AuthService {
     private final PasswordEncoder                 passwordEncoder;
     private final EmailService                    emailService;
     private final AuditoriaService                auditoriaService;
+    private final PasswordResetRateLimiter        passwordResetRateLimiter;
 
     // Campo separado (no final): Lombok no copia @Value a los parámetros del
     // constructor generado por @RequiredArgsConstructor sin un lombok.config,
@@ -156,24 +155,27 @@ public class AuthService {
     // email de otra persona alcance para tumbarle la sesión/cuenta (DoS sin login).
     @Transactional
     public void olvideMiContrasenia(String email) {
+        String emailNormalizado = email.toLowerCase();
+
+        // El límite se aplica por email (no por idUsuario) y ANTES de saber si el
+        // usuario existe: si solo se limitaran los emails que sí existen, el 429
+        // aparecería únicamente para cuentas reales y sería en sí mismo un oráculo
+        // de enumeración (ver PasswordResetRateLimiter). La respuesta acá tiene que
+        // ser la misma sin importar si el email pertenece a un usuario o no.
+        if (!passwordResetRateLimiter.registrarIntento(emailNormalizado)) {
+            log.warn("Límite de restablecimiento excedido para email={}", emailNormalizado);
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Has solicitado restablecer la contraseña demasiadas veces. Por favor, intentá nuevamente más tarde.");
+        }
+
         // Respuesta genérica siempre — no revelar si el email existe o no
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email.toLowerCase());
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(emailNormalizado);
         if (usuarioOpt.isEmpty()) {
             log.warn("Solicitud de olvido para email inexistente: {}", email);
             return;
         }
 
         Usuario usuario = usuarioOpt.get();
-
-        LocalDateTime ventana = LocalDateTime.now().minusMinutes(RESET_VENTANA_MINUTOS);
-        long intentos = tokenRestablecimientoRepository.contarTokensGeneradosDesde(
-                usuario.getIdUsuario(), ventana);
-
-        if (intentos >= MAX_RESET_INTENTOS) {
-            log.warn("Límite de restablecimiento excedido para id={}", usuario.getIdUsuario());
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Has solicitado restablecer la contraseña demasiadas veces. Por favor, intentá nuevamente más tarde.");
-        }
 
         tokenRestablecimientoRepository.invalidarTokensActivos(usuario.getIdUsuario());
 

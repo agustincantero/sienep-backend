@@ -52,6 +52,7 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
     @Mock private AuditoriaService auditoriaService;
+    @Mock private PasswordResetRateLimiter passwordResetRateLimiter;
 
     @InjectMocks
     private AuthService authService;
@@ -216,6 +217,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("Olvidé mi contraseña - Email existe, genera token y manda el link (no toca la contraseña)")
     void olvideMiContrasenia_EmailExiste_GeneraTokenYEnviaLink() {
+        when(passwordResetRateLimiter.registrarIntento("juan.garcia@utec.edu.uy")).thenReturn(true);
         when(usuarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
 
         authService.olvideMiContrasenia("juan.garcia@utec.edu.uy");
@@ -233,6 +235,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("Olvidé mi contraseña - Email no existe, no revela nada ni lanza excepción")
     void olvideMiContrasenia_EmailNoExiste_NoHaceNada() {
+        when(passwordResetRateLimiter.registrarIntento("inexistente@utec.edu.uy")).thenReturn(true);
         when(usuarioRepository.findByEmail("inexistente@utec.edu.uy")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> authService.olvideMiContrasenia("inexistente@utec.edu.uy"));
@@ -244,6 +247,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("Olvidé mi contraseña - Fallo de email no lanza excepción (no debe revelar nada distinto)")
     void olvideMiContrasenia_FalloDeEmail_NoLanza() {
+        when(passwordResetRateLimiter.registrarIntento("juan.garcia@utec.edu.uy")).thenReturn(true);
         when(usuarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
         doThrow(new RuntimeException("SMTP no disponible"))
                 .when(emailService).enviarLinkRestablecimiento(any(), any(), any());
@@ -251,6 +255,32 @@ class AuthServiceTest {
         assertDoesNotThrow(() -> authService.olvideMiContrasenia("juan.garcia@utec.edu.uy"));
 
         verify(tokenRestablecimientoRepository).save(any(TokenRestablecimiento.class));
+    }
+
+    @Test
+    @DisplayName("Olvidé mi contraseña - Límite excedido con email existente (429), no genera token")
+    void olvideMiContrasenia_LanzaTooManyRequests_EmailExiste() {
+        when(passwordResetRateLimiter.registrarIntento("juan.garcia@utec.edu.uy")).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.olvideMiContrasenia("juan.garcia@utec.edu.uy"));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+        verifyNoInteractions(usuarioRepository, tokenRestablecimientoRepository, emailService);
+    }
+
+    @Test
+    @DisplayName("Olvidé mi contraseña - Límite excedido con email inexistente (429 igual, no filtra existencia)")
+    void olvideMiContrasenia_LanzaTooManyRequests_EmailNoExiste() {
+        when(passwordResetRateLimiter.registrarIntento("inexistente@utec.edu.uy")).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.olvideMiContrasenia("inexistente@utec.edu.uy"));
+
+        // Misma respuesta (429) que con un email existente: el rate-limit no debe
+        // filtrar si el email pertenece a un usuario real o no.
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+        verifyNoInteractions(usuarioRepository, tokenRestablecimientoRepository, emailService);
     }
 
     // ── Restablecer contraseña con token ───────────────────────

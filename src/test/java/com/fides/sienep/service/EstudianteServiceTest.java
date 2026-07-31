@@ -11,6 +11,8 @@ import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.PaisDocumento;
+import com.fides.sienep.model.Telefono;
+import com.fides.sienep.model.Grupo;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
@@ -356,6 +358,84 @@ class EstudianteServiceTest {
 
         assertNotNull(resultado);
         verify(estudianteRepository).save(estudianteExistente);
+    }
+
+    @Test
+    @DisplayName("Actualizar - Da de baja lógica los teléfonos que ya no vienen en la lista (M1)")
+    void actualizar_DaDeBajaTelefonosRemovidos() {
+        Telefono telefonoViejo = new Telefono(estudianteExistente, "099111111");
+        telefonoViejo.setEstado(EstadoLogico.ACTIVO);
+        estudianteExistente.setTelefonos(new ArrayList<>(List.of(telefonoViejo)));
+
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("ana.garcia@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+        dto.setTelefonos(List.of("099222222"));
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.actualizar(1, dto);
+
+        assertEquals(EstadoLogico.ELIMINADO, telefonoViejo.getEstado());
+        boolean nuevoTelefonoActivo = false;
+        for (Telefono t : estudianteExistente.getTelefonos()) {
+            if (t.getId().getNumero().equals("099222222") && t.getEstado() == EstadoLogico.ACTIVO) {
+                nuevoTelefonoActivo = true;
+            }
+        }
+        assertTrue(nuevoTelefonoActivo);
+    }
+
+    @Test
+    @DisplayName("Actualizar - Reactiva un teléfono previamente eliminado que vuelve a la lista (M1)")
+    void actualizar_ReactivaTelefonoEliminado() {
+        Telefono telefonoEliminado = new Telefono(estudianteExistente, "099111111");
+        telefonoEliminado.setEstado(EstadoLogico.ELIMINADO);
+        estudianteExistente.setTelefonos(new ArrayList<>(List.of(telefonoEliminado)));
+
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("ana.garcia@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+        dto.setTelefonos(List.of("099111111"));
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.actualizar(1, dto);
+
+        assertEquals(EstadoLogico.ACTIVO, telefonoEliminado.getEstado());
+        assertEquals(1, estudianteExistente.getTelefonos().size());
+    }
+
+    @Test
+    @DisplayName("Actualizar - Rechaza asignar un grupo que no está ACTIVO (M2)")
+    void actualizar_LanzaExcepcion_GrupoNoActivo() {
+        Grupo grupoInactivo = new Grupo();
+        grupoInactivo.setIdGrupo(1);
+        grupoInactivo.setEstado(EstadoLogico.INACTIVO);
+
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("ana.garcia@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+        dto.setIdGrupos(List.of(1));
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoInactivo));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.actualizar(1, dto));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
     }
 
     @Test

@@ -215,6 +215,32 @@ class InstanciaComunServiceTest {
     }
 
     @Test
+    @DisplayName("Crear instancia común - recordatorioInicial con nroOcurrencias=0 lanza 422 (regresión RF13)")
+    void crear_ConRecordatorioInicialNroOcurrenciasCero_LanzaUnprocessable() {
+        RecordatorioInicialDTO recordatorioInicial = new RecordatorioInicialDTO();
+        recordatorioInicial.setTitulo("Recordatorio de seguimiento");
+        recordatorioInicial.setTipo(TipoRecordatorio.LLAMADA);
+        recordatorioInicial.setFechaHora(LocalDateTime.now().plusDays(1));
+        recordatorioInicial.setIdCategoria(1);
+        recordatorioInicial.setNroOcurrencias(0);
+        requestDTO.setRecordatorioInicial(recordatorioInicial);
+
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(recordatorioService, never()).crear(any());
+    }
+
+    @Test
     @DisplayName("Crear instancia común - Sin recordatorioInicial no llama a RecordatorioService (RF13)")
     void crear_SinRecordatorioInicial_NoLlamaARecordatorioService() {
         mockSecurityContext(2);

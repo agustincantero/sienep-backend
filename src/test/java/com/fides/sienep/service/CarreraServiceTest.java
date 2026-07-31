@@ -136,6 +136,19 @@ class CarreraServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar carrera - Rechaza editar una carrera inactiva (M3)")
+    void actualizar_LanzaConflicto_CarreraInactiva() {
+        carreraMock.setEstado(EstadoLogico.INACTIVO);
+        when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> carreraService.actualizar(1, requestDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(carreraRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Actualizar carrera - No encontrada")
     void actualizar_LanzaExcepcion_NoEncontrada() {
         when(carreraRepository.findById(99)).thenReturn(Optional.empty());

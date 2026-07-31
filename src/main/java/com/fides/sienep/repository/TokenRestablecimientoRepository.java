@@ -17,14 +17,4 @@ public interface TokenRestablecimientoRepository extends JpaRepository<TokenRest
     @Modifying
     @Query("UPDATE TokenRestablecimiento t SET t.usado = true WHERE t.idUsuario = :idUsuario AND t.usado = false")
     void invalidarTokensActivos(@Param("idUsuario") int idUsuario);
-
-    @Query("""
-        SELECT COUNT(t) FROM TokenRestablecimiento t
-        WHERE t.idUsuario = :idUsuario
-          AND t.createdAt >= :desde
-        """)
-    long contarTokensGeneradosDesde(
-            @Param("idUsuario") Integer idUsuario,
-            @Param("desde") java.time.LocalDateTime desde
-    );
 }
