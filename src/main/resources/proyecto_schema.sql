@@ -719,6 +719,28 @@ CREATE INDEX idx_login_intentos_usuario_fecha
     ON proyecto.log_intentos(id_usuario, fec_hora DESC);
 
 -- =====================================================
+-- TABLA: token_restablecimiento
+-- =====================================================
+-- Tokens de un solo uso para el flujo "olvidé mi contraseña": se guarda el
+-- hash SHA-256 del token (no el token en claro), nunca la contraseña en sí.
+-- La contraseña solo se aplica cuando se confirma con un token válido, no
+-- en el momento de la solicitud — así un pedido no autenticado no alcanza
+-- para tumbarle la contraseña a otro usuario.
+CREATE TABLE proyecto.token_restablecimiento (
+                                       id_token       SERIAL       PRIMARY KEY,
+                                       id_usuario     INT          NOT NULL,
+                                       token_hash     VARCHAR(255) NOT NULL UNIQUE,
+                                       fec_expiracion TIMESTAMP    NOT NULL,
+                                       usado          BOOLEAN      NOT NULL DEFAULT FALSE,
+                                       created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                       CONSTRAINT fk_token_restablecimiento_usuario FOREIGN KEY (id_usuario)
+                                           REFERENCES proyecto.usuarios(id_usuario)
+                                           ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX idx_token_restablecimiento_usuario ON proyecto.token_restablecimiento(id_usuario);
+
+-- =====================================================
 -- TABLA: auditoria
 -- =====================================================
 CREATE TABLE proyecto.auditoria (

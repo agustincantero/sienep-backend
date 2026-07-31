@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 GEMINI.md
 CLAUDE.md
+.mcp.json
 
 ### STS ###
 .apt_generated

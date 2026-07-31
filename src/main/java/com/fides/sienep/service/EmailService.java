@@ -59,6 +59,31 @@ public class EmailService {
         }
     }
 
+    // Flujo "olvidé mi contraseña": a diferencia de enviarContraseniaRestablecida
+    // (usada cuando un admin autenticado resetea la de otro), acá no se manda ninguna
+    // contraseña — se manda un link con un token de un solo uso, y la contraseña la
+    // elige el usuario recién al confirmar (AuthService.restablecerContraseniaConToken).
+    public void enviarLinkRestablecimiento(String destinatario, String nombreUsuario, String link) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@sienep.app");
+            message.setTo(destinatario);
+            message.setSubject("Restablecer tu contraseña - SIENEP");
+            message.setText(
+                    "¡Hola, " + nombreUsuario + "!\n\n" +
+                            "Solicitaste restablecer tu contraseña.\n" +
+                            "Si fuiste vos, entrá a este link (válido por 30 minutos):\n" +
+                            link + "\n\n" +
+                            "Si no fuiste vos, ignorá este mensaje: tu contraseña actual sigue funcionando."
+            );
+            mailSender.send(message);
+            log.info("[AUDIT] Email de restablecimiento (link) enviado a {}", destinatario);
+        } catch (Exception e) {
+            log.error("[AUDIT] Error al enviar email de restablecimiento a {}: {}", destinatario, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo enviar el email a " + destinatario);
+        }
+    }
+
     // RF15 — notificación del ID de negocio al funcionario creador de la instancia.
     // A diferencia de los flujos de contraseña, un fallo de envío NO debe interrumpir
     // la operación principal: la instancia ya fue persistida correctamente.

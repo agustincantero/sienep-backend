@@ -3,6 +3,7 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
 import com.fides.sienep.dto.OlvideContraseniaDTO;
+import com.fides.sienep.dto.RestablecerContraseniaConTokenDTO;
 import com.fides.sienep.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -54,13 +55,27 @@ public class AuthController {
 
     @PostMapping("/olvide-contrasenia")
     @Operation(summary = "Olvidé mi contraseña",
-            description = "Genera una nueva contraseña temporal y la envía al email registrado.")
+            description = "Genera un token de un solo uso (válido 30 minutos) y manda un link al email " +
+                    "registrado. La contraseña actual sigue funcionando hasta que se confirme el cambio " +
+                    "en /restablecer-contrasenia con ese token.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Si el email existe, se envió la contraseña"),
-            @ApiResponse(responseCode = "400", description = "Body malformado o email con formato inválido")
+            @ApiResponse(responseCode = "200", description = "Si el email existe, se envió el link")
     })
     public ResponseEntity<Void> olvideMiContrasenia(@RequestBody @Valid OlvideContraseniaDTO dto) {
         authService.olvideMiContrasenia(dto.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/restablecer-contrasenia")
+    @Operation(summary = "Confirmar restablecimiento de contraseña",
+            description = "Aplica la nueva contraseña usando el token de un solo uso recibido por email " +
+                    "en /olvide-contrasenia. El token vence a los 30 minutos o al primer uso.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Contraseña restablecida"),
+            @ApiResponse(responseCode = "401", description = "Token inválido, vencido o ya usado")
+    })
+    public ResponseEntity<Void> restablecerContrasenia(@RequestBody @Valid RestablecerContraseniaConTokenDTO dto) {
+        authService.restablecerContraseniaConToken(dto.getToken(), dto.getContraseniaNueva());
         return ResponseEntity.ok().build();
     }
 

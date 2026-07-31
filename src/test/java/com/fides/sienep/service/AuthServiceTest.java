@@ -6,10 +6,12 @@ import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.model.LogIntento;
 import com.fides.sienep.model.Rol;
+import com.fides.sienep.model.TokenRestablecimiento;
 import com.fides.sienep.model.Usuario;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.LogIntentoRepository;
+import com.fides.sienep.repository.TokenRestablecimientoRepository;
 import com.fides.sienep.repository.UsuarioRepository;
 import com.fides.sienep.utils.JwtTokenUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,12 +27,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -43,9 +48,9 @@ class AuthServiceTest {
     @Mock private EstudianteRepository estudianteRepository;
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private LogIntentoRepository logIntentoRepository;
+    @Mock private TokenRestablecimientoRepository tokenRestablecimientoRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
-    @Mock private PasswordGeneratorService passwordGeneratorService;
     @Mock private AuditoriaService auditoriaService;
 
     @InjectMocks
@@ -58,6 +63,8 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(authService, "frontendUrl", "http://localhost:3000");
+
         rol = new Rol("ADMINISTRADOR");
 
         funcionario = new Funcionario();
@@ -207,20 +214,20 @@ class AuthServiceTest {
     // ── Olvidé mi contraseña ──────────────────────────────────
 
     @Test
-    @DisplayName("Olvidé mi contraseña - Email existe, genera y envía nueva contraseña")
-    void olvideMiContrasenia_EmailExiste_GeneraNuevaContrasenia() {
-        funcionario.setBloqueado(true); // para confirmar que se desbloquea
+    @DisplayName("Olvidé mi contraseña - Email existe, genera token y manda el link (no toca la contraseña)")
+    void olvideMiContrasenia_EmailExiste_GeneraTokenYEnviaLink() {
         when(usuarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
-        when(passwordGeneratorService.generar()).thenReturn("Temporal123!");
-        when(passwordEncoder.encode("Temporal123!")).thenReturn("hash-fake");
 
         authService.olvideMiContrasenia("juan.garcia@utec.edu.uy");
 
-        assertEquals("hash-fake", funcionario.getContrasenia());
-        assertFalse(funcionario.isBloqueado());
-        verify(usuarioRepository).save(funcionario);
-        verify(emailService).enviarContraseniaRestablecida(
-                "juan.garcia@utec.edu.uy", "Juan", "Temporal123!");
+        // La contraseña actual NO se toca acá — recién se aplica al confirmar el token
+        verify(usuarioRepository, never()).save(any());
+        verify(tokenRestablecimientoRepository).invalidarTokensActivos(2);
+        verify(tokenRestablecimientoRepository).save(argThat((TokenRestablecimiento t) ->
+                t.getIdUsuario() == 2 && !t.isUsado() && t.getFechaExpiracion().isAfter(LocalDateTime.now())));
+        verify(emailService).enviarLinkRestablecimiento(
+                eq("juan.garcia@utec.edu.uy"), eq("Juan"),
+                argThat(link -> link.startsWith("http://localhost:3000/restablecer-contrasenia?token=")));
     }
 
     @Test
@@ -230,7 +237,67 @@ class AuthServiceTest {
 
         assertDoesNotThrow(() -> authService.olvideMiContrasenia("inexistente@utec.edu.uy"));
 
+        verifyNoInteractions(tokenRestablecimientoRepository, emailService);
         verify(usuarioRepository, never()).save(any());
-        verifyNoInteractions(emailService);
+    }
+
+    @Test
+    @DisplayName("Olvidé mi contraseña - Fallo de email no lanza excepción (no debe revelar nada distinto)")
+    void olvideMiContrasenia_FalloDeEmail_NoLanza() {
+        when(usuarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+        doThrow(new RuntimeException("SMTP no disponible"))
+                .when(emailService).enviarLinkRestablecimiento(any(), any(), any());
+
+        assertDoesNotThrow(() -> authService.olvideMiContrasenia("juan.garcia@utec.edu.uy"));
+
+        verify(tokenRestablecimientoRepository).save(any(TokenRestablecimiento.class));
+    }
+
+    // ── Restablecer contraseña con token ───────────────────────
+
+    @Test
+    @DisplayName("Restablecer con token - Éxito, aplica la contraseña elegida y marca el token usado")
+    void restablecerConToken_Exito() {
+        TokenRestablecimiento token = new TokenRestablecimiento(2, "hash-fake", LocalDateTime.now().plusMinutes(10));
+
+        when(tokenRestablecimientoRepository.findByTokenHashAndUsadoFalse(anyString()))
+                .thenReturn(Optional.of(token));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(passwordEncoder.encode("NuevaPass123!")).thenReturn("hash-nueva");
+
+        authService.restablecerContraseniaConToken("token-plano", "NuevaPass123!");
+
+        assertEquals("hash-nueva", funcionario.getContrasenia());
+        assertFalse(funcionario.isBloqueado());
+        assertTrue(token.isUsado());
+        verify(usuarioRepository).save(funcionario);
+        verify(tokenRestablecimientoRepository).save(token);
+    }
+
+    @Test
+    @DisplayName("Restablecer con token - Token inexistente o ya usado (401)")
+    void restablecerConToken_LanzaUnauthorized_TokenNoEncontrado() {
+        when(tokenRestablecimientoRepository.findByTokenHashAndUsadoFalse(anyString()))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.restablecerContraseniaConToken("token-invalido", "NuevaPass123!"));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Restablecer con token - Token vencido (401)")
+    void restablecerConToken_LanzaUnauthorized_TokenVencido() {
+        TokenRestablecimiento token = new TokenRestablecimiento(2, "hash-fake", LocalDateTime.now().minusMinutes(1));
+        when(tokenRestablecimientoRepository.findByTokenHashAndUsadoFalse(anyString()))
+                .thenReturn(Optional.of(token));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.restablecerContraseniaConToken("token-vencido", "NuevaPass123!"));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verify(usuarioRepository, never()).save(any());
     }
 }
