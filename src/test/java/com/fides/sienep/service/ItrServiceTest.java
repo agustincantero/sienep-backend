@@ -236,7 +236,7 @@ class ItrServiceTest {
     }
 
     @Test
-    @DisplayName("actualizar: Lanza 422 si la nueva carrera a asociar no está ACTIVA (H13)")
+    @DisplayName("actualizar: Lanza 422 si la nueva carrera a asociar no está ACTIVA")
     void actualizar_LanzaUnprocessable_CarreraNuevaInactiva() {
         Itr itr = new Itr("Norte");
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
@@ -258,7 +258,7 @@ class ItrServiceTest {
     }
 
     @Test
-    @DisplayName("actualizar: Lanza 422 al reactivar un vínculo si la carrera ya no está ACTIVA (H13)")
+    @DisplayName("actualizar: Lanza 422 al reactivar un vínculo si la carrera ya no está ACTIVA")
     void actualizar_LanzaUnprocessable_AlReactivarVinculoConCarreraInactiva() {
         Itr itr = new Itr("Norte");
         itr.setIdItr(1);
@@ -285,12 +285,12 @@ class ItrServiceTest {
     }
 
     @Test
-    @DisplayName("darDeBaja: Modifica el estado a INACTIVO")
-    void darDeBaja_Exito() {
+    @DisplayName("desactivar: Modifica el estado a INACTIVO")
+    void desactivar_Exito() {
         Itr itr = new Itr("Norte");
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
 
-        itrService.darDeBaja(1);
+        itrService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, itr.getEstado());
         verify(itrRepository, times(1)).save(itr);
@@ -310,21 +310,21 @@ class ItrServiceTest {
     }
 
     @Test
-    @DisplayName("darDeBaja: Ya está inactivo (409) (H11)")
-    void darDeBaja_LanzaConflict_YaInactivo() {
+    @DisplayName("desactivar: Ya está inactivo (409)")
+    void desactivar_LanzaConflict_YaInactivo() {
         Itr itr = new Itr("Norte");
         itr.setEstado(EstadoLogico.INACTIVO);
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> itrService.darDeBaja(1));
+                () -> itrService.desactivar(1));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(itrRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("reactivar: Ya está activo (409) (H11)")
+    @DisplayName("reactivar: Ya está activo (409)")
     void reactivar_LanzaConflict_YaActivo() {
         Itr itr = new Itr("Norte");
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));

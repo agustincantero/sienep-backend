@@ -185,10 +185,10 @@ public class RolService {
         return mapper.toDto(rolActualizado);
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_ROL')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_ROL')")
     @Transactional
     @CacheEvict(value = "roles", allEntries = true)
-    public void darDeBajaRol(int id) {
+    public void desactivarRol(int id) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
         

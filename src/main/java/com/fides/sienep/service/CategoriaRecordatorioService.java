@@ -99,10 +99,10 @@ public class CategoriaRecordatorioService {
         return mapper.toDto(actualizada);
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_CATEGORIA_RECORDATORIO')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     @CacheEvict(value = "categoriasRecordatorio", allEntries = true)
-    public void darDeBajaCategoria(int id) {
+    public void desactivarCategoria(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
 

@@ -155,7 +155,7 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Crear recordatorio - Evento creado en Google pero falla el guardado local del eventIdGoogle, no propaga (M5)")
+    @DisplayName("Crear recordatorio - Evento creado en Google pero falla el guardado local del eventIdGoogle, no propaga")
     void crear_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
         FuncionarioGcal gcal = new FuncionarioGcal(responsable, "refresh-token", "juan@gmail.com");
 
@@ -299,7 +299,7 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Listar activos - Éxito, paginado (H4)")
+    @DisplayName("Listar activos - Éxito, paginado")
     void listarActivos_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(recordatorioRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
@@ -580,7 +580,7 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Evento nuevo creado en Google pero falla el guardado local, no propaga (M5)")
+    @DisplayName("Actualizar recordatorio - Evento nuevo creado en Google pero falla el guardado local, no propaga")
     void actualizar_CambiaResponsable_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
         recordatorio.setEventIdGoogle("evento-viejo-id");
 
@@ -634,31 +634,31 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja - Éxito")
-    void darDeBaja_Exito() {
+    @DisplayName("Desactivar - Éxito")
+    void desactivar_Exito() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
 
-        recordatorioService.darDeBaja(1);
+        recordatorioService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, recordatorio.getEstado());
         verify(recordatorioRepository).save(recordatorio);
     }
 
     @Test
-    @DisplayName("Dar de baja - No encontrado (404)")
-    void darDeBaja_LanzaNotFound() {
+    @DisplayName("Desactivar - No encontrado (404)")
+    void desactivar_LanzaNotFound() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.darDeBaja(99));
+                () -> recordatorioService.desactivar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
-    @DisplayName("Listar por instancia - Éxito, paginado (H4)")
+    @DisplayName("Listar por instancia - Éxito, paginado")
     void listarPorInstancia_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(recordatorioRepository.findByInstanciaAndEstado(1, EstadoLogico.ACTIVO, pageable))
@@ -672,7 +672,7 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por responsable - Éxito, paginado (H4)")
+    @DisplayName("Listar por responsable - Éxito, paginado")
     void listarPorResponsable_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(recordatorioRepository.findByResponsableAndEstado(2, EstadoLogico.ACTIVO, pageable))

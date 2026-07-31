@@ -169,7 +169,7 @@ class EstudianteServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Obtener por ID - Éxito, con VER_BLOQUE_CONFIDENCIAL muestra datos de salud (H5)")
+    @DisplayName("Obtener por ID - Éxito, con VER_BLOQUE_CONFIDENCIAL muestra datos de salud")
     void obtenerPorId_DebeRetornarDTO_CuandoElEstudianteExiste() {
         mockAuthConPermisos("2", "VER_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
@@ -187,7 +187,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Obtener por ID - Sin VER_BLOQUE_CONFIDENCIAL oculta datos de salud (H5)")
+    @DisplayName("Obtener por ID - Sin VER_BLOQUE_CONFIDENCIAL oculta datos de salud")
     void obtenerPorId_SinVerBloqueConfidencial_OcultaDatosDeSalud() {
         mockAuthConPermisos("2", "VER_ESTUDIANTE");
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
@@ -535,7 +535,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar - Da de baja lógica los teléfonos que ya no vienen en la lista (M1)")
+    @DisplayName("Actualizar - Da de baja lógica los teléfonos que ya no vienen en la lista")
     void actualizar_DaDeBajaTelefonosRemovidos() {
         Telefono telefonoViejo = new Telefono(estudianteExistente, "099111111");
         telefonoViejo.setEstado(EstadoLogico.ACTIVO);
@@ -565,7 +565,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar - Reactiva un teléfono previamente eliminado que vuelve a la lista (M1)")
+    @DisplayName("Actualizar - Reactiva un teléfono previamente eliminado que vuelve a la lista")
     void actualizar_ReactivaTelefonoEliminado() {
         Telefono telefonoEliminado = new Telefono(estudianteExistente, "099111111");
         telefonoEliminado.setEstado(EstadoLogico.ELIMINADO);
@@ -589,7 +589,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar - Rechaza asignar un grupo que no está ACTIVO (M2)")
+    @DisplayName("Actualizar - Rechaza asignar un grupo que no está ACTIVO")
     void actualizar_LanzaExcepcion_GrupoNoActivo() {
         Grupo grupoInactivo = new Grupo();
         grupoInactivo.setIdGrupo(1);
@@ -918,13 +918,13 @@ class EstudianteServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Dar de baja - Estado pasa a INACTIVO")
-    void darDeBaja_DebePonerEstadoInactivo_YGuardar() {
+    @DisplayName("Desactivar - Estado pasa a INACTIVO")
+    void desactivar_DebePonerEstadoInactivo_YGuardar() {
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
         when(estudianteRepository.save(any(Estudiante.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        estudianteService.darDeBaja(1);
+        estudianteService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, estudianteExistente.getEstado());
         verify(estudianteRepository).save(estudianteExistente);

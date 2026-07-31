@@ -143,9 +143,9 @@ public class FuncionarioService {
         log.info("[AUDIT] Admin restableció contraseña del funcionario id={}", id);
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_FUNCIONARIO')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_FUNCIONARIO')")
     @Transactional
-    public void darDeBaja(Integer id) {
+    public void desactivar(Integer id) {
         Funcionario funcionario = buscarOFallar(id);
         if (funcionario.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra inactivo");

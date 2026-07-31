@@ -52,16 +52,16 @@ public class InvolucradoController {
     }
 
     @DeleteMapping("/{nomInvolucrado}")
-    @Operation(summary = "Dar de baja involucrado",
+    @Operation(summary = "Desactivar involucrado",
             description = "Baja lógica del involucrado (estado INACTIVO).")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Baja realizada"),
             @ApiResponse(responseCode = "404", description = "Involucrado no encontrado")
     })
-    public ResponseEntity<Void> darDeBaja(
+    public ResponseEntity<Void> desactivar(
             @PathVariable int codInstancia,
             @PathVariable String nomInvolucrado) {
-        involucradoService.darDeBaja(codInstancia, nomInvolucrado);
+        involucradoService.desactivar(codInstancia, nomInvolucrado);
         return ResponseEntity.noContent().build();
     }
 }

@@ -159,7 +159,7 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar activas - Éxito, paginado (H2)")
+    @DisplayName("Listar activas - Éxito, paginado")
     void listarActivas_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(incidenciaRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
@@ -227,19 +227,19 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja - Éxito")
-    void darDeBaja_Exito() {
+    @DisplayName("Desactivar - Éxito")
+    void desactivar_Exito() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(incidencia));
 
-        incidenciaService.darDeBaja(1);
+        incidenciaService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, incidencia.getEstado());
         verify(incidenciaRepository).save(incidencia);
     }
 
     @Test
-    @DisplayName("Reactivar - Éxito (H8)")
+    @DisplayName("Reactivar - Éxito")
     void reactivar_Exito() {
         incidencia.setEstado(EstadoLogico.INACTIVO);
         when(incidenciaRepository.findById(1)).thenReturn(Optional.of(incidencia));
@@ -254,7 +254,7 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Reactivar - No encontrada (404) (H8)")
+    @DisplayName("Reactivar - No encontrada (404)")
     void reactivar_LanzaNotFound() {
         when(incidenciaRepository.findById(99)).thenReturn(Optional.empty());
 
@@ -266,7 +266,7 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Reactivar - Ya está activa (409) (H8)")
+    @DisplayName("Reactivar - Ya está activa (409)")
     void reactivar_LanzaConflict_YaActiva() {
         when(incidenciaRepository.findById(1)).thenReturn(Optional.of(incidencia));
 
@@ -278,13 +278,13 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja - No encontrada (404)")
-    void darDeBaja_LanzaNotFound() {
+    @DisplayName("Desactivar - No encontrada (404)")
+    void desactivar_LanzaNotFound() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> incidenciaService.darDeBaja(99));
+                () -> incidenciaService.desactivar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
@@ -333,7 +333,7 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito, paginado (H2)")
+    @DisplayName("Listar por estudiante - Éxito, paginado")
     void listarPorEstudiante_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
@@ -347,7 +347,7 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por funcionario - Éxito, paginado (H2)")
+    @DisplayName("Listar por funcionario - Éxito, paginado")
     void listarPorFuncionario_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(incidenciaRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))

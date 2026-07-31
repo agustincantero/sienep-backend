@@ -54,11 +54,11 @@ public class CarreraController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Dar de baja una carrera", description = "Cambia el estado de la carrera a INACTIVO.")
-    @ApiResponse(responseCode = "204", description = "Carrera dada de baja")
+    @Operation(summary = "Desactivar una carrera", description = "Cambia el estado de la carrera a INACTIVO.")
+    @ApiResponse(responseCode = "204", description = "Carrera desactivada")
     @ApiResponse(responseCode = "404", description = "Carrera no encontrada")
-    public ResponseEntity<Void> darDeBaja(@PathVariable Integer id) {
-        carreraService.eliminar(id);
+    public ResponseEntity<Void> desactivar(@PathVariable Integer id) {
+        carreraService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 

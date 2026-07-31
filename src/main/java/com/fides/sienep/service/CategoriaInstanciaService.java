@@ -103,10 +103,10 @@ public class CategoriaInstanciaService {
         return mapper.toDto(actualizada);
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_CATEGORIA_INSTANCIA')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_CATEGORIA_INSTANCIA')")
     @Transactional
     @CacheEvict(value = "categoriasInstancia", allEntries = true)
-    public void darDeBajaCategoria(int id) {
+    public void desactivarCategoria(int id) {
         CategoriaInstancia categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de instancia no encontrada"));
 

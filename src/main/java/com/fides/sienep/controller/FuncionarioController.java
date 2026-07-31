@@ -64,11 +64,11 @@ public class FuncionarioController {
         return ResponseEntity.ok(funcionarioService.actualizar(id, dto));
     }
 
-    @Operation(summary = "Eliminar funcionario")
-    @ApiResponse(responseCode = "204", description = "Funcionario eliminado correctamente")
+    @Operation(summary = "Desactivar funcionario")
+    @ApiResponse(responseCode = "204", description = "Funcionario desactivado correctamente")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-        funcionarioService.darDeBaja(id);
+    public ResponseEntity<Void> desactivar(@PathVariable Integer id) {
+        funcionarioService.desactivar(id);
 
         // 204 No Content: la operación fue exitosa pero no hay nada que devolver en el body (ya no existe el recurso).
         return ResponseEntity.noContent().build();

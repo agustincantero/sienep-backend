@@ -70,12 +70,12 @@ public class IncidenciaController {
         return ResponseEntity.ok(incidenciaService.actualizar(id, dto));
     }
 
-    @Operation(summary = "Dar de baja una incidencia")
+    @Operation(summary = "Desactivar una incidencia")
     @ApiResponse(responseCode = "204", description = "Incidencia dada de baja correctamente")
     @ApiResponse(responseCode = "404", description = "Incidencia no encontrada")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> darDeBaja(@PathVariable int id) {
-        incidenciaService.darDeBaja(id);
+    public ResponseEntity<Void> desactivar(@PathVariable int id) {
+        incidenciaService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 

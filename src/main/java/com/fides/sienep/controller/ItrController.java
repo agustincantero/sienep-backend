@@ -66,13 +66,13 @@ public class ItrController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Dar de baja ITR", description = "Aplica una baja lógica (estado INACTIVO) a un ITR.")
+    @Operation(summary = "Desactivar ITR", description = "Aplica una baja lógica (estado INACTIVO) a un ITR.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "ITR dado de baja exitosamente"),
             @ApiResponse(responseCode = "404", description = "ITR no encontrado")
     })
-    public ResponseEntity<Void> darDeBaja(@PathVariable Integer id) {
-        itrService.darDeBaja(id);
+    public ResponseEntity<Void> desactivar(@PathVariable Integer id) {
+        itrService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 

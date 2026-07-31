@@ -60,7 +60,7 @@ public class TelefonoService {
         return telefonoMapper.toDto(telefono);
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_ESTUDIANTE')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_ESTUDIANTE')")
     @Transactional
     public void eliminar(Integer idUsuario, String numero) {
         Telefono.Id id = new Telefono.Id(idUsuario, numero);

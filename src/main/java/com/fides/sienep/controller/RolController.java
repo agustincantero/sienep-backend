@@ -68,15 +68,15 @@ public class RolController {
         return ResponseEntity.ok(rolService.actualizarRol(id, requestDTO));
     }
 
-    @Operation(summary = "Dar de baja un rol", description = "Realiza una baja lógica del rol cambiando su estado a INACTIVO.")
+    @Operation(summary = "Desactivar un rol", description = "Realiza una baja lógica del rol cambiando su estado a INACTIVO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Rol dado de baja exitosamente (No Content)"),
             @ApiResponse(responseCode = "404", description = "Rol no encontrado")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> darDeBajaRol(
+    public ResponseEntity<Void> desactivarRol(
             @Parameter(description = "ID del rol a dar de baja", required = true) @PathVariable int id) {
-        rolService.darDeBajaRol(id);
+        rolService.desactivarRol(id);
         return ResponseEntity.noContent().build();
     }
 

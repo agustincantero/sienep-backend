@@ -43,7 +43,7 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
 
     Optional<Recordatorio> findByCodRecordatorioAndEstado(int codRecordatorio, EstadoLogico estado);
 
-    // Usado por FrecuenciaService.darDeBaja() para no dejar recordatorios
+    // Usado por FrecuenciaService.desactivar() para no dejar recordatorios
     // activos con una frecuencia inactiva (RecurrenceRuleBuilder seguiría
     // computando la recurrencia con datos de un catálogo dado de baja).
     boolean existsByFrecuencia_IdFrecuenciaAndEstado(int idFrecuencia, EstadoLogico estado);

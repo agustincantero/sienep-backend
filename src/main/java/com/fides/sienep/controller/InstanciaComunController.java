@@ -83,12 +83,12 @@ public class InstanciaComunController {
         return ResponseEntity.ok(instanciaComunService.actualizar(codInstancia, dto));
     }
 
-    @Operation(summary = "Dar de baja una instancia")
+    @Operation(summary = "Desactivar una instancia")
     @ApiResponse(responseCode = "204", description = "Instancia dada de baja correctamente")
     @ApiResponse(responseCode = "404", description = "Instancia no encontrada")
     @DeleteMapping("/{codInstancia}")
-    public ResponseEntity<Void> darDeBaja(@PathVariable int codInstancia) {
-        instanciaComunService.darDeBaja(codInstancia);
+    public ResponseEntity<Void> desactivar(@PathVariable int codInstancia) {
+        instanciaComunService.desactivar(codInstancia);
         return ResponseEntity.noContent().build();
     }
 

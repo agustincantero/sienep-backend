@@ -451,7 +451,7 @@ class InstanciaComunServiceTest {
     // ── Listar ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Listar activas - Éxito, paginado (H3)")
+    @DisplayName("Listar activas - Éxito, paginado")
     void listarActivas_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
@@ -465,7 +465,7 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito, paginado (H3)")
+    @DisplayName("Listar por estudiante - Éxito, paginado")
     void listarPorEstudiante_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
@@ -479,7 +479,7 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por funcionario - Éxito, paginado (H3)")
+    @DisplayName("Listar por funcionario - Éxito, paginado")
     void listarPorFuncionario_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))
@@ -493,7 +493,7 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por categoría - Éxito, paginado (H3)")
+    @DisplayName("Listar por categoría - Éxito, paginado")
     void listarPorCategoria_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByCategoriaAndEstado(1, EstadoLogico.ACTIVO, pageable))
@@ -611,25 +611,25 @@ class InstanciaComunServiceTest {
     // ── Dar de baja ───────────────────────────────────────────
 
     @Test
-    @DisplayName("Dar de baja - Éxito")
-    void darDeBaja_Exito() {
+    @DisplayName("Desactivar - Éxito")
+    void desactivar_Exito() {
         when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(instancia));
 
-        instanciaComunService.darDeBaja(1);
+        instanciaComunService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, instancia.getEstado());
         verify(instanciaComunRepository).save(instancia);
     }
 
     @Test
-    @DisplayName("Dar de baja - No encontrada (404)")
-    void darDeBaja_LanzaNotFound() {
+    @DisplayName("Desactivar - No encontrada (404)")
+    void desactivar_LanzaNotFound() {
         when(instanciaComunRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.darDeBaja(99));
+                () -> instanciaComunService.desactivar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
@@ -637,7 +637,7 @@ class InstanciaComunServiceTest {
     // ── Reactivar (H8) ────────────────────────────────────────
 
     @Test
-    @DisplayName("Reactivar - Éxito (H8)")
+    @DisplayName("Reactivar - Éxito")
     void reactivar_Exito() {
         instancia.setEstado(EstadoLogico.INACTIVO);
         when(instanciaComunRepository.findById(1)).thenReturn(Optional.of(instancia));
@@ -652,7 +652,7 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Reactivar - No encontrada (404) (H8)")
+    @DisplayName("Reactivar - No encontrada (404)")
     void reactivar_LanzaNotFound() {
         when(instanciaComunRepository.findById(99)).thenReturn(Optional.empty());
 
@@ -664,7 +664,7 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Reactivar - Ya está activa (409) (H8)")
+    @DisplayName("Reactivar - Ya está activa (409)")
     void reactivar_LanzaConflict_YaActiva() {
         when(instanciaComunRepository.findById(1)).thenReturn(Optional.of(instancia));
 

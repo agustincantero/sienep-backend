@@ -81,7 +81,7 @@ public class GoogleCalendarService {
     }
 
     // ── Eliminar evento ───────────────────────────────────────────────────
-    // Se llama desde RecordatorioService.darDeBaja() si eventIdGoogle != null.
+    // Se llama desde RecordatorioService.desactivar() si eventIdGoogle != null.
 
     public void eliminarEvento(String eventIdGoogle, String refreshToken) {
         try {

@@ -116,10 +116,10 @@ public class ItrService {
     /**
      * Da de baja lógica un ITR. Evict de caché requerido para actualizar catálogo.
      */
-    @PreAuthorize("hasAuthority('ELIMINAR_ITR')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_ITR')")
     @CacheEvict(value = "itrs", allEntries = true)
     @Transactional
-    public void darDeBaja(Integer id) {
+    public void desactivar(Integer id) {
         Itr itr = buscarOFallar(id);
         if (itr.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El ITR ya se encuentra inactivo");

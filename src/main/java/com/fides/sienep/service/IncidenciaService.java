@@ -150,8 +150,8 @@ public class IncidenciaService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('ELIMINAR_INCIDENCIA')")
-    public void darDeBaja(int id) {
+    @PreAuthorize("hasAuthority('DESACTIVAR_INCIDENCIA')")
+    public void desactivar(int id) {
         Incidencia incidencia = buscarActivaOFallar(id);
         incidencia.setEstado(EstadoLogico.INACTIVO);
         incidenciaRepository.save(incidencia);

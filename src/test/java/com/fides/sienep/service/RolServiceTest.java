@@ -197,8 +197,8 @@ class RolServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja Rol - Lanza Forbidden si intenta borrar ADMINISTRADOR")
-    void darDeBajaRol_DebeLanzarExcepcion_SiEsAdministrador() {
+    @DisplayName("Desactivar Rol - Lanza Forbidden si intenta borrar ADMINISTRADOR")
+    void desactivarRol_DebeLanzarExcepcion_SiEsAdministrador() {
         // Arrange
         Rol admin = new Rol();
         admin.setIdRol(1);
@@ -208,7 +208,7 @@ class RolServiceTest {
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            rolService.darDeBajaRol(1);
+            rolService.desactivarRol(1);
         });
 
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
@@ -217,13 +217,13 @@ class RolServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja Rol - Éxito (Baja lógica)")
-    void darDeBajaRol_DebeDarDeBajaCorrectamente_CuandoEsRolValido() {
+    @DisplayName("Desactivar Rol - Éxito (Baja lógica)")
+    void desactivarRol_DebeDarDeBajaCorrectamente_CuandoEsRolValido() {
         // Arrange
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));
         
         // Act
-        rolService.darDeBajaRol(1);
+        rolService.desactivarRol(1);
         
         // Assert
         assertEquals(EstadoLogico.INACTIVO, rolExistente.getEstado());

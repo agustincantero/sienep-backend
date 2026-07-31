@@ -84,13 +84,13 @@ public class GrupoController {
     // BAJA LÓGICA
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Dar de baja un grupo", description = "Cambia el estado del grupo a INACTIVO.")
+    @Operation(summary = "Desactivar un grupo", description = "Cambia el estado del grupo a INACTIVO.")
     @ApiResponse(responseCode = "204", description = "Grupo dado de baja")
     @ApiResponse(responseCode = "404", description = "Grupo no encontrado")
-    public ResponseEntity<Void> darDeBaja(
+    public ResponseEntity<Void> desactivar(
             @PathVariable Integer id) {
 
-        grupoService.darDeBaja(id);
+        grupoService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 

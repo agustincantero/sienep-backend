@@ -178,12 +178,12 @@ public class EstudianteController {
      * Internamente cambia estado a INACTIVO — no borra datos.
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "Dar de baja lógica a un estudiante",
-            description = "Requiere ELIMINAR_ESTUDIANTE. No elimina datos — estado pasa a INACTIVO.")
+    @Operation(summary = "Desactivar un estudiante",
+            description = "Requiere DESACTIVAR_ESTUDIANTE. No elimina datos — estado pasa a INACTIVO.")
     @ApiResponse(responseCode = "204", description = "Estudiante dado de baja")
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
-    public ResponseEntity<Void> darDeBaja(@PathVariable Integer id) {
-        estudianteService.darDeBaja(id);
+    public ResponseEntity<Void> desactivar(@PathVariable Integer id) {
+        estudianteService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 

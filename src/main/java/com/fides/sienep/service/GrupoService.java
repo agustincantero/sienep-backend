@@ -104,9 +104,9 @@ public class GrupoService {
         return grupoMapper.toDto(grupoRepository.save(grupo));
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_GRUPO')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_GRUPO')")
     @Transactional
-    public void darDeBaja(Integer id) {
+    public void desactivar(Integer id) {
         Grupo grupo = buscarOFallar(id);
         if (grupo.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El grupo ya se encuentra inactivo");

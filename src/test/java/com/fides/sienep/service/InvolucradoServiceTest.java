@@ -153,29 +153,29 @@ class InvolucradoServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja involucrado - Éxito")
-    void darDeBaja_Exito() {
+    @DisplayName("Desactivar involucrado - Éxito")
+    void desactivar_Exito() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(incidencia));
         when(involucradoRepository.findByIdCodInstanciaAndIdNomInvolucrado(1, "Juan Pérez"))
                 .thenReturn(Optional.of(involucrado));
 
-        involucradoService.darDeBaja(1, "Juan Pérez");
+        involucradoService.desactivar(1, "Juan Pérez");
 
         assertEquals(EstadoLogico.INACTIVO, involucrado.getEstado());
         verify(involucradoRepository).save(involucrado);
     }
 
     @Test
-    @DisplayName("Dar de baja involucrado - No encontrado (404)")
-    void darDeBaja_LanzaNotFound_InvolucradoNoExiste() {
+    @DisplayName("Desactivar involucrado - No encontrado (404)")
+    void desactivar_LanzaNotFound_InvolucradoNoExiste() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(incidencia));
         when(involucradoRepository.findByIdCodInstanciaAndIdNomInvolucrado(1, "No Existe"))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> involucradoService.darDeBaja(1, "No Existe"));
+                () -> involucradoService.desactivar(1, "No Existe"));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(involucradoRepository, never()).save(any());

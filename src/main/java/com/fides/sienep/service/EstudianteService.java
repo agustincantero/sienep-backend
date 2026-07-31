@@ -284,9 +284,9 @@ public class EstudianteService {
     // BAJA Y REACTIVACIÓN
     // =========================================================
 
-    @PreAuthorize("hasAuthority('ELIMINAR_ESTUDIANTE')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_ESTUDIANTE')")
     @Transactional
-    public void darDeBaja(Integer id) {
+    public void desactivar(Integer id) {
         Estudiante estudiante = buscarOFallar(id);
         estudiante.setEstado(EstadoLogico.INACTIVO);
         estudianteRepository.save(estudiante);

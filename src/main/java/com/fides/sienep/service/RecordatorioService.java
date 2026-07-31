@@ -268,7 +268,7 @@ public class RecordatorioService {
         Recordatorio actualizado = recordatorioRepository.save(recordatorio);
 
         // RF22 — mantener sincronizado el evento de Google Calendar tras la edición.
-        // No es bloqueante, mismo criterio que en crear()/darDeBaja().
+        // No es bloqueante, mismo criterio que en crear()/desactivar().
         sincronizarEdicionConGoogleCalendar(actualizado, responsableAnterior, eventIdAnterior);
 
         return recordatorioMapper.toDto(actualizado);
@@ -327,8 +327,8 @@ public class RecordatorioService {
 
 
     @Transactional
-    @PreAuthorize("hasAuthority('ELIMINAR_RECORDATORIO')")
-    public void darDeBaja(int id) {
+    @PreAuthorize("hasAuthority('DESACTIVAR_RECORDATORIO')")
+    public void desactivar(int id) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
 
         // ── RF22: eliminar evento de Google Calendar si existe ────────────────

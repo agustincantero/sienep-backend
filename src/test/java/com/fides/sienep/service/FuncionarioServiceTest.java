@@ -168,9 +168,9 @@ class FuncionarioServiceTest {
         Rol rolAdmin = new Rol("ADMINISTRADOR");
         rolAdmin.setIdRol(1);
         rolAdmin.agregarPermiso(new Permiso("CREAR_FUNCIONARIO", "Permite registrar un nuevo funcionario"));
-        rolAdmin.agregarPermiso(new Permiso("ELIMINAR_ROL", "Permite eliminar roles"));
+        rolAdmin.agregarPermiso(new Permiso("DESACTIVAR_ROL", "Permite eliminar roles"));
 
-        // El actor solo tiene CREAR_FUNCIONARIO, no ELIMINAR_ROL — no puede asignar rolAdmin
+        // El actor solo tiene CREAR_FUNCIONARIO, no DESACTIVAR_ROL — no puede asignar rolAdmin
         mockAuthConPermisos("CREAR_FUNCIONARIO");
 
         when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
@@ -350,9 +350,9 @@ class FuncionarioServiceTest {
         Rol rolAdmin = new Rol("ADMINISTRADOR");
         rolAdmin.setIdRol(2);
         rolAdmin.agregarPermiso(new Permiso("EDITAR_FUNCIONARIO", "Permite editar funcionarios"));
-        rolAdmin.agregarPermiso(new Permiso("ELIMINAR_ROL", "Permite eliminar roles"));
+        rolAdmin.agregarPermiso(new Permiso("DESACTIVAR_ROL", "Permite eliminar roles"));
 
-        // El actor solo tiene EDITAR_FUNCIONARIO, no ELIMINAR_ROL — no puede asignar rolAdmin
+        // El actor solo tiene EDITAR_FUNCIONARIO, no DESACTIVAR_ROL — no puede asignar rolAdmin
         mockAuthConPermisos("EDITAR_FUNCIONARIO");
 
         FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
@@ -396,12 +396,12 @@ class FuncionarioServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Dar de baja - Estado pasa a INACTIVO")
-    void darDeBaja_DebePonerEstadoInactivo() {
+    @DisplayName("Desactivar - Estado pasa a INACTIVO")
+    void desactivar_DebePonerEstadoInactivo() {
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
         when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
 
-        funcionarioService.darDeBaja(1);
+        funcionarioService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, funcionarioMock.getEstado());
         verify(funcionarioRepository).save(funcionarioMock);
@@ -425,20 +425,20 @@ class FuncionarioServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja - Ya está inactivo (409) (H11)")
-    void darDeBaja_LanzaConflict_YaInactivo() {
+    @DisplayName("Desactivar - Ya está inactivo (409)")
+    void desactivar_LanzaConflict_YaInactivo() {
         funcionarioMock.setEstado(EstadoLogico.INACTIVO);
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> funcionarioService.darDeBaja(1));
+                () -> funcionarioService.desactivar(1));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(funcionarioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Reactivar funcionario - Ya está activo (409) (H11)")
+    @DisplayName("Reactivar funcionario - Ya está activo (409)")
     void reactivar_LanzaConflict_YaActivo() {
         // El constructor "alta" de Funcionario arranca en PENDIENTE_DE_ACTIVACION, no ACTIVO
         funcionarioMock.setEstado(EstadoLogico.ACTIVO);

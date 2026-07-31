@@ -244,7 +244,7 @@ class GrupoServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar grupo - Rechaza editar un grupo inactivo (M3)")
+    @DisplayName("Actualizar grupo - Rechaza editar un grupo inactivo")
     void actualizar_LanzaConflicto_GrupoInactivo() {
         grupoMock.setEstado(EstadoLogico.INACTIVO);
         GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
@@ -282,12 +282,12 @@ class GrupoServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Dar de baja - Estado pasa a INACTIVO")
-    void darDeBaja_DebePonerEstadoInactivo() {
+    @DisplayName("Desactivar - Estado pasa a INACTIVO")
+    void desactivar_DebePonerEstadoInactivo() {
         when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
         when(grupoRepository.save(any(Grupo.class))).thenReturn(grupoMock);
 
-        grupoService.darDeBaja(1);
+        grupoService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, grupoMock.getEstado());
         verify(grupoRepository).save(grupoMock);
@@ -295,13 +295,13 @@ class GrupoServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja - No encontrado → 404")
-    void darDeBaja_LanzaExcepcion_NoEncontrado() {
+    @DisplayName("Desactivar - No encontrado → 404")
+    void desactivar_LanzaExcepcion_NoEncontrado() {
         when(grupoRepository.findById(99)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> grupoService.darDeBaja(99));
+                () -> grupoService.desactivar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(grupoRepository, never()).save(any());
@@ -309,13 +309,13 @@ class GrupoServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja - Ya está inactivo (409) (H11)")
-    void darDeBaja_LanzaConflict_YaInactivo() {
+    @DisplayName("Desactivar - Ya está inactivo (409)")
+    void desactivar_LanzaConflict_YaInactivo() {
         grupoMock.setEstado(EstadoLogico.INACTIVO);
         when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> grupoService.darDeBaja(1));
+                () -> grupoService.desactivar(1));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(grupoRepository, never()).save(any());
@@ -352,7 +352,7 @@ class GrupoServiceTest {
     }
 
     @Test
-    @DisplayName("Reactivar - Ya está activo (409) (H11)")
+    @DisplayName("Reactivar - Ya está activo (409)")
     void reactivar_LanzaConflict_YaActivo() {
         when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
 

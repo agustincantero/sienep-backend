@@ -177,46 +177,46 @@ public class CategoriaInstanciaServiceTest {
     // ── Dar de baja ───────────────────────────────────────────
 
     @Test
-    @DisplayName("Dar de baja categoría - Éxito (baja lógica)")
-    void darDeBajaCategoria_Exito() {
+    @DisplayName("Desactivar categoría - Éxito (baja lógica)")
+    void desactivarCategoria_Exito() {
         CategoriaInstancia cat = categoriaActiva(5, "REUNIÓN");
         when(categoriaRepository.findById(5)).thenReturn(Optional.of(cat));
         when(categoriaRepository.existeInstanciaActivaConCategoria(5)).thenReturn(false);
 
-        categoriaService.darDeBajaCategoria(5);
+        categoriaService.desactivarCategoria(5);
 
         assertEquals(EstadoLogico.INACTIVO, cat.getEstado());
         verify(categoriaRepository).save(cat);
     }
 
     @Test
-    @DisplayName("Dar de baja categoría - No encontrada (404)")
-    void darDeBajaCategoria_LanzaNotFound() {
+    @DisplayName("Desactivar categoría - No encontrada (404)")
+    void desactivarCategoria_LanzaNotFound() {
         when(categoriaRepository.findById(99)).thenReturn(Optional.empty());
 
-        assertThrows(ResponseStatusException.class, () -> categoriaService.darDeBajaCategoria(99));
+        assertThrows(ResponseStatusException.class, () -> categoriaService.desactivarCategoria(99));
         verify(categoriaRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Dar de baja categoría - Ya estaba inactiva (409)")
-    void darDeBajaCategoria_LanzaConflict_CuandoYaEstaInactiva() {
+    @DisplayName("Desactivar categoría - Ya estaba inactiva (409)")
+    void desactivarCategoria_LanzaConflict_CuandoYaEstaInactiva() {
         when(categoriaRepository.findById(5)).thenReturn(Optional.of(categoriaInactiva(5, "REUNIÓN")));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> categoriaService.darDeBajaCategoria(5));
+                () -> categoriaService.desactivarCategoria(5));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(categoriaRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Dar de baja categoría - Tiene instancias activas asociadas (409)")
-    void darDeBajaCategoria_LanzaConflict_CuandoTieneInstanciasActivas() {
+    @DisplayName("Desactivar categoría - Tiene instancias activas asociadas (409)")
+    void desactivarCategoria_LanzaConflict_CuandoTieneInstanciasActivas() {
         when(categoriaRepository.findById(5)).thenReturn(Optional.of(categoriaActiva(5, "REUNIÓN")));
         when(categoriaRepository.existeInstanciaActivaConCategoria(5)).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> categoriaService.darDeBajaCategoria(5));
+                () -> categoriaService.desactivarCategoria(5));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(categoriaRepository, never()).save(any());
     }

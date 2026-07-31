@@ -82,12 +82,12 @@ public class RecordatorioController {
         return ResponseEntity.ok(recordatorioService.actualizar(id, dto));
     }
 
-    @Operation(summary = "Dar de baja un recordatorio")
+    @Operation(summary = "Desactivar un recordatorio")
     @ApiResponse(responseCode = "204", description = "Recordatorio dado de baja correctamente")
     @ApiResponse(responseCode = "404", description = "Recordatorio no encontrado")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> darDeBaja(@PathVariable int id) {
-        recordatorioService.darDeBaja(id);
+    public ResponseEntity<Void> desactivar(@PathVariable int id) {
+        recordatorioService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 

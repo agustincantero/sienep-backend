@@ -62,8 +62,8 @@ public class InvolucradoService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('ELIMINAR_INCIDENCIA')")
-    public void darDeBaja(int codInstancia, String nomInvolucrado) {
+    @PreAuthorize("hasAuthority('DESACTIVAR_INCIDENCIA')")
+    public void desactivar(int codInstancia, String nomInvolucrado) {
         buscarIncidenciaOFallar(codInstancia);
         Involucrado involucrado = buscarInvolucradoOFallar(codInstancia, nomInvolucrado);
         involucrado.setEstado(EstadoLogico.INACTIVO);

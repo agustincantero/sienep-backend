@@ -260,41 +260,41 @@ class FrecuenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Dar de baja - Éxito")
-    void darDeBaja_Exito() {
+    @DisplayName("Desactivar - Éxito")
+    void desactivar_Exito() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(frecuencia));
         when(recordatorioRepository.existsByFrecuencia_IdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(false);
 
-        frecuenciaService.darDeBaja(1);
+        frecuenciaService.desactivar(1);
 
         assertEquals(EstadoLogico.INACTIVO, frecuencia.getEstado());
         verify(frecuenciaRepository).save(frecuencia);
     }
 
     @Test
-    @DisplayName("Dar de baja - No encontrada (404)")
-    void darDeBaja_LanzaNotFound() {
+    @DisplayName("Desactivar - No encontrada (404)")
+    void desactivar_LanzaNotFound() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> frecuenciaService.darDeBaja(99));
+                () -> frecuenciaService.desactivar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
-    @DisplayName("Dar de baja - En uso por recordatorios activos (409, M8)")
-    void darDeBaja_LanzaConflict_EnUsoPorRecordatorios() {
+    @DisplayName("Desactivar - En uso por recordatorios activos (409, M8)")
+    void desactivar_LanzaConflict_EnUsoPorRecordatorios() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(frecuencia));
         when(recordatorioRepository.existsByFrecuencia_IdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> frecuenciaService.darDeBaja(1));
+                () -> frecuenciaService.desactivar(1));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         assertEquals(EstadoLogico.ACTIVO, frecuencia.getEstado());

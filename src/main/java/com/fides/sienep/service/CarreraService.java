@@ -76,10 +76,10 @@ public class CarreraService {
         return carreraMapper.toDto(carreraRepository.save(carrera));
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_CARRERA')")
+    @PreAuthorize("hasAuthority('DESACTIVAR_CARRERA')")
     @Transactional
     @CacheEvict(value = "carreras", allEntries = true)
-    public void eliminar(Integer id) {
+    public void desactivar(Integer id) {
         Carrera carrera = buscarOFallar(id);
         if (carrera.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La carrera ya se encuentra inactiva");
