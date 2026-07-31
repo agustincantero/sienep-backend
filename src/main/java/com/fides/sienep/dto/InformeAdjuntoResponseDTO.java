@@ -17,6 +17,8 @@ public class InformeAdjuntoResponseDTO {
     @Schema(description = "Ruta relativa para descargar el archivo (requiere autenticación y permiso VER_INFORME)",
             example = "/api/informes-adjuntos/1/descargar")
     private String urlDescarga;
+
+    @Schema(description = "Estado actual del informe", example = "ACTIVO")
     private EstadoLogico estado;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

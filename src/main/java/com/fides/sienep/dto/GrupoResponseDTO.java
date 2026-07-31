@@ -19,6 +19,7 @@ public class GrupoResponseDTO {
 
     private Integer generacion;
 
+    @Schema(description = "Estado actual del grupo", example = "ACTIVO")
     private EstadoLogico estado;
 
     @Schema(description = "ID de la carrera a la que pertenece el grupo")

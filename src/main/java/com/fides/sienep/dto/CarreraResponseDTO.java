@@ -18,6 +18,7 @@ public class CarreraResponseDTO {
 
     private String nomCarrera;
 
+    @Schema(description = "Estado actual de la carrera", example = "ACTIVO")
     private EstadoLogico estado;
 
     private List<ItrSimpleDTO> itrs;

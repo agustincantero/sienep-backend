@@ -28,6 +28,7 @@ public class FuncionarioResponseDTO {
 
         private String email;
 
+        @Schema(description = "Estado actual del funcionario", example = "ACTIVO")
         private EstadoLogico estado;
 
         @Schema(description = "Nombre del rol asignado")

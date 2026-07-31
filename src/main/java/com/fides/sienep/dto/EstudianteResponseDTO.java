@@ -23,6 +23,8 @@ public class EstudianteResponseDTO {
     private String documento;
     private PaisDocumento paisDocumento;
     private String email;
+
+    @Schema(description = "Estado actual del estudiante", example = "ACTIVO")
     private EstadoLogico estado;
     private LocalDate fechaNacimiento;
     private String ciudad;
