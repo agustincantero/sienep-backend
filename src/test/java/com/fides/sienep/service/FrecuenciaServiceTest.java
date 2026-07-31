@@ -5,6 +5,7 @@ import com.fides.sienep.dto.FrecuenciaResponseDTO;
 import com.fides.sienep.mapper.FrecuenciaMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.FrecuenciaRepository;
+import com.fides.sienep.repository.RecordatorioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.*;
 class FrecuenciaServiceTest {
 
     @Mock private FrecuenciaRepository frecuenciaRepository;
+    @Mock private RecordatorioRepository recordatorioRepository;
     @Mock private FrecuenciaMapper frecuenciaMapper;
 
     @InjectMocks
@@ -248,6 +250,8 @@ class FrecuenciaServiceTest {
     void darDeBaja_Exito() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(frecuencia));
+        when(recordatorioRepository.existsByFrecuencia_IdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(false);
 
         frecuenciaService.darDeBaja(1);
 
@@ -265,5 +269,64 @@ class FrecuenciaServiceTest {
                 () -> frecuenciaService.darDeBaja(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("Dar de baja - En uso por recordatorios activos (409, M8)")
+    void darDeBaja_LanzaConflict_EnUsoPorRecordatorios() {
+        when(frecuenciaRepository.findByIdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(frecuencia));
+        when(recordatorioRepository.existsByFrecuencia_IdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> frecuenciaService.darDeBaja(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertEquals(EstadoLogico.ACTIVO, frecuencia.getEstado());
+        verify(frecuenciaRepository, never()).save(any());
+    }
+
+    // =========================================================
+    // REACTIVAR (M8)
+    // =========================================================
+
+    @Test
+    @DisplayName("Reactivar - Estado pasa a ACTIVO")
+    void reactivar_DebePonerEstadoActivo() {
+        frecuencia.setEstado(EstadoLogico.INACTIVO);
+        when(frecuenciaRepository.findById(1)).thenReturn(Optional.of(frecuencia));
+        when(frecuenciaRepository.save(any(Frecuencia.class))).thenReturn(frecuencia);
+        when(frecuenciaMapper.toDto(frecuencia)).thenReturn(responseDTO);
+
+        FrecuenciaResponseDTO resultado = frecuenciaService.reactivar(1);
+
+        assertNotNull(resultado);
+        assertEquals(EstadoLogico.ACTIVO, frecuencia.getEstado());
+        verify(frecuenciaRepository).save(frecuencia);
+    }
+
+    @Test
+    @DisplayName("Reactivar - No encontrada (404)")
+    void reactivar_LanzaNotFound() {
+        when(frecuenciaRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> frecuenciaService.reactivar(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(frecuenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar - Ya está activa (409)")
+    void reactivar_LanzaConflict_YaActiva() {
+        when(frecuenciaRepository.findById(1)).thenReturn(Optional.of(frecuencia));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> frecuenciaService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(frecuenciaRepository, never()).save(any());
     }
 }

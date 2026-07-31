@@ -6,6 +6,7 @@ import com.fides.sienep.mapper.FrecuenciaMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Frecuencia;
 import com.fides.sienep.repository.FrecuenciaRepository;
+import com.fides.sienep.repository.RecordatorioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +21,7 @@ import java.util.List;
 public class FrecuenciaService {
 
     private final FrecuenciaRepository frecuenciaRepository;
+    private final RecordatorioRepository recordatorioRepository;
     private final FrecuenciaMapper frecuenciaMapper;
 
     @Transactional
@@ -64,8 +66,32 @@ public class FrecuenciaService {
     @PreAuthorize("hasAuthority('BAJA_RECORDATORIO')")
     public void darDeBaja(int id) {
         Frecuencia frecuencia = buscarActivaOFallar(id);
+
+        // Integridad referencial: si se desactiva una frecuencia que todavía usan
+        // recordatorios activos, RecurrenceRuleBuilder seguiría generando la RRULE
+        // de esos recordatorios a partir de un catálogo dado de baja.
+        if (recordatorioRepository.existsByFrecuencia_IdFrecuenciaAndEstado(id, EstadoLogico.ACTIVO)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede dar de baja una frecuencia en uso por recordatorios activos");
+        }
+
         frecuencia.setEstado(EstadoLogico.INACTIVO);
         frecuenciaRepository.save(frecuencia);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
+    public FrecuenciaResponseDTO reactivar(int id) {
+        Frecuencia frecuencia = frecuenciaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No se encontró una frecuencia con el id " + id));
+
+        if (frecuencia.getEstado() == EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La frecuencia ya se encuentra activa");
+        }
+
+        frecuencia.setEstado(EstadoLogico.ACTIVO);
+        return frecuenciaMapper.toDto(frecuenciaRepository.save(frecuencia));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

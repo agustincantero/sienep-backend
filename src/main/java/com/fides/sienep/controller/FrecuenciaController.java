@@ -57,9 +57,19 @@ public class FrecuenciaController {
     @Operation(summary = "Dar de baja una frecuencia")
     @ApiResponse(responseCode = "204", description = "Frecuencia dada de baja correctamente")
     @ApiResponse(responseCode = "404", description = "Frecuencia no encontrada")
+    @ApiResponse(responseCode = "409", description = "La frecuencia está en uso por recordatorios activos")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> darDeBaja(@PathVariable int id) {
         frecuenciaService.darDeBaja(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Reactivar una frecuencia")
+    @ApiResponse(responseCode = "200", description = "Frecuencia reactivada correctamente")
+    @ApiResponse(responseCode = "404", description = "Frecuencia no encontrada")
+    @ApiResponse(responseCode = "409", description = "La frecuencia ya está activa")
+    @PatchMapping("/{id}/reactivar")
+    public ResponseEntity<FrecuenciaResponseDTO> reactivar(@PathVariable int id) {
+        return ResponseEntity.ok(frecuenciaService.reactivar(id));
     }
 }

@@ -20,6 +20,11 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
 
     Optional<Recordatorio> findByCodRecordatorioAndEstado(int codRecordatorio, EstadoLogico estado);
 
+    // M8 — usado por FrecuenciaService.darDeBaja() para no dejar recordatorios
+    // activos con una frecuencia inactiva (RecurrenceRuleBuilder seguiría
+    // computando la recurrencia con datos de un catálogo dado de baja).
+    boolean existsByFrecuencia_IdFrecuenciaAndEstado(int idFrecuencia, EstadoLogico estado);
+
     // RF27 — lock pesimista (SELECT ... FOR UPDATE) usado por
     // InstanciaComunService.crearDesdeRecordatorio(): sin esto, dos requests
     // concurrentes para el mismo recordatorio podrían leer "cumplido=false" antes
