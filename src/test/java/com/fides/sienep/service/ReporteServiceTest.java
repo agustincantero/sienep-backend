@@ -21,6 +21,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +37,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -124,7 +129,7 @@ class ReporteServiceTest {
         mockearMetricasVacias(estudianteMock.getIdUsuario());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null);
+                null, null, null, null, null, null);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalEstudiantes());
@@ -142,7 +147,7 @@ class ReporteServiceTest {
         when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
         mockearMetricasVacias(estudianteMock.getIdUsuario());
 
-        reporteService.generarReporte(null, null, null, null, null);
+        reporteService.generarReporte(null, null, null, null, null, null);
 
         verify(estudianteRepository).findByEstado(EstadoLogico.ACTIVO);
         verify(estudianteRepository, never()).findAll();
@@ -159,7 +164,7 @@ class ReporteServiceTest {
         mockearMetricasVacias(estudianteMock.getIdUsuario());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, 1, null, null);
+                null, null, 1, null, null, null);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalEstudiantes());
@@ -172,7 +177,7 @@ class ReporteServiceTest {
         when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, 99, null, null);
+                null, null, 99, null, null, null);
 
         assertNotNull(resultado);
         assertEquals(0, resultado.getTotalEstudiantes());
@@ -191,7 +196,7 @@ class ReporteServiceTest {
         mockearMetricasVacias(estudianteMock.getIdUsuario());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, 1, null, null, null);
+                null, 1, null, null, null, null);
 
         assertNotNull(resultado.getAdvertencia());
         assertTrue(resultado.getAdvertencia().contains("múltiples grupos"));
@@ -205,7 +210,7 @@ class ReporteServiceTest {
         mockearMetricasVacias(estudianteMock.getIdUsuario());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                1, null, null, null, null);
+                1, null, null, null, null, null);
 
         assertNotNull(resultado.getAdvertencia());
         assertTrue(resultado.getAdvertencia().contains("múltiples grupos"));
@@ -238,7 +243,7 @@ class ReporteServiceTest {
                 .thenReturn(List.of());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null);
+                null, null, null, null, null, null);
 
         assertEquals(2, resultado.getTotalInstancias());
         assertEquals(1, resultado.getTotalIncidencias());
@@ -281,7 +286,7 @@ class ReporteServiceTest {
                 .thenReturn(List.of());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null);
+                null, null, null, null, null, null);
 
         // Una sola llamada por tipo, sin importar cuántos estudiantes haya (no N+1)
         verify(instanciaComunRepository, times(1))
@@ -323,7 +328,7 @@ class ReporteServiceTest {
                 .thenReturn(recordatorios);
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null);
+                null, null, null, null, null, null);
 
         assertEquals(4, resultado.getTotalRecordatorios());
         assertEquals(2, resultado.getRecordatoriosVencidos());
@@ -343,7 +348,7 @@ class ReporteServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> reporteService.generarReporte(null, null, null, desde, hasta));
+                () -> reporteService.generarReporte(null, null, null, desde, hasta, null));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         verify(estudianteRepository, never()).findByEstado(EstadoLogico.ACTIVO);
@@ -359,7 +364,7 @@ class ReporteServiceTest {
         when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null);
+                null, null, null, null, null, null);
 
         assertEquals(LocalDate.now().minusMonths(3), resultado.getDesde());
         assertEquals(LocalDate.now(), resultado.getHasta());
@@ -374,10 +379,76 @@ class ReporteServiceTest {
         ReporteResponseDTO resultado = reporteService.generarReporte(
                 null, null, 5,
                 LocalDate.of(2025, 1, 1),
-                LocalDate.of(2025, 6, 30));
+                LocalDate.of(2025, 6, 30), null);
 
         assertNotNull(resultado.getFiltrosAplicados());
         assertTrue(resultado.getFiltrosAplicados().contains("Estudiante ID: 5"));
         assertTrue(resultado.getFiltrosAplicados().contains("2025-01-01"));
+    }
+
+    // =========================================================
+    // PAGINACIÓN (H1)
+    // =========================================================
+
+    @Test
+    @DisplayName("Generar reporte - Con Pageable usa la query paginada y completa la metadata")
+    void generarReporte_ConPageable_UsaQueryPaginadaYCompletaMetadata() {
+        Pageable pageable = PageRequest.of(0, 20);
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteMock), pageable, 1);
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
+        mockearMetricasVacias(estudianteMock.getIdUsuario());
+
+        ReporteResponseDTO resultado = reporteService.generarReporte(
+                null, null, null, null, null, pageable);
+
+        verify(estudianteRepository).findByEstado(EstadoLogico.ACTIVO, pageable);
+        verify(estudianteRepository, never()).findByEstado(EstadoLogico.ACTIVO);
+        assertEquals(0, resultado.getPagina());
+        assertEquals(20, resultado.getTamanioPagina());
+        assertEquals(1, resultado.getTotalPaginas());
+        assertEquals(1L, resultado.getTotalEstudiantesFiltrados());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Sin Pageable (exportación PDF) no completa metadata de paginación")
+    void generarReporte_SinPageable_NoCompletaMetadataDePaginacion() {
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
+        mockearMetricasVacias(estudianteMock.getIdUsuario());
+
+        ReporteResponseDTO resultado = reporteService.generarReporte(
+                null, null, null, null, null, null);
+
+        assertNull(resultado.getPagina());
+        assertNull(resultado.getTamanioPagina());
+        assertNull(resultado.getTotalPaginas());
+        assertNull(resultado.getTotalEstudiantesFiltrados());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Con Pageable y filtro de grupo usa findByGrupoAndEstado paginado")
+    void generarReporte_ConPageableYGrupo_UsaQueryPaginadaDeGrupo() {
+        Pageable pageable = PageRequest.of(0, 20);
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteMock), pageable, 1);
+        when(estudianteRepository.findByGrupoAndEstado(1, EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
+        mockearMetricasVacias(estudianteMock.getIdUsuario());
+
+        reporteService.generarReporte(null, 1, null, null, null, pageable);
+
+        verify(estudianteRepository).findByGrupoAndEstado(1, EstadoLogico.ACTIVO, pageable);
+        verify(estudianteRepository, never()).findByGrupoAndEstadoList(anyInt(), any());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Con Pageable y filtro de carrera usa findByCarreraAndEstado paginado")
+    void generarReporte_ConPageableYCarrera_UsaQueryPaginadaDeCarrera() {
+        Pageable pageable = PageRequest.of(0, 20);
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteMock), pageable, 1);
+        when(estudianteRepository.findByCarreraAndEstado(1, EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
+        mockearMetricasVacias(estudianteMock.getIdUsuario());
+
+        reporteService.generarReporte(1, null, null, null, null, pageable);
+
+        verify(estudianteRepository).findByCarreraAndEstado(1, EstadoLogico.ACTIVO, pageable);
+        verify(estudianteRepository, never()).findByCarreraAndEstadoList(anyInt(), any());
     }
 }

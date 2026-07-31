@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,7 +37,9 @@ public class ReporteController {
             summary = "Generar reporte de seguimiento",
             description = "Genera métricas agregadas de instancias, incidencias y recordatorios. " +
                     "Todos los filtros son opcionales y combinables. " +
-                    "Sin filtros devuelve métricas globales. " +
+                    "Sin filtros devuelve métricas globales, paginadas (los totales del reporte " +
+                    "reflejan únicamente los estudiantes de la página actual — ver totalEstudiantesFiltrados " +
+                    "para el total real a través de todas las páginas). " +
                     "Requiere VER_REPORTES.")
     @ApiResponse(responseCode = "200", description = "Reporte generado exitosamente")
     @ApiResponse(responseCode = "403", description = "Sin permiso VER_REPORTES")
@@ -43,10 +48,11 @@ public class ReporteController {
             @RequestParam(required = false) Integer idGrupo,
             @RequestParam(required = false) Integer idEstudiante,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @ParameterObject @PageableDefault(size = 20, sort = "apellido") Pageable pageable) {
 
         return ResponseEntity.ok(
-                reporteService.generarReporte(idCarrera, idGrupo, idEstudiante, desde, hasta));
+                reporteService.generarReporte(idCarrera, idGrupo, idEstudiante, desde, hasta, pageable));
     }
 
     @GetMapping("/pdf")
@@ -64,8 +70,10 @@ public class ReporteController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
 
+        // Sin Pageable a propósito: el PDF es un documento autocontenido, tiene
+        // que representar el total de la población filtrada, no una página.
         ReporteResponseDTO reporte = reporteService.generarReporte(
-                idCarrera, idGrupo, idEstudiante, desde, hasta);
+                idCarrera, idGrupo, idEstudiante, desde, hasta, null);
 
         byte[] pdf = reportePdfService.generarPdf(reporte);
 

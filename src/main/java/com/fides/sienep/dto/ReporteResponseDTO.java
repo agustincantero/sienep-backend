@@ -33,8 +33,26 @@ public class ReporteResponseDTO {
     @Schema(description = "Fecha de fin del período analizado")
     private LocalDate hasta;
 
+    // ── Paginación (null cuando el reporte no está paginado, ej. exportación PDF) ──
+    @Schema(description = "Número de página actual (0-indexado). Null si el reporte no está paginado.")
+    private Integer pagina;
+
+    @Schema(description = "Tamaño de página solicitado. Null si el reporte no está paginado.")
+    private Integer tamanioPagina;
+
+    @Schema(description = "Total de páginas disponibles. Null si el reporte no está paginado.")
+    private Integer totalPaginas;
+
+    @Schema(description = "Total de estudiantes que matchean los filtros, a través de todas las páginas. " +
+            "Null si el reporte no está paginado (en ese caso totalEstudiantes ya representa el total real).")
+    private Long totalEstudiantesFiltrados;
+
     // ── Métricas globales ─────────────────────────────────────
-    @Schema(description = "Total de estudiantes incluidos en el reporte")
+    // Nota: estas métricas siempre reflejan exactamente los estudiantes de
+    // detallePorEstudiante (la página actual si el reporte está paginado, o
+    // el total filtrado si no lo está) — nunca un agregado "oculto" de datos
+    // que no aparecen en el detalle.
+    @Schema(description = "Total de estudiantes incluidos en este resultado (esta página, si el reporte está paginado)")
     private Integer totalEstudiantes;
 
     @Schema(description = "Total de instancias en el período")

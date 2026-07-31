@@ -14,6 +14,9 @@ import com.fides.sienep.repository.IncidenciaRepository;
 import com.fides.sienep.repository.InstanciaComunRepository;
 import com.fides.sienep.repository.RecordatorioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,7 +49,8 @@ public class ReporteService {
             Integer idGrupo,
             Integer idEstudiante,
             LocalDate desde,
-            LocalDate hasta) {
+            LocalDate hasta,
+            Pageable pageable) {
 
         // ── Validación de fechas ──────────────────────────────
         if (desde != null && hasta != null && desde.isAfter(hasta)) {
@@ -60,8 +64,29 @@ public class ReporteService {
         LocalDateTime desdeDateTime = fechaDesde.atStartOfDay();
         LocalDateTime hastaDateTime = fechaHasta.atTime(23, 59, 59);
 
-        // ── Resolver lista de estudiantes según filtros ───────
-        List<Estudiante> estudiantes = resolverEstudiantes(idCarrera, idGrupo, idEstudiante);
+        // ── Resolver estudiantes según filtros ────────────────
+        // pageable == null (exportación PDF): se trae la población completa que
+        // matchea los filtros, sin paginar — el PDF es un documento autocontenido
+        // y no tendría sentido que representara solo una página de resultados.
+        // pageable != null (endpoint JSON): se pagina la población para no cargar
+        // en memoria (ni serializar en la respuesta) miles de estudiantes cuando
+        // no hay idCarrera/idGrupo/idEstudiante que acote el conjunto.
+        List<Estudiante> estudiantes;
+        Integer paginaActual = null;
+        Integer tamanioPagina = null;
+        Integer totalPaginas = null;
+        Long totalEstudiantesFiltrados = null;
+
+        if (pageable != null) {
+            Page<Estudiante> pagina = resolverEstudiantesPaginado(idCarrera, idGrupo, idEstudiante, pageable);
+            estudiantes = pagina.getContent();
+            paginaActual = pagina.getNumber();
+            tamanioPagina = pagina.getSize();
+            totalPaginas = pagina.getTotalPages();
+            totalEstudiantesFiltrados = pagina.getTotalElements();
+        } else {
+            estudiantes = resolverEstudiantes(idCarrera, idGrupo, idEstudiante);
+        }
 
         // ── Advertencia por posibles duplicados ───────────────
         String advertencia = null;
@@ -152,6 +177,10 @@ public class ReporteService {
                 .advertencia(advertencia)
                 .desde(fechaDesde)
                 .hasta(fechaHasta)
+                .pagina(paginaActual)
+                .tamanioPagina(tamanioPagina)
+                .totalPaginas(totalPaginas)
+                .totalEstudiantesFiltrados(totalEstudiantesFiltrados)
                 .totalEstudiantes(estudiantes.size())
                 .totalInstancias(totalInstancias)
                 .totalIncidencias(totalIncidencias)
@@ -178,6 +207,22 @@ public class ReporteService {
             return estudianteRepository.findByCarreraAndEstadoList(idCarrera, EstadoLogico.ACTIVO);
         }
         return estudianteRepository.findByEstado(EstadoLogico.ACTIVO);
+    }
+
+    private Page<Estudiante> resolverEstudiantesPaginado(Integer idCarrera, Integer idGrupo,
+                                                          Integer idEstudiante, Pageable pageable) {
+        if (idEstudiante != null) {
+            List<Estudiante> lista = new ArrayList<>();
+            estudianteRepository.findById(idEstudiante).ifPresent(lista::add);
+            return new PageImpl<>(lista, pageable, lista.size());
+        }
+        if (idGrupo != null) {
+            return estudianteRepository.findByGrupoAndEstado(idGrupo, EstadoLogico.ACTIVO, pageable);
+        }
+        if (idCarrera != null) {
+            return estudianteRepository.findByCarreraAndEstado(idCarrera, EstadoLogico.ACTIVO, pageable);
+        }
+        return estudianteRepository.findByEstado(EstadoLogico.ACTIVO, pageable);
     }
 
     private String construirDescripcionFiltros(Integer idCarrera, Integer idGrupo,
