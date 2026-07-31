@@ -909,7 +909,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  ('BUSCAR_ESTUDIANTE',           'Permite buscar estudiantes por criterios específicos'),
                                                                  ('REACTIVAR_ESTUDIANTE',        'Permite reactivar estudiantes dados de baja'),
                                                                  -- Adjuntos
-                                                                 ('VER_ADJUNTOS',            'Permite ver los archivos adjuntos de un estudiante o instancia'),
+                                                                 ('VER_INFORME',            'Permite ver los archivos adjuntos de un estudiante o instancia'),
                                                                  ('ADJUNTAR_INFORME',        'Permite adjuntar un informe u otro archivo al sistema'),
                                                                  ('ELIMINAR_INFORME',        'Permite dar de baja un informe.'),
                                                                  -- Instancias
@@ -1013,7 +1013,7 @@ FROM proyecto.roles r
          JOIN proyecto.permisos p ON p.nom_permiso IN (
                                                        'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
                                                        'CREAR_ESTUDIANTE', 'EDITAR_ESTUDIANTE', 'REACTIVAR_ESTUDIANTE',
-                                                       'VER_ADJUNTOS', 'ADJUNTAR_INFORME',
+                                                       'VER_INFORME', 'ADJUNTAR_INFORME',
                                                        'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
                                                        'ELIMINAR_INSTANCIA', 'REACTIVAR_INSTANCIA',
                                                        'CATEGORIZAR_INSTANCIA', 'VER_BLOQUE_CONFIDENCIAL',
@@ -1040,7 +1040,7 @@ SELECT r.id_rol, p.id_permiso
 FROM proyecto.roles r
          JOIN proyecto.permisos p ON p.nom_permiso IN (
                                                        'VER_ESTUDIANTE_RESUMIDO', 'BUSCAR_ESTUDIANTE',
-                                                       'VER_ADJUNTOS',
+                                                       'VER_INFORME',
                                                        'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
                                                        'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO', 'REACTIVAR_RECORDATORIO',
                                                        'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
@@ -1069,7 +1069,7 @@ SELECT r.id_rol, p.id_permiso
 FROM proyecto.roles r
          JOIN proyecto.permisos p ON p.nom_permiso IN (
                                                        'VER_ESTUDIANTE_RESUMIDO', 'VER_ESTUDIANTE', 'BUSCAR_ESTUDIANTE',
-                                                       'VER_ADJUNTOS',
+                                                       'VER_INFORME',
                                                        'VER_INSTANCIAS', 'VER_BLOQUE_CONFIDENCIAL',
                                                        'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
                                                        'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',

@@ -41,7 +41,7 @@ public class InformeAdjuntoService {
     private final InformeAdjuntoMapper informeMapper;
     private final FileStorageService fileStorageService;
 
-    @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
+    @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public Page<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario, Pageable pageable) {
         Page<InformeAdjunto> pagina = informeRepository
@@ -50,7 +50,7 @@ public class InformeAdjuntoService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
+    @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public InformeAdjuntoResponseDTO obtenerPorId(Integer id) {
         return informeMapper.toDto(buscarActivoOFallar(id));
@@ -90,7 +90,7 @@ public class InformeAdjuntoService {
         return informeMapper.toDto(informe);
     }
 
-    @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
+    @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public ArchivoDescargaDTO descargar(Integer id) {
         InformeAdjunto informe = buscarActivoOFallar(id);
