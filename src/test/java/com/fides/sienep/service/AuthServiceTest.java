@@ -53,6 +53,7 @@ class AuthServiceTest {
     @Mock private EmailService emailService;
     @Mock private AuditoriaService auditoriaService;
     @Mock private PasswordResetRateLimiter passwordResetRateLimiter;
+    @Mock private LoginIpRateLimiter loginIpRateLimiter;
 
     @InjectMocks
     private AuthService authService;
@@ -65,6 +66,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(authService, "frontendUrl", "http://localhost:3000");
+        lenient().when(loginIpRateLimiter.registrarIntento(anyString())).thenReturn(true);
 
         rol = new Rol("ADMINISTRADOR");
 
@@ -178,6 +180,22 @@ class AuthServiceTest {
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(captor.capture());
         assertTrue(captor.getValue().isBloqueado());
+    }
+
+    @Test
+    @DisplayName("Login - Límite de intentos fallidos por IP excedido (429), sin importar la cuenta")
+    void login_LimiteDeIpExcedido_LanzaTooManyRequests() {
+        when(funcionarioRepository.findByEmail(any())).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        doThrow(new BadCredentialsException("Credenciales inválidas"))
+                .when(authManager).authenticate(any());
+        when(logIntentoRepository.contarIntentosFallidosDesde(eq(2), any())).thenReturn(1L);
+        when(loginIpRateLimiter.registrarIntento(IP)).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.login(loginDto, IP));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
     }
 
     // ── Logout ────────────────────────────────────────────────

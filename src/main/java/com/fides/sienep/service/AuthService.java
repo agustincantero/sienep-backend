@@ -51,6 +51,7 @@ public class AuthService {
     private final EmailService                    emailService;
     private final AuditoriaService                auditoriaService;
     private final PasswordResetRateLimiter        passwordResetRateLimiter;
+    private final LoginIpRateLimiter              loginIpRateLimiter;
 
     // Campo separado (no final): Lombok no copia @Value a los parámetros del
     // constructor generado por @RequiredArgsConstructor sin un lombok.config,
@@ -75,16 +76,14 @@ public class AuthService {
             rol = funcionarioOpt.get().getRol().getNombre();
         } else {
             Estudiante estudiante = estudianteRepository.findByEmail(dto.getEmail())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
+                    .orElseThrow(() -> credencialesInvalidas(ip));
             idUsuario = estudiante.getIdUsuario();
             rol = "ESTUDIANTE";
         }
 
         // 2. Verificar si está bloqueado
         Usuario usuario = usuarioRepository.findById(idUsuario)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
+                .orElseThrow(() -> credencialesInvalidas(ip));
 
         // Mismo status y mensaje que "credenciales inválidas" (no un 403 con
         // mensaje explícito): de lo contrario, un atacante puede distinguir "el
@@ -95,7 +94,7 @@ public class AuthService {
         // login del frontend, no depender de si ESTE email puntual está bloqueado.
         if (usuario.isBloqueado()) {
             log.warn("Login denegado — usuario bloqueado id={}", idUsuario);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
+            throw credencialesInvalidas(ip);
         }
 
         // 3. Validar contraseña
@@ -106,7 +105,7 @@ public class AuthService {
             registrarIntento(idUsuario, false);
             verificarYBloquearSiCorresponde(idUsuario, usuario);
             log.warn("Login fallido para id={}", idUsuario);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
+            throw credencialesInvalidas(ip);
         }
 
         // 4. Login exitoso
@@ -116,6 +115,19 @@ public class AuthService {
         auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGIN, idUsuario, ip);
 
         return new LoginResponseDTO(token);
+    }
+
+    // Único punto de salida para todo login rechazado (email inexistente, usuario
+    // no encontrado, bloqueado, o contraseña incorrecta): mismo status y mensaje en
+    // los cuatro casos (ver nota de enumeración de cuentas más arriba), y de paso
+    // registra el fallo para el rate-limit por IP (password-spraying).
+    private ResponseStatusException credencialesInvalidas(String ip) {
+        if (!loginIpRateLimiter.registrarIntento(ip)) {
+            log.warn("Límite de intentos de login fallidos excedido para ip={}", ip);
+            return new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Demasiados intentos de inicio de sesión fallidos. Intentá nuevamente más tarde.");
+        }
+        return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
     }
 
     // =========================================================
