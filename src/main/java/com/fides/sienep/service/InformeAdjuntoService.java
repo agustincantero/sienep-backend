@@ -113,8 +113,6 @@ public class InformeAdjuntoService {
         log.info("[AUDIT] Informe {} dado de baja lógica", id);
     }
 
-    // M16 — antes buscaba por findById() a secas, sin filtrar por ACTIVO: se podía
-    // descargar o volver a "eliminar" un informe ya dado de baja lógica.
     private InformeAdjunto buscarActivoOFallar(Integer id) {
         return informeRepository.findByIdInformeAndEstado(id, EstadoLogico.ACTIVO)
                 .orElseThrow(() -> new ResponseStatusException(

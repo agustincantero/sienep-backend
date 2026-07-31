@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// M15 — test de integración real contra Postgres (requiere `docker compose up -d`
+// Test de integración real contra Postgres (requiere `docker compose up -d`
 // con el schema ya aplicado). NO corre con `./mvnw test`: el sufijo "IT" (en vez de
 // "Test") lo excluye a propósito de los patrones que Surefire toma por defecto, para
 // no romper la garantía documentada en CLAUDE.md de que la suite normal no necesita

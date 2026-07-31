@@ -83,10 +83,6 @@ public class IncidenciaService {
         return incidenciaMapper.toDto(guardada);
     }
 
-    // H2 — GET /api/incidencias sin filtro es una tabla de alta continua sin
-    // ningún acotador; se pagina igual que las otras dos ramas del mismo
-    // endpoint para que el contrato de respuesta sea uniforme sin importar
-    // qué filtro se use.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
     public Page<IncidenciaResponseDTO> listarActivas(Pageable pageable) {
@@ -162,9 +158,6 @@ public class IncidenciaService {
         log.info("Baja lógica incidencia: {}", id);
     }
 
-    // H8 — darDeBaja() usa INACTIVO (estado reversible por diseño), pero no
-    // existía ninguna vía de API para revertirlo, a diferencia del resto de
-    // las entidades con el mismo patrón de baja lógica.
     @Transactional
     @PreAuthorize("hasAuthority('REACTIVAR_INCIDENCIA')")
     public IncidenciaResponseDTO reactivar(int id) {

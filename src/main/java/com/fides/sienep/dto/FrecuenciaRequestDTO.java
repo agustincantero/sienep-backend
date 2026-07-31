@@ -16,9 +16,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class FrecuenciaRequestDTO {
 
-    // H9 — la columna es VARCHAR(50); sin este límite, un texto más largo
-    // pasaba la validación de Bean Validation (400) y fallaba recién en el
-    // INSERT con un DataIntegrityViolationException sin manejar (500).
+    // La columna es VARCHAR(50); sin este límite, un texto más largo fallaría
+    // recién en el INSERT en vez de devolver un 400 de validación.
     @NotBlank(message = "La descripción no puede estar vacía")
     @Size(max = 50, message = "La descripción no puede superar los 50 caracteres")
     private String descripcion;

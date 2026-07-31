@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
-// B8 — @Cacheable y @PreAuthorize son completamente inertes bajo Mockito puro
+// @Cacheable y @PreAuthorize son completamente inertes bajo Mockito puro
 // (@InjectMocks nunca pasa por un proxy de AOP), así que el orden real entre
 // ambos solo se puede observar con un contexto de Spring de verdad. Por eso este
 // es el único test de todo el proyecto que usa @SpringBootTest para un service.

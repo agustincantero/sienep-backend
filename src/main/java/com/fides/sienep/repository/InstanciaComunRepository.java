@@ -16,7 +16,7 @@ import java.util.Optional;
 @Repository
 public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, Integer> {
 
-    // M9 — JOIN FETCH de estudiante/funcionario/categoria: InstanciaComunMapper
+    // JOIN FETCH de estudiante/funcionario/categoria: InstanciaComunMapper
     // accede a los tres en cada fila (nombreEstudiante, nombreFuncionario,
     // nombreCategoria); sin el fetch, listar N instancias dispara 3N SELECTs
     // adicionales (uno lazy por asociación y por fila).
@@ -27,7 +27,6 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             "WHERE ic.estado = :estado")
     List<InstanciaComun> findByEstado(@Param("estado") EstadoLogico estado);
 
-    // H3 — paginado, usado por InstanciaComunService.listarActivas (GET /api/instancias sin filtro).
     // Los 3 JOIN FETCH son todos @ManyToOne (a-uno), no colecciones, así que
     // Hibernate pagina en SQL (LIMIT/OFFSET) sin caer al "in-memory paging"
     // que sí ocurriría si alguno fuera una colección (@OneToMany/@ManyToMany).
@@ -48,7 +47,6 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
     List<InstanciaComun> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
                                                    @Param("estado") EstadoLogico estado);
 
-    // H3 — paginado, usado por InstanciaComunService.listarPorEstudiante
     @Query("SELECT ic FROM InstanciaComun ic " +
             "JOIN FETCH ic.estudiante " +
             "JOIN FETCH ic.funcionario " +
@@ -66,7 +64,6 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
     List<InstanciaComun> findByFuncionarioAndEstado(@Param("idFuncionario") int idFuncionario,
                                                     @Param("estado") EstadoLogico estado);
 
-    // H3 — paginado, usado por InstanciaComunService.listarPorFuncionario
     @Query("SELECT ic FROM InstanciaComun ic " +
             "JOIN FETCH ic.estudiante " +
             "JOIN FETCH ic.funcionario " +
@@ -84,7 +81,6 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
     List<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
                                                   @Param("estado") EstadoLogico estado);
 
-    // H3 — paginado, usado por InstanciaComunService.listarPorCategoria
     @Query("SELECT ic FROM InstanciaComun ic " +
             "JOIN FETCH ic.estudiante " +
             "JOIN FETCH ic.funcionario " +
@@ -105,10 +101,9 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
 
-    // M11 — versión "batch" de la anterior: ReporteService.generarReporte()
-    // llamaba a findByEstudianteYPeriodo() una vez por cada estudiante dentro
-    // de un for (N+1). Con IN (:idsEstudiantes) se trae todo en una sola query
-    // y se agrupa en memoria por idEstudiante.
+    // Versión "batch" de la anterior: evita llamar a findByEstudianteYPeriodo()
+    // una vez por cada estudiante dentro de un for (N+1). Con IN (:idsEstudiantes)
+    // se trae todo en una sola query y se agrupa en memoria por idEstudiante.
     @Query("SELECT ic FROM InstanciaComun ic " +
             "WHERE ic.estudiante.idUsuario IN :idsEstudiantes " +
             "AND ic.estado = :estado " +

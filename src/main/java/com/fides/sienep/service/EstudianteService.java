@@ -114,13 +114,9 @@ public class EstudianteService {
     // CONSULTAS
     // =========================================================
 
-    // H5 — VER_ESTUDIANTE alcanza para ver los datos generales, pero el bloque
-    // de salud/motivo de derivación es un dato más sensible que el schema ya
-    // modela con un permiso propio (VER_BLOQUE_CONFIDENCIAL, asignado hoy a
-    // PSICOPEDAGOGO y LEGALES junto con VER_ESTUDIANTE). Antes ese permiso
-    // nunca se chequeaba en el código: cualquier rol futuro con VER_ESTUDIANTE
-    // pero sin VER_BLOQUE_CONFIDENCIAL vería igual esos datos. Se nulifican acá
-    // en vez de en el mapper para no acoplar MapStruct a SecurityContextHolder.
+    // El bloque de salud/motivo de derivación requiere además VER_BLOQUE_CONFIDENCIAL
+    // (asignado junto con VER_ESTUDIANTE a PSICOPEDAGOGO y LEGALES). Se nulifica
+    // acá en vez de en el mapper para no acoplar MapStruct a SecurityContextHolder.
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public EstudianteResponseDTO obtenerPorId(Integer id) {
@@ -388,10 +384,9 @@ public class EstudianteService {
             Grupo grupo = grupoRepository.findById(idGrupo)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado: " + idGrupo));
             
-            // H10 — 422 (no 400): el JSON de la request es válido, el problema es
-            // que idGrupo referencia un grupo inactivo — mismo código que usan el
-            // resto de los "entidad referenciada inactiva" del proyecto
-            // (RecordatorioService, IncidenciaService, InstanciaComunService).
+            // 422 (no 400): el JSON de la request es válido, el problema es que
+            // idGrupo referencia un grupo inactivo — mismo código que el resto de
+            // las validaciones de "entidad referenciada inactiva" del proyecto.
             if (grupo.getEstado() != EstadoLogico.ACTIVO) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "No se puede asignar un grupo que no está ACTIVO: " + idGrupo);
             }

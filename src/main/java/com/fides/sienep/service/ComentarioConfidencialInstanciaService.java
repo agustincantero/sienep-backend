@@ -62,12 +62,11 @@ public class ComentarioConfidencialInstanciaService {
                 comentarioRepository.findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
-    // M14 — el path es anidado (/instancias/{codInstancia}/comentarios-confidenciales/{id}),
-    // pero antes se editaba/eliminaba solo por idComConfidencial: un comentario de la
-    // instancia 1 se podía tocar entrando por la URL de la instancia 2, mientras el
-    // id existiera. Se valida que el comentario realmente pertenezca al codInstancia
-    // del path (404 si no, mismo criterio que "no encontrado" para no distinguir
-    // "no existe" de "existe pero es de otra instancia").
+    // El path es anidado (/instancias/{codInstancia}/comentarios-confidenciales/{id}):
+    // se valida que el comentario realmente pertenezca al codInstancia del path
+    // (404 si no, mismo criterio que "no encontrado" para no distinguir "no
+    // existe" de "existe pero es de otra instancia") — de lo contrario un
+    // comentario de la instancia 1 se podría tocar entrando por la URL de la 2.
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
     public ComentarioConfidencialInstanciaResponseDTO actualizar(int codInstancia, int idComConfidencial,
@@ -78,9 +77,8 @@ public class ComentarioConfidencialInstanciaService {
         return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
-    // M13 — ELIMINADO (no INACTIVO): mismo criterio que ComentarioNormalInstanciaService
-    // (ver comentario ahí) — unificado con el estado que ya usan los comentarios de
-    // Estudiante.
+    // ELIMINADO (no INACTIVO): unificado con el estado que ya usan los
+    // comentarios de Estudiante, ver ComentarioNormalInstanciaService.darDeBaja.
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
     public void darDeBaja(int codInstancia, int idComConfidencial) {

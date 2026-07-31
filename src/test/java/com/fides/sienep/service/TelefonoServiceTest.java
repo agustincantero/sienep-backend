@@ -149,7 +149,7 @@ class TelefonoServiceTest {
 
         telefonoService.eliminar(1, "099123456");
 
-        // B3 — save() explícito por consistencia con el resto de los services,
+        // save() explícito por consistencia con el resto de los services,
         // aunque el dirty-checking de Hibernate ya hubiera persistido el cambio.
         assertEquals(EstadoLogico.ELIMINADO, telefono.getEstado());
         verify(telefonoRepository).save(telefono);

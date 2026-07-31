@@ -224,9 +224,6 @@ public class InstanciaComunService {
         return nuevaInstancia;
     }
 
-    // H3 — GET /api/instancias sin filtro crece con cada instancia registrada;
-    // se pagina igual que las otras 3 ramas del mismo endpoint para que el
-    // contrato de respuesta sea uniforme sin importar qué filtro se use.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public Page<InstanciaComunResponseDTO> listarActivas(Pageable pageable) {
@@ -308,9 +305,6 @@ public class InstanciaComunService {
         instanciaComunRepository.save(instancia);
     }
 
-    // H8 — darDeBaja() usa INACTIVO (estado reversible por diseño), pero no
-    // existía ninguna vía de API para revertirlo, a diferencia del resto de
-    // las entidades con el mismo patrón de baja lógica.
     @Transactional
     @PreAuthorize("hasAuthority('REACTIVAR_INSTANCIA')")
     public InstanciaComunResponseDTO reactivar(int codInstancia) {

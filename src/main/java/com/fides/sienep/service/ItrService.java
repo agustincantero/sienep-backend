@@ -116,7 +116,6 @@ public class ItrService {
     /**
      * Da de baja lógica un ITR. Evict de caché requerido para actualizar catálogo.
      */
-    // H11 — guarda idempotente, ver misma nota en CarreraService.
     @PreAuthorize("hasAuthority('ELIMINAR_ITR')")
     @CacheEvict(value = "itrs", allEntries = true)
     @Transactional
@@ -162,8 +161,7 @@ public class ItrService {
             for (ItrCarrera itrCarrera : itr.getCarreras()) {
                 if (itrCarrera.getCarrera().getIdCarrera().equals(idCarrera)) {
                     if (itrCarrera.getEstado() == EstadoLogico.INACTIVO) {
-                        // H13 — mismo chequeo que abajo para asociaciones nuevas:
-                        // reactivar el vínculo no debería saltearse la validación
+                        // Reactivar el vínculo no debería saltearse la validación
                         // de que la carrera referenciada siga ACTIVA.
                         if (itrCarrera.getCarrera().getEstado() != EstadoLogico.ACTIVO) {
                             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
@@ -179,8 +177,6 @@ public class ItrService {
             if (!existeAsociacion) {
                 Carrera carrera = carreraRepository.findById(idCarrera)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera con ID " + idCarrera + " no encontrada."));
-                // H13 — mismo bug que M2 (Grupo↔Estudiante): faltaba validar que
-                // la carrera referenciada esté ACTIVA antes de asociarla al ITR.
                 if (carrera.getEstado() != EstadoLogico.ACTIVO) {
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
                             "No se puede asociar una carrera que no está ACTIVA: " + idCarrera);

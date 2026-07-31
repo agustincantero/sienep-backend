@@ -61,12 +61,11 @@ public class ComentarioNormalInstanciaService {
                 comentarioRepository.findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
-    // M14 — el path es anidado (/instancias/{codInstancia}/comentarios-normales/{id}),
-    // pero antes se editaba/eliminaba solo por idComentario: un comentario de la
-    // instancia 1 se podía tocar entrando por la URL de la instancia 2, mientras el
-    // id existiera. Se valida que el comentario realmente pertenezca al codInstancia
-    // del path (404 si no, mismo criterio que "no encontrado" para no distinguir
-    // "no existe" de "existe pero es de otra instancia").
+    // El path es anidado (/instancias/{codInstancia}/comentarios-normales/{id}):
+    // se valida que el comentario realmente pertenezca al codInstancia del path
+    // (404 si no, mismo criterio que "no encontrado" para no distinguir "no
+    // existe" de "existe pero es de otra instancia") — de lo contrario un
+    // comentario de la instancia 1 se podría tocar entrando por la URL de la 2.
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_NORMAL_INSTANCIA')")
     public ComentarioNormalInstanciaResponseDTO actualizar(int codInstancia, int idComentario,
@@ -77,10 +76,9 @@ public class ComentarioNormalInstanciaService {
         return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
-    // M13 — ELIMINADO (no INACTIVO): a diferencia de los catálogos (Carrera, Grupo,
-    // etc.), ningún comentario tiene reactivar(); el permiso que protege este método
-    // ya se llama ELIMINAR_COMENTARIO_NORMAL_INSTANCIA, no BAJA_. Unificado con el
-    // estado que ya usan los comentarios de Estudiante (ComentarioNormalEstudiante/
+    // ELIMINADO (no INACTIVO): a diferencia de los catálogos (Carrera, Grupo,
+    // etc.), ningún comentario tiene reactivar() — unificado con el estado que
+    // ya usan los comentarios de Estudiante (ComentarioNormalEstudiante/
     // ComentarioConfidencialEstudiante.eliminar()).
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA')")

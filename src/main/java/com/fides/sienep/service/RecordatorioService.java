@@ -146,8 +146,6 @@ public class RecordatorioService {
         return recordatorioMapper.toDto(guardado);
     }
 
-    // H4 — GET /api/recordatorios crece con cada recordatorio creado; se pagina
-    // igual que listarPorInstancia/listarPorResponsable para un contrato uniforme.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public Page<RecordatorioResponseDTO> listarActivos(Pageable pageable) {
@@ -185,13 +183,11 @@ public class RecordatorioService {
     public RecordatorioResponseDTO actualizar(int id, RecordatorioRequestDTO dto) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
 
-        // B11 — decisión: codInstancia es inmutable después de creado. No hay ningún
-        // caso de uso real que necesite "mover" un recordatorio a otra instancia (que
-        // podría ser hasta de otro estudiante), y permitirlo sin más validación que
-        // "existe y está activa" es el mismo tipo de problema que ya se corrigió para
-        // comentarios en M14 (romper la relación de pertenencia del recurso). Si en el
-        // futuro aparece un caso de uso real (ej. mover entre instancias del mismo
-        // estudiante), agregar esa validación puntual en vez de sacar este chequeo.
+        // codInstancia es inmutable después de creado: no hay ningún caso de uso
+        // real que necesite "mover" un recordatorio a otra instancia (que podría
+        // ser hasta de otro estudiante). Si en el futuro aparece un caso de uso
+        // real (ej. mover entre instancias del mismo estudiante), agregar esa
+        // validación puntual en vez de sacar este chequeo.
         if (dto.getCodInstancia() != recordatorio.getInstancia().getCodInstancia()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "No se puede reasignar un recordatorio a otra instancia. "
@@ -387,11 +383,6 @@ public class RecordatorioService {
     }
 
 
-    // H7 — permiso propio en vez de EDITAR_RECORDATORIO, igual que el resto de
-    // las entidades con reactivar() (Carrera/Grupo/Itr/Estudiante/Funcionario/
-    // Rol/CategoriaInstancia/CategoriaRecordatorio). Se asigna a los mismos
-    // roles que ya tenían EDITAR_RECORDATORIO (PSICOPEDAGOGO, TUTOR), así que
-    // no cambia quién puede reactivar hoy — solo separa el permiso.
     @Transactional
     @PreAuthorize("hasAuthority('REACTIVAR_RECORDATORIO')")
     public RecordatorioResponseDTO reactivar(int id) {

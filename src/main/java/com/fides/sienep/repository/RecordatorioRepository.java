@@ -18,7 +18,7 @@ import java.util.Optional;
 @Repository
 public interface RecordatorioRepository extends JpaRepository<Recordatorio, Integer> {
 
-    // M9 — JOIN FETCH de instancia/categoria/responsable: RecordatorioMapper accede
+    // JOIN FETCH de instancia/categoria/responsable: RecordatorioMapper accede
     // a las tres en cada fila, más frecuencia si no es null. Sin el fetch, listar N
     // recordatorios dispara SELECTs lazy adicionales por cada asociación y fila.
     // frecuencia es LEFT JOIN porque es opcional (id_frecuencia admite NULL); un
@@ -31,7 +31,6 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             "WHERE r.estado = :estado")
     List<Recordatorio> findByEstado(@Param("estado") EstadoLogico estado);
 
-    // H4 — paginado, usado por RecordatorioService.listarActivos (GET /api/recordatorios).
     // Los 4 fetch son todos @ManyToOne/LEFT JOIN a-uno, no colecciones, así que
     // Hibernate pagina en SQL (LIMIT/OFFSET) sin caer al "in-memory paging".
     @Query("SELECT r FROM Recordatorio r " +
@@ -44,7 +43,7 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
 
     Optional<Recordatorio> findByCodRecordatorioAndEstado(int codRecordatorio, EstadoLogico estado);
 
-    // M8 — usado por FrecuenciaService.darDeBaja() para no dejar recordatorios
+    // Usado por FrecuenciaService.darDeBaja() para no dejar recordatorios
     // activos con una frecuencia inactiva (RecurrenceRuleBuilder seguiría
     // computando la recurrencia con datos de un catálogo dado de baja).
     boolean existsByFrecuencia_IdFrecuenciaAndEstado(int idFrecuencia, EstadoLogico estado);
@@ -70,7 +69,6 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
     List<Recordatorio> findByInstanciaAndEstado(@Param("codInstancia") int codInstancia,
                                                 @Param("estado") EstadoLogico estado);
 
-    // H4 — paginado, usado por RecordatorioService.listarPorInstancia
     @Query("SELECT r FROM Recordatorio r " +
             "JOIN FETCH r.instancia " +
             "JOIN FETCH r.categoria " +
@@ -90,7 +88,6 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
     List<Recordatorio> findByResponsableAndEstado(@Param("idResponsable") int idResponsable,
                                                   @Param("estado") EstadoLogico estado);
 
-    // H4 — paginado, usado por RecordatorioService.listarPorResponsable
     @Query("SELECT r FROM Recordatorio r " +
             "JOIN FETCH r.instancia " +
             "JOIN FETCH r.categoria " +
@@ -112,10 +109,9 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
 
-    // M11 — versión "batch" de la anterior: ReporteService.generarReporte()
-    // llamaba a findByEstudianteYPeriodo() una vez por cada estudiante dentro
-    // de un for (N+1). Con IN (:idsEstudiantes) se trae todo en una sola query
-    // y se agrupa en memoria por idEstudiante.
+    // Versión "batch" de la anterior: evita llamar a findByEstudianteYPeriodo()
+    // una vez por cada estudiante dentro de un for (N+1). Con IN (:idsEstudiantes)
+    // se trae todo en una sola query y se agrupa en memoria por idEstudiante.
     @Query("SELECT r FROM Recordatorio r " +
             "WHERE r.instancia.estudiante.idUsuario IN :idsEstudiantes " +
             "AND r.estado = :estado " +
@@ -130,7 +126,7 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
     Optional<Recordatorio> findByCodRecordatorio(int codRecordatorio);
 
     // ── RF23: recordatorios próximos a vencer, aún no notificados ──
-    // M9 — JOIN FETCH de responsable: RecordatorioNotificacionScheduler accede a
+    // JOIN FETCH de responsable: RecordatorioNotificacionScheduler accede a
     // getResponsable().getEmail()/getNombre() por cada recordatorio de la lista.
     @Query("SELECT r FROM Recordatorio r JOIN FETCH r.responsable " +
             "WHERE r.estado = :estado AND r.notificadoProximidad = false " +

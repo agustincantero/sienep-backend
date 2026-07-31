@@ -104,7 +104,6 @@ public class GrupoService {
         return grupoMapper.toDto(grupoRepository.save(grupo));
     }
 
-    // H11 — guarda idempotente, ver misma nota en CarreraService.
     @PreAuthorize("hasAuthority('ELIMINAR_GRUPO')")
     @Transactional
     public void darDeBaja(Integer id) {

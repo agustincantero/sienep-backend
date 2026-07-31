@@ -143,7 +143,6 @@ public class FuncionarioService {
         log.info("[AUDIT] Admin restableció contraseña del funcionario id={}", id);
     }
 
-    // H11 — guarda idempotente, ver misma nota en CarreraService.
     @PreAuthorize("hasAuthority('ELIMINAR_FUNCIONARIO')")
     @Transactional
     public void darDeBaja(Integer id) {

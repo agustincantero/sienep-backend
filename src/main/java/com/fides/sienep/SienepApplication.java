@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 // Se configura el orden en 0 para que @Transactional se ejecute antes (por fuera)
 // de nuestros aspectos personalizados, asegurando que compartan la misma conexión.
 @EnableTransactionManagement(order = 0)
-// B2 — sin un CacheManager explícito en el classpath (Redis, etc.), Spring Boot
+// Sin un CacheManager explícito en el classpath (Redis, etc.), Spring Boot
 // auto-configura ConcurrentMapCacheManager: un caché en memoria del proceso, igual
 // que OAuthStateStore/PasswordResetRateLimiter. Usado por los @Cacheable de
 // RolService, CategoriaInstanciaService, CategoriaRecordatorioService,

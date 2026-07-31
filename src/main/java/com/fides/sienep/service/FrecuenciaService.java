@@ -37,9 +37,7 @@ public class FrecuenciaService {
         return frecuenciaMapper.toDto(frecuenciaRepository.save(frecuencia));
     }
 
-    // B10 — antes solo existía listarActivas() (ACTIVO fijo, sin forma de ver
-    // frecuencias INACTIVAS, p. ej. para decidir cuáles reactivar). estado=null
-    // lista todas, sin filtrar — mismo criterio que CategoriaInstanciaService.obtenerTodas().
+    // estado=null lista todas, sin filtrar — mismo criterio que CategoriaInstanciaService.obtenerTodas().
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<FrecuenciaResponseDTO> listar(EstadoLogico estado) {
@@ -84,10 +82,8 @@ public class FrecuenciaService {
         frecuenciaRepository.save(frecuencia);
     }
 
-    // H7 — permiso propio (REACTIVAR_RECORDATORIO), ver misma nota en
-    // RecordatorioService.reactivar(). Frecuencia comparte todo el namespace
-    // de permisos de Recordatorio (no tiene los suyos propios), así que usa
-    // el mismo permiso nuevo.
+    // Frecuencia comparte todo el namespace de permisos de Recordatorio (no
+    // tiene los suyos propios), de ahí REACTIVAR_RECORDATORIO y no REACTIVAR_FRECUENCIA.
     @Transactional
     @PreAuthorize("hasAuthority('REACTIVAR_RECORDATORIO')")
     public FrecuenciaResponseDTO reactivar(int id) {
