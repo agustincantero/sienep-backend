@@ -73,8 +73,9 @@ public class ComentarioNormalEstudianteService {
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
 
-        Funcionario autor = funcionarioRepository.findById(dto.getIdAutor())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + dto.getIdAutor()));
+        Integer idAutor = getIdUsuarioAutenticado();
+        Funcionario autor = funcionarioRepository.findById(idAutor)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + idAutor));
 
         ComentarioNormalEstudiante comentario =
                 new ComentarioNormalEstudiante(dto.getContenido(), autor, estudiante);

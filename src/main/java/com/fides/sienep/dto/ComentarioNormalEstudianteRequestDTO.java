@@ -15,10 +15,6 @@ public class ComentarioNormalEstudianteRequestDTO {
     @Schema(description = "Contenido del comentario", example = "El estudiante mostró mejoras significativas.")
     private String contenido;
 
-    @NotNull(message = "El id del autor es obligatorio")
-    @Schema(description = "ID del funcionario autor", example = "1")
-    private Integer idAutor;
-
     @NotNull(message = "El id del estudiante es obligatorio")
     @Schema(description = "ID del estudiante comentado", example = "5")
     private Integer idEstudiante;

@@ -16,6 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -59,8 +61,9 @@ public class ComentarioConfidencialEstudianteService {
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
 
-        Funcionario autor = funcionarioRepository.findById(dto.getIdAutor())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + dto.getIdAutor()));
+        Integer idAutor = getIdUsuarioAutenticado();
+        Funcionario autor = funcionarioRepository.findById(idAutor)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + idAutor));
 
         ComentarioConfidencialEstudiante comentario =
                 new ComentarioConfidencialEstudiante(dto.getContenido(), autor, estudiante);
@@ -91,5 +94,10 @@ public class ComentarioConfidencialEstudianteService {
     private ComentarioConfidencialEstudiante buscarOFallar(Integer id) {
         return comentarioRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Observación confidencial no encontrada: " + id));
+    }
+
+    private Integer getIdUsuarioAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Integer.parseInt(auth.getName());
     }
 }

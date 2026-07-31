@@ -10,8 +10,9 @@ import lombok.Setter;
  * DTO exclusivo para PUT /api/comentarios-confidenciales/{id}
  *
  * Mismo razonamiento que ComentarioNormalEstudianteUpdateDTO.
- * En un PUT de edición, idEstudiante e idAutor son irrelevantes
- * porque el comentario ya está asociado a ellos desde su creación.
+ * En un PUT de edición, idEstudiante es irrelevante porque el
+ * comentario ya está asociado a él desde su creación (el autor se
+ * resuelve del usuario autenticado, no viaja en ningún DTO).
  */
 @Getter
 @Setter

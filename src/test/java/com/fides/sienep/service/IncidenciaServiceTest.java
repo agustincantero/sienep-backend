@@ -6,6 +6,7 @@ import com.fides.sienep.mapper.IncidenciaMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
 import com.fides.sienep.utils.InstanciaIdGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -79,6 +80,11 @@ class IncidenciaServiceTest {
         responseDTO.setCodInstancia(1);
         responseDTO.setTitulo("Llegada tarde reiterada");
         responseDTO.setEstado(EstadoLogico.ACTIVO);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     private void mockSecurityContext(int idUsuario) {

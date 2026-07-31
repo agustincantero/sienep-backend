@@ -11,6 +11,7 @@ import com.fides.sienep.mapper.InstanciaComunMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
 import com.fides.sienep.utils.InstanciaIdGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -98,6 +99,11 @@ class InstanciaComunServiceTest {
         responseDTO.setTitulo("Reunión de seguimiento");
         responseDTO.setIdNegInstancia("INST-2026-000001");
         responseDTO.setEstado(EstadoLogico.ACTIVO);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     private void mockSecurityContext(int idUsuario) {

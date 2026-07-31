@@ -13,6 +13,7 @@ import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.ComentarioConfidencialEstudianteRepository;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -90,6 +93,17 @@ class ComentarioConfidencialEstudianteServiceTest {
                 .build();
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void mockAutenticadoComoFuncionario(int id) {
+        Authentication auth = mock(Authentication.class);
+        lenient().when(auth.getName()).thenReturn(String.valueOf(id));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
     // =========================================================
     // CREAR
     // =========================================================
@@ -97,10 +111,11 @@ class ComentarioConfidencialEstudianteServiceTest {
     @Test
     @DisplayName("Crear observación confidencial - Éxito")
     void crear_Exito() {
+        mockAutenticadoComoFuncionario(1);
+
         ComentarioConfidencialEstudianteRequestDTO dto = new ComentarioConfidencialEstudianteRequestDTO();
         dto.setContenido("Observación confidencial.");
         dto.setIdEstudiante(1);
-        dto.setIdAutor(1);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(autorMock));
@@ -120,7 +135,6 @@ class ComentarioConfidencialEstudianteServiceTest {
         ComentarioConfidencialEstudianteRequestDTO dto = new ComentarioConfidencialEstudianteRequestDTO();
         dto.setContenido("Contenido");
         dto.setIdEstudiante(99);
-        dto.setIdAutor(1);
 
         when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
 
@@ -135,10 +149,11 @@ class ComentarioConfidencialEstudianteServiceTest {
     @Test
     @DisplayName("Crear observación - Autor no encontrado → 404")
     void crear_LanzaExcepcion_AutorNoEncontrado() {
+        mockAutenticadoComoFuncionario(99);
+
         ComentarioConfidencialEstudianteRequestDTO dto = new ComentarioConfidencialEstudianteRequestDTO();
         dto.setContenido("Contenido");
         dto.setIdEstudiante(1);
-        dto.setIdAutor(99);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
         when(funcionarioRepository.findById(99)).thenReturn(Optional.empty());

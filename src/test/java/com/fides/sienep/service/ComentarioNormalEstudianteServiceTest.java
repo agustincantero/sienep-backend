@@ -13,6 +13,7 @@ import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.ComentarioNormalEstudianteRepository;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -90,6 +93,18 @@ class ComentarioNormalEstudianteServiceTest {
                 .build();
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void mockAutenticadoComoFuncionario(int id) {
+        Authentication auth = mock(Authentication.class);
+        lenient().when(auth.getName()).thenReturn(String.valueOf(id));
+        lenient().when(auth.getAuthorities()).thenReturn(List.of());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
     // =========================================================
     // CREAR
     // =========================================================
@@ -97,10 +112,11 @@ class ComentarioNormalEstudianteServiceTest {
     @Test
     @DisplayName("Crear comentario normal - Éxito")
     void crear_Exito() {
+        mockAutenticadoComoFuncionario(1);
+
         ComentarioNormalEstudianteRequestDTO dto = new ComentarioNormalEstudianteRequestDTO();
         dto.setContenido("El estudiante muestra avances.");
         dto.setIdEstudiante(1);
-        dto.setIdAutor(1);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(autorMock));
@@ -120,7 +136,6 @@ class ComentarioNormalEstudianteServiceTest {
         ComentarioNormalEstudianteRequestDTO dto = new ComentarioNormalEstudianteRequestDTO();
         dto.setContenido("Contenido");
         dto.setIdEstudiante(99);
-        dto.setIdAutor(1);
 
         when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
 
@@ -135,10 +150,11 @@ class ComentarioNormalEstudianteServiceTest {
     @Test
     @DisplayName("Crear comentario - Autor no encontrado → 404")
     void crear_LanzaExcepcion_AutorNoEncontrado() {
+        mockAutenticadoComoFuncionario(99);
+
         ComentarioNormalEstudianteRequestDTO dto = new ComentarioNormalEstudianteRequestDTO();
         dto.setContenido("Contenido");
         dto.setIdEstudiante(1);
-        dto.setIdAutor(99);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
         when(funcionarioRepository.findById(99)).thenReturn(Optional.empty());

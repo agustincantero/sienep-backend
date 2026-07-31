@@ -11,14 +11,15 @@ import lombok.Setter;
  *
  * ¿Por qué separado del RequestDTO?
  *
- * El RequestDTO (crear) necesita idEstudiante e idAutor para saber
- * a quién le pertenece el comentario y quién lo escribe.
+ * El RequestDTO (crear) necesita idEstudiante para saber a quién le
+ * pertenece el comentario (el autor se resuelve del usuario autenticado,
+ * no viaja en el DTO).
  *
- * El UpdateDTO (editar) NO los necesita:
+ * El UpdateDTO (editar) no lo necesita:
  *   - El comentario ya existe → ya tiene estudiante y autor asignados.
- *   - Permitir cambiar el idEstudiante o idAutor sería un error de
- *     diseño: estarías "moviendo" el comentario a otro estudiante,
- *     lo cual no tiene sentido de negocio.
+ *   - Permitir cambiar el idEstudiante sería un error de diseño:
+ *     estarías "moviendo" el comentario a otro estudiante, lo cual no
+ *     tiene sentido de negocio.
  *
  * Principio: un DTO de actualización solo debe contener los campos
  * que SE PUEDEN cambiar, no todos los que existen en la entidad.

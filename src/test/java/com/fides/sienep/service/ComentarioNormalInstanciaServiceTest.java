@@ -7,6 +7,7 @@ import com.fides.sienep.model.*;
 import com.fides.sienep.repository.ComentarioNormalInstanciaRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.InstanciaRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,11 @@ class ComentarioNormalInstanciaServiceTest {
         responseDTO.setCodInstancia(1);
         responseDTO.setContenido("Comentario de prueba");
         responseDTO.setEstado(EstadoLogico.ACTIVO);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     private void mockSecurityContext(int idUsuario) {
