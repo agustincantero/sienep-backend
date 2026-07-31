@@ -79,7 +79,7 @@ public class ComentarioConfidencialEstudianteService {
                 new ComentarioConfidencialEstudiante(dto.getContenido(), autor, estudiante);
 
         comentarioRepository.save(comentario);
-        log.info("[AUDIT] Observación confidencial creada para estudiante {}", dto.getIdEstudiante());
+        log.info("Observación confidencial creada para estudiante {}", dto.getIdEstudiante());
         return comentarioMapper.toDto(comentario);
     }
 
@@ -88,7 +88,7 @@ public class ComentarioConfidencialEstudianteService {
     public ComentarioConfidencialEstudianteResponseDTO editar(Integer id, ComentarioConfidencialEstudianteUpdateDTO dto) {
         ComentarioConfidencialEstudiante comentario = buscarOFallar(id);
         comentario.setContenido(dto.getContenido());
-        log.info("[AUDIT] Observación confidencial {} editada", id);
+        log.info("Observación confidencial {} editada", id);
         return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
@@ -98,7 +98,7 @@ public class ComentarioConfidencialEstudianteService {
         ComentarioConfidencialEstudiante comentario = buscarOFallar(id);
         comentario.setEstado(EstadoLogico.ELIMINADO);
         comentarioRepository.save(comentario);
-        log.info("[AUDIT] Observación confidencial {} dada de baja lógica", id);
+        log.info("Observación confidencial {} dada de baja lógica", id);
     }
 
     private ComentarioConfidencialEstudiante buscarOFallar(Integer id) {

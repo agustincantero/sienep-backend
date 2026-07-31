@@ -95,7 +95,7 @@ public class ComentarioNormalEstudianteService {
                 new ComentarioNormalEstudiante(dto.getContenido(), autor, estudiante);
 
         comentarioRepository.save(comentario);
-        log.info("[AUDIT] Comentario normal creado para estudiante {}", dto.getIdEstudiante());
+        log.info("Comentario normal creado para estudiante {}", dto.getIdEstudiante());
         return comentarioMapper.toDto(comentario);
     }
 
@@ -104,7 +104,7 @@ public class ComentarioNormalEstudianteService {
     public ComentarioNormalEstudianteResponseDTO editar(Integer id, ComentarioNormalEstudianteUpdateDTO dto) {
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
         comentario.setContenido(dto.getContenido());
-        log.info("[AUDIT] Comentario {} editado", id);
+        log.info("Comentario {} editado", id);
         return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
 
@@ -114,7 +114,7 @@ public class ComentarioNormalEstudianteService {
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
         comentario.setEstado(EstadoLogico.ELIMINADO);
         comentarioRepository.save(comentario);
-        log.info("[AUDIT] Comentario {} dado de baja lógica", id);
+        log.info("Comentario {} dado de baja lógica", id);
     }
 
     private ComentarioNormalEstudiante buscarOFallar(Integer id) {
