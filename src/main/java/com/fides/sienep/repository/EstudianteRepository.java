@@ -88,6 +88,14 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Integer>
 
 
     // ── Queries para Reportes — sin paginación ────────────────
+    // M10 — usado por ReporteService cuando no se pasa ningún filtro (ni
+    // carrera, ni grupo, ni estudiante puntual): antes caía a findAll(), que
+    // incluía estudiantes INACTIVOS/ELIMINADOS/PENDIENTES_DE_ACTIVACION, a
+    // diferencia de las otras dos ramas del mismo método que sí filtran ACTIVO.
+    // Sobrecarga del findByEstado(estado, Pageable) de arriba, sin paginar
+    // (Spring Data los distingue por la lista de parámetros).
+    List<Estudiante> findByEstado(EstadoLogico estado);
+
     @Query("SELECT e FROM Estudiante e JOIN e.grupos g WHERE g.idGrupo = :idGrupo AND e.estado = :estado")
     List<Estudiante> findByGrupoAndEstadoList(@Param("idGrupo") Integer idGrupo,
                                               @Param("estado") EstadoLogico estado);

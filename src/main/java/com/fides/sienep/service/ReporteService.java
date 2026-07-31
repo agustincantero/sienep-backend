@@ -153,7 +153,7 @@ public class ReporteService {
         if (idCarrera != null) {
             return estudianteRepository.findByCarreraAndEstadoList(idCarrera, EstadoLogico.ACTIVO);
         }
-        return estudianteRepository.findAll();
+        return estudianteRepository.findByEstado(EstadoLogico.ACTIVO);
     }
 
     private String construirDescripcionFiltros(Integer idCarrera, Integer idGrupo,

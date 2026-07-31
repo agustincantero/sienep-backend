@@ -112,7 +112,7 @@ class ReporteServiceTest {
     @Test
     @DisplayName("Generar reporte - Sin filtros devuelve métricas globales")
     void generarReporte_SinFiltros_DevuelveMetricasGlobales() {
-        when(estudianteRepository.findAll()).thenReturn(List.of(estudianteMock));
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
         mockearMetricasVacias(estudianteMock.getIdUsuario());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
@@ -126,6 +126,18 @@ class ReporteServiceTest {
         assertNull(resultado.getAdvertencia());
         assertNotNull(resultado.getFechaGeneracion());
         assertNotNull(resultado.getGeneradoPor());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Sin filtros solo considera estudiantes ACTIVOS (M10)")
+    void generarReporte_SinFiltros_SoloConsideraActivos() {
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
+        mockearMetricasVacias(estudianteMock.getIdUsuario());
+
+        reporteService.generarReporte(null, null, null, null, null);
+
+        verify(estudianteRepository).findByEstado(EstadoLogico.ACTIVO);
+        verify(estudianteRepository, never()).findAll();
     }
 
     // =========================================================
@@ -198,7 +210,7 @@ class ReporteServiceTest {
     @Test
     @DisplayName("Generar reporte - Conteo de instancias e incidencias correcto")
     void generarReporte_ConteoDeMetricasCorrecto() {
-        when(estudianteRepository.findAll()).thenReturn(List.of(estudianteMock));
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
 
         InstanciaComun instancia = new InstanciaComun();
         Incidencia incidencia = new Incidencia();
@@ -226,7 +238,7 @@ class ReporteServiceTest {
     @Test
     @DisplayName("Generar reporte - Conteo de recordatorios por estado operativo correcto")
     void generarReporte_ConteoRecordatoriosPorEstadoCorrecto() {
-        when(estudianteRepository.findAll()).thenReturn(List.of(estudianteMock));
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
 
         lenient().when(instanciaComunRepository.findByEstudianteYPeriodo(
                         any(), eq(EstadoLogico.ACTIVO), any(), any()))
@@ -270,7 +282,7 @@ class ReporteServiceTest {
                 () -> reporteService.generarReporte(null, null, null, desde, hasta));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        verify(estudianteRepository, never()).findAll();
+        verify(estudianteRepository, never()).findByEstado(EstadoLogico.ACTIVO);
     }
 
     // =========================================================
@@ -280,7 +292,7 @@ class ReporteServiceTest {
     @Test
     @DisplayName("Generar reporte - Período por defecto es últimos 3 meses")
     void generarReporte_SinPeriodo_UsaUltimos3Meses() {
-        when(estudianteRepository.findAll()).thenReturn(List.of());
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of());
 
         ReporteResponseDTO resultado = reporteService.generarReporte(
                 null, null, null, null, null);
