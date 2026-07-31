@@ -900,7 +900,6 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  ('EDITAR_ROL',              'Permite editar la información de un rol'),
                                                                  ('ELIMINAR_ROL',            'Permite eliminar un rol existente'),
                                                                  ('REACTIVAR_ROL',           'Permite reactivar un rol dado de baja'),
-                                                                 ('ASIGNAR_PERMISOS',        'Permite asignar o revocar permisos a roles'),
                                                                  -- Estudiantes
                                                                  ('VER_ESTUDIANTE',              'Permite visualizar los datos de los estudiantes'),
                                                                  ('VER_ESTUDIANTE_RESUMIDO',     'Permite visualizar datos resumidos de estudiantes'),
