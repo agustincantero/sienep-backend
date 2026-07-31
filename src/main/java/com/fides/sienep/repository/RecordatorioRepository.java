@@ -3,6 +3,8 @@ package com.fides.sienep.repository;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Recordatorio;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -28,6 +30,17 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             "LEFT JOIN FETCH r.frecuencia " +
             "WHERE r.estado = :estado")
     List<Recordatorio> findByEstado(@Param("estado") EstadoLogico estado);
+
+    // H4 — paginado, usado por RecordatorioService.listarActivos (GET /api/recordatorios).
+    // Los 4 fetch son todos @ManyToOne/LEFT JOIN a-uno, no colecciones, así que
+    // Hibernate pagina en SQL (LIMIT/OFFSET) sin caer al "in-memory paging".
+    @Query("SELECT r FROM Recordatorio r " +
+            "JOIN FETCH r.instancia " +
+            "JOIN FETCH r.categoria " +
+            "JOIN FETCH r.responsable " +
+            "LEFT JOIN FETCH r.frecuencia " +
+            "WHERE r.estado = :estado")
+    Page<Recordatorio> findByEstado(@Param("estado") EstadoLogico estado, Pageable pageable);
 
     Optional<Recordatorio> findByCodRecordatorioAndEstado(int codRecordatorio, EstadoLogico estado);
 
@@ -57,6 +70,17 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
     List<Recordatorio> findByInstanciaAndEstado(@Param("codInstancia") int codInstancia,
                                                 @Param("estado") EstadoLogico estado);
 
+    // H4 — paginado, usado por RecordatorioService.listarPorInstancia
+    @Query("SELECT r FROM Recordatorio r " +
+            "JOIN FETCH r.instancia " +
+            "JOIN FETCH r.categoria " +
+            "JOIN FETCH r.responsable " +
+            "LEFT JOIN FETCH r.frecuencia " +
+            "WHERE r.instancia.codInstancia = :codInstancia AND r.estado = :estado")
+    Page<Recordatorio> findByInstanciaAndEstado(@Param("codInstancia") int codInstancia,
+                                                @Param("estado") EstadoLogico estado,
+                                                Pageable pageable);
+
     @Query("SELECT r FROM Recordatorio r " +
             "JOIN FETCH r.instancia " +
             "JOIN FETCH r.categoria " +
@@ -65,6 +89,17 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             "WHERE r.responsable.idUsuario = :idResponsable AND r.estado = :estado")
     List<Recordatorio> findByResponsableAndEstado(@Param("idResponsable") int idResponsable,
                                                   @Param("estado") EstadoLogico estado);
+
+    // H4 — paginado, usado por RecordatorioService.listarPorResponsable
+    @Query("SELECT r FROM Recordatorio r " +
+            "JOIN FETCH r.instancia " +
+            "JOIN FETCH r.categoria " +
+            "JOIN FETCH r.responsable " +
+            "LEFT JOIN FETCH r.frecuencia " +
+            "WHERE r.responsable.idUsuario = :idResponsable AND r.estado = :estado")
+    Page<Recordatorio> findByResponsableAndEstado(@Param("idResponsable") int idResponsable,
+                                                  @Param("estado") EstadoLogico estado,
+                                                  Pageable pageable);
 
     // ── Queries para Reportes ─────────────────────────────────
     @Query("SELECT r FROM Recordatorio r " +

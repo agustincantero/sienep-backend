@@ -11,6 +11,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,10 +40,11 @@ public class RecordatorioController {
     }
 
     @Operation(summary = "Listar recordatorios activos")
-    @ApiResponse(responseCode = "200", description = "Lista de recordatorios activos")
+    @ApiResponse(responseCode = "200", description = "Página de recordatorios activos")
     @GetMapping
-    public ResponseEntity<List<RecordatorioResponseDTO>> listar() {
-        return ResponseEntity.ok(recordatorioService.listarActivos());
+    public ResponseEntity<Page<RecordatorioResponseDTO>> listar(
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(recordatorioService.listarActivos(pageable));
     }
 
     @Operation(summary = "Buscar recordatorio por ID")
@@ -51,17 +56,21 @@ public class RecordatorioController {
     }
 
     @Operation(summary = "Listar recordatorios por instancia")
-    @ApiResponse(responseCode = "200", description = "Lista de recordatorios de la instancia")
+    @ApiResponse(responseCode = "200", description = "Página de recordatorios de la instancia")
     @GetMapping("/instancia/{codInstancia}")
-    public ResponseEntity<List<RecordatorioResponseDTO>> listarPorInstancia(@PathVariable int codInstancia) {
-        return ResponseEntity.ok(recordatorioService.listarPorInstancia(codInstancia));
+    public ResponseEntity<Page<RecordatorioResponseDTO>> listarPorInstancia(
+            @PathVariable int codInstancia,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(recordatorioService.listarPorInstancia(codInstancia, pageable));
     }
 
     @Operation(summary = "Listar recordatorios por responsable")
-    @ApiResponse(responseCode = "200", description = "Lista de recordatorios del responsable")
+    @ApiResponse(responseCode = "200", description = "Página de recordatorios del responsable")
     @GetMapping("/responsable/{idResponsable}")
-    public ResponseEntity<List<RecordatorioResponseDTO>> listarPorResponsable(@PathVariable int idResponsable) {
-        return ResponseEntity.ok(recordatorioService.listarPorResponsable(idResponsable));
+    public ResponseEntity<Page<RecordatorioResponseDTO>> listarPorResponsable(
+            @PathVariable int idResponsable,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(recordatorioService.listarPorResponsable(idResponsable, pageable));
     }
 
     @Operation(summary = "Actualizar un recordatorio")

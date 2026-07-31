@@ -13,6 +13,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -295,15 +299,17 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Listar activos - Éxito")
+    @DisplayName("Listar activos - Éxito, paginado (H4)")
     void listarActivos_Exito() {
-        when(recordatorioRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(recordatorio));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(recordatorioRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(recordatorio), pageable, 1));
         when(recordatorioMapper.toDtoList(List.of(recordatorio))).thenReturn(List.of(responseDTO));
 
-        List<RecordatorioResponseDTO> resultado = recordatorioService.listarActivos();
+        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarActivos(pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
@@ -652,29 +658,31 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por instancia - Éxito")
+    @DisplayName("Listar por instancia - Éxito, paginado (H4)")
     void listarPorInstancia_Exito() {
-        when(recordatorioRepository.findByInstanciaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(recordatorio));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(recordatorioRepository.findByInstanciaAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(recordatorio), pageable, 1));
         when(recordatorioMapper.toDtoList(List.of(recordatorio))).thenReturn(List.of(responseDTO));
 
-        List<RecordatorioResponseDTO> resultado = recordatorioService.listarPorInstancia(1);
+        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarPorInstancia(1, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por responsable - Éxito")
+    @DisplayName("Listar por responsable - Éxito, paginado (H4)")
     void listarPorResponsable_Exito() {
-        when(recordatorioRepository.findByResponsableAndEstado(2, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(recordatorio));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(recordatorioRepository.findByResponsableAndEstado(2, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(recordatorio), pageable, 1));
         when(recordatorioMapper.toDtoList(List.of(recordatorio))).thenReturn(List.of(responseDTO));
 
-        List<RecordatorioResponseDTO> resultado = recordatorioService.listarPorResponsable(2);
+        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarPorResponsable(2, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
 

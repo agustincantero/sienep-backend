@@ -8,6 +8,9 @@ import com.fides.sienep.repository.*;
 import com.fides.sienep.utils.RecordatorioIdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -143,11 +146,14 @@ public class RecordatorioService {
         return recordatorioMapper.toDto(guardado);
     }
 
+    // H4 — GET /api/recordatorios crece con cada recordatorio creado; se pagina
+    // igual que listarPorInstancia/listarPorResponsable para un contrato uniforme.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public List<RecordatorioResponseDTO> listarActivos() {
-        return recordatorioMapper.toDtoList(
-                recordatorioRepository.findByEstado(EstadoLogico.ACTIVO));
+    public Page<RecordatorioResponseDTO> listarActivos(Pageable pageable) {
+        Page<Recordatorio> pagina = recordatorioRepository.findByEstado(EstadoLogico.ACTIVO, pageable);
+        List<RecordatorioResponseDTO> dtos = recordatorioMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -158,16 +164,20 @@ public class RecordatorioService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public List<RecordatorioResponseDTO> listarPorInstancia(int codInstancia) {
-        return recordatorioMapper.toDtoList(
-                recordatorioRepository.findByInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
+    public Page<RecordatorioResponseDTO> listarPorInstancia(int codInstancia, Pageable pageable) {
+        Page<Recordatorio> pagina = recordatorioRepository.findByInstanciaAndEstado(
+                codInstancia, EstadoLogico.ACTIVO, pageable);
+        List<RecordatorioResponseDTO> dtos = recordatorioMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public List<RecordatorioResponseDTO> listarPorResponsable(int idResponsable) {
-        return recordatorioMapper.toDtoList(
-                recordatorioRepository.findByResponsableAndEstado(idResponsable, EstadoLogico.ACTIVO));
+    public Page<RecordatorioResponseDTO> listarPorResponsable(int idResponsable, Pageable pageable) {
+        Page<Recordatorio> pagina = recordatorioRepository.findByResponsableAndEstado(
+                idResponsable, EstadoLogico.ACTIVO, pageable);
+        List<RecordatorioResponseDTO> dtos = recordatorioMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional
