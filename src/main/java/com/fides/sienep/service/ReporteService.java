@@ -25,7 +25,9 @@ import org.springframework.http.HttpStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +74,34 @@ public class ReporteService {
         // ── Filtros aplicados ─────────────────────────────────
         String filtros = construirDescripcionFiltros(idCarrera, idGrupo, idEstudiante, fechaDesde, fechaHasta);
 
+        // ── Traer instancias/incidencias/recordatorios de TODOS los estudiantes
+        // en 3 queries (una por tipo), en vez de 3 por estudiante dentro del for
+        // de abajo (N+1). Se agrupan en memoria por idEstudiante.
+        List<Integer> idsEstudiantes = new ArrayList<>();
+        for (Estudiante e : estudiantes) {
+            idsEstudiantes.add(e.getIdUsuario());
+        }
+
+        Map<Integer, List<InstanciaComun>> instanciasPorEstudiante = new HashMap<>();
+        Map<Integer, List<Incidencia>> incidenciasPorEstudiante = new HashMap<>();
+        Map<Integer, List<Recordatorio>> recordatoriosPorEstudiante = new HashMap<>();
+
+        if (!idsEstudiantes.isEmpty()) {
+            for (InstanciaComun instancia : instanciaComunRepository.findByEstudiantesYPeriodo(
+                    idsEstudiantes, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime)) {
+                agregarAGrupo(instanciasPorEstudiante, instancia.getEstudiante().getIdUsuario(), instancia);
+            }
+            for (Incidencia incidencia : incidenciaRepository.findByEstudiantesYPeriodo(
+                    idsEstudiantes, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime)) {
+                agregarAGrupo(incidenciasPorEstudiante, incidencia.getEstudiante().getIdUsuario(), incidencia);
+            }
+            for (Recordatorio recordatorio : recordatorioRepository.findByEstudiantesYPeriodo(
+                    idsEstudiantes, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime)) {
+                agregarAGrupo(recordatoriosPorEstudiante,
+                        recordatorio.getInstancia().getEstudiante().getIdUsuario(), recordatorio);
+            }
+        }
+
         // ── Agregar métricas por estudiante ───────────────────
         List<ReporteEstudianteDTO> detalle = new ArrayList<>();
         int totalInstancias    = 0;
@@ -84,15 +114,9 @@ public class ReporteService {
         for (Estudiante e : estudiantes) {
             Integer id = e.getIdUsuario();
 
-            List<InstanciaComun> instancias = instanciaComunRepository
-                    .findByEstudianteYPeriodo(id, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime);
-
-            List<Incidencia> incidencias = incidenciaRepository
-                    .findByEstudianteYPeriodo(id, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime);
-
-            // ── Una sola query para todos los recordatorios ───
-            List<Recordatorio> recordatorios = recordatorioRepository
-                    .findByEstudianteYPeriodo(id, EstadoLogico.ACTIVO, desdeDateTime, hastaDateTime);
+            List<InstanciaComun> instancias = instanciasPorEstudiante.getOrDefault(id, List.of());
+            List<Incidencia> incidencias = incidenciasPorEstudiante.getOrDefault(id, List.of());
+            List<Recordatorio> recordatorios = recordatoriosPorEstudiante.getOrDefault(id, List.of());
 
             // ── Conteo en memoria por estado operativo ────────
             int vencidos = 0;
@@ -177,6 +201,12 @@ public class ReporteService {
         return auth.getName();
     }
 
-
-
+    private <T> void agregarAGrupo(Map<Integer, List<T>> grupo, Integer idEstudiante, T elemento) {
+        List<T> lista = grupo.get(idEstudiante);
+        if (lista == null) {
+            lista = new ArrayList<>();
+            grupo.put(idEstudiante, lista);
+        }
+        lista.add(elemento);
+    }
 }

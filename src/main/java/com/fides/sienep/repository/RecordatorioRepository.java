@@ -77,6 +77,20 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
 
+    // M11 — versión "batch" de la anterior: ReporteService.generarReporte()
+    // llamaba a findByEstudianteYPeriodo() una vez por cada estudiante dentro
+    // de un for (N+1). Con IN (:idsEstudiantes) se trae todo en una sola query
+    // y se agrupa en memoria por idEstudiante.
+    @Query("SELECT r FROM Recordatorio r " +
+            "WHERE r.instancia.estudiante.idUsuario IN :idsEstudiantes " +
+            "AND r.estado = :estado " +
+            "AND r.fechaHora BETWEEN :desde AND :hasta")
+    List<Recordatorio> findByEstudiantesYPeriodo(
+            @Param("idsEstudiantes") List<Integer> idsEstudiantes,
+            @Param("estado") EstadoLogico estado,
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta);
+
     // ── Reactivar ─────────────────────────────────────────────
     Optional<Recordatorio> findByCodRecordatorio(int codRecordatorio);
 

@@ -86,20 +86,28 @@ class ReporteServiceTest {
 
     // ── Helper: mockear queries de métricas vacías ────────────
     private void mockearMetricasVacias(Integer idEstudiante) {
-        lenient().when(instanciaComunRepository.findByEstudianteYPeriodo(
-                        eq(idEstudiante), eq(EstadoLogico.ACTIVO), any(), any()))
+        List<Integer> ids = List.of(idEstudiante);
+        lenient().when(instanciaComunRepository.findByEstudiantesYPeriodo(
+                        eq(ids), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of());
-        lenient().when(incidenciaRepository.findByEstudianteYPeriodo(
-                        eq(idEstudiante), eq(EstadoLogico.ACTIVO), any(), any()))
+        lenient().when(incidenciaRepository.findByEstudiantesYPeriodo(
+                        eq(ids), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of());
-        lenient().when(recordatorioRepository.findByEstudianteYPeriodo(
-                        eq(idEstudiante), eq(EstadoLogico.ACTIVO), any(), any()))
+        lenient().when(recordatorioRepository.findByEstudiantesYPeriodo(
+                        eq(ids), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of());
     }
 
     // ── Helper: crear recordatorio mock con estado operativo ──
+    // La instancia (con estudianteMock) es necesaria porque ReporteService
+    // ahora agrupa los recordatorios batch por recordatorio.getInstancia()
+    // .getEstudiante().getIdUsuario() (M11).
     private Recordatorio buildRecordatorio(EstadoRecordatorio estadoOperativo) {
+        InstanciaComun instancia = new InstanciaComun();
+        instancia.setEstudiante(estudianteMock);
+
         Recordatorio r = new Recordatorio();
+        r.setInstancia(instancia);
         r.setEstadoOperativo(estadoOperativo);
         r.setEstado(EstadoLogico.ACTIVO);
         return r;
@@ -213,17 +221,19 @@ class ReporteServiceTest {
         when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
 
         InstanciaComun instancia = new InstanciaComun();
+        instancia.setEstudiante(estudianteMock);
         Incidencia incidencia = new Incidencia();
+        incidencia.setEstudiante(estudianteMock);
 
-        when(instanciaComunRepository.findByEstudianteYPeriodo(
+        when(instanciaComunRepository.findByEstudiantesYPeriodo(
                 any(), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of(instancia, instancia));
 
-        when(incidenciaRepository.findByEstudianteYPeriodo(
+        when(incidenciaRepository.findByEstudiantesYPeriodo(
                 any(), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of(incidencia));
 
-        when(recordatorioRepository.findByEstudianteYPeriodo(
+        when(recordatorioRepository.findByEstudiantesYPeriodo(
                 any(), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of());
 
@@ -236,14 +246,68 @@ class ReporteServiceTest {
     }
 
     @Test
+    @DisplayName("Generar reporte - Con varios estudiantes hace una sola query por tipo y agrupa bien las métricas (M11)")
+    void generarReporte_VariosEstudiantes_UnaSolaQueryPorTipoYAgrupaBien() {
+        estudianteMock.setIdUsuario(1);
+
+        Estudiante estudianteMock2 = new Estudiante();
+        estudianteMock2.setIdUsuario(2);
+        estudianteMock2.setNombre("Luis");
+        estudianteMock2.setApellido("Pérez");
+        estudianteMock2.setDocumento("87654321");
+        estudianteMock2.setPaisDocumento(PaisDocumento.ARG);
+        estudianteMock2.setEmail("luis.perez@utec.edu.uy");
+        estudianteMock2.setFechaNacimiento(LocalDate.of(1999, 5, 20));
+        estudianteMock2.setEstado(EstadoLogico.ACTIVO);
+        estudianteMock2.setTelefonos(new ArrayList<>());
+        estudianteMock2.setGrupos(new ArrayList<>());
+
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO))
+                .thenReturn(List.of(estudianteMock, estudianteMock2));
+
+        InstanciaComun instanciaDeUno = new InstanciaComun();
+        instanciaDeUno.setEstudiante(estudianteMock);
+        InstanciaComun instanciaDeDos = new InstanciaComun();
+        instanciaDeDos.setEstudiante(estudianteMock2);
+
+        when(instanciaComunRepository.findByEstudiantesYPeriodo(
+                eq(List.of(1, 2)), eq(EstadoLogico.ACTIVO), any(), any()))
+                .thenReturn(List.of(instanciaDeUno, instanciaDeDos, instanciaDeDos));
+        when(incidenciaRepository.findByEstudiantesYPeriodo(
+                eq(List.of(1, 2)), eq(EstadoLogico.ACTIVO), any(), any()))
+                .thenReturn(List.of());
+        when(recordatorioRepository.findByEstudiantesYPeriodo(
+                eq(List.of(1, 2)), eq(EstadoLogico.ACTIVO), any(), any()))
+                .thenReturn(List.of());
+
+        ReporteResponseDTO resultado = reporteService.generarReporte(
+                null, null, null, null, null);
+
+        // Una sola llamada por tipo, sin importar cuántos estudiantes haya (no N+1)
+        verify(instanciaComunRepository, times(1))
+                .findByEstudiantesYPeriodo(any(), any(), any(), any());
+        verify(incidenciaRepository, times(1))
+                .findByEstudiantesYPeriodo(any(), any(), any(), any());
+        verify(recordatorioRepository, times(1))
+                .findByEstudiantesYPeriodo(any(), any(), any(), any());
+
+        assertEquals(2, resultado.getTotalEstudiantes());
+        assertEquals(3, resultado.getTotalInstancias());
+
+        // Las métricas quedan asignadas al estudiante correcto, no mezcladas
+        assertEquals(1, resultado.getDetallePorEstudiante().get(0).getCantidadInstancias());
+        assertEquals(2, resultado.getDetallePorEstudiante().get(1).getCantidadInstancias());
+    }
+
+    @Test
     @DisplayName("Generar reporte - Conteo de recordatorios por estado operativo correcto")
     void generarReporte_ConteoRecordatoriosPorEstadoCorrecto() {
         when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
 
-        lenient().when(instanciaComunRepository.findByEstudianteYPeriodo(
+        lenient().when(instanciaComunRepository.findByEstudiantesYPeriodo(
                         any(), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of());
-        lenient().when(incidenciaRepository.findByEstudianteYPeriodo(
+        lenient().when(incidenciaRepository.findByEstudiantesYPeriodo(
                         any(), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(List.of());
 
@@ -254,7 +318,7 @@ class ReporteServiceTest {
                 buildRecordatorio(EstadoRecordatorio.FUTURO)
         );
 
-        when(recordatorioRepository.findByEstudianteYPeriodo(
+        when(recordatorioRepository.findByEstudiantesYPeriodo(
                 any(), eq(EstadoLogico.ACTIVO), any(), any()))
                 .thenReturn(recordatorios);
 
