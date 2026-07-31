@@ -74,7 +74,7 @@ class CategoriaCacheSeguridadOrderTest {
         when(categoriaMapper.toDtoList(List.of(categoria))).thenReturn(List.of(dto));
 
         // 1) Usuario CON el permiso: pasa el chequeo y puebla la caché
-        autenticarCon("VER_CATEGORIA_INSTANCIA");
+        autenticarCon("VER_CATEGORIAS_INSTANCIA");
         List<CategoriaInstanciaResponseDTO> primero = categoriaInstanciaService.obtenerTodas(null, null);
         assertEquals(1, primero.size());
 

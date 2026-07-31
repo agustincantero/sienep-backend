@@ -39,7 +39,7 @@ public class CategoriaRecordatorioService {
     private final CategoriaRecordatorioRepository categoriaRepository;
     private final CategoriaRecordatorioMapper mapper;
 
-    @PreAuthorize("hasAuthority('VER_CATEGORIA_RECORDATORIO')")
+    @PreAuthorize("hasAuthority('VER_CATEGORIAS_RECORDATORIO')")
     @Transactional(readOnly = true)
     @Cacheable("categoriasRecordatorio")
     public List<CategoriaRecordatorioResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
@@ -47,7 +47,7 @@ public class CategoriaRecordatorioService {
         return mapper.toDtoList(categorias);
     }
 
-    @PreAuthorize("hasAuthority('VER_CATEGORIA_RECORDATORIO')")
+    @PreAuthorize("hasAuthority('VER_CATEGORIAS_RECORDATORIO')")
     @Transactional(readOnly = true)
     @Cacheable(value = "categoriasRecordatorio", key = "#id")
     public CategoriaRecordatorioResponseDTO obtenerPorId(int id) {

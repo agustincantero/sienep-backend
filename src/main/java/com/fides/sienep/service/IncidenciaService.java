@@ -124,7 +124,7 @@ public class IncidenciaService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('EDITAR_INCIDENCIAS')")
+    @PreAuthorize("hasAuthority('EDITAR_INCIDENCIA')")
     public IncidenciaResponseDTO actualizar(int id, IncidenciaRequestDTO dto) {
         Incidencia incidencia = buscarActivaOFallar(id);
 
@@ -150,7 +150,7 @@ public class IncidenciaService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('ELIMINAR_INCIDENCIAS')")
+    @PreAuthorize("hasAuthority('ELIMINAR_INCIDENCIA')")
     public void darDeBaja(int id) {
         Incidencia incidencia = buscarActivaOFallar(id);
         incidencia.setEstado(EstadoLogico.INACTIVO);

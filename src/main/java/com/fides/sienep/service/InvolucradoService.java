@@ -29,7 +29,7 @@ public class InvolucradoService {
     private final InvolucradoMapper involucradoMapper;
 
     @Transactional
-    @PreAuthorize("hasAuthority('EDITAR_INCIDENCIAS')")
+    @PreAuthorize("hasAuthority('EDITAR_INCIDENCIA')")
     public InvolucradoResponseDTO agregar(int codInstancia, InvolucradoRequestDTO dto) {
         Incidencia incidencia = buscarIncidenciaOFallar(codInstancia);
 
@@ -62,7 +62,7 @@ public class InvolucradoService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('ELIMINAR_INCIDENCIAS')")
+    @PreAuthorize("hasAuthority('ELIMINAR_INCIDENCIA')")
     public void darDeBaja(int codInstancia, String nomInvolucrado) {
         buscarIncidenciaOFallar(codInstancia);
         Involucrado involucrado = buscarInvolucradoOFallar(codInstancia, nomInvolucrado);

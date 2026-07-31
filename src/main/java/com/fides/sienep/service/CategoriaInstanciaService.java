@@ -40,7 +40,7 @@ public class CategoriaInstanciaService {
     private final CategoriaInstanciaMapper mapper;
 
     // --- Métodos CRUD ---
-    @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
+    @PreAuthorize("hasAuthority('VER_CATEGORIAS_INSTANCIA')")
     @Transactional(readOnly = true)
     @Cacheable("categoriasInstancia")
     public List<CategoriaInstanciaResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
@@ -48,7 +48,7 @@ public class CategoriaInstanciaService {
         return mapper.toDtoList(categorias);
     }
 
-    @PreAuthorize("hasAuthority('VER_CATEGORIA_INSTANCIA')")
+    @PreAuthorize("hasAuthority('VER_CATEGORIAS_INSTANCIA')")
     @Transactional(readOnly = true)
     @Cacheable(value = "categoriasInstancia", key = "#id")
     public CategoriaInstanciaResponseDTO obtenerPorId(int id) {
