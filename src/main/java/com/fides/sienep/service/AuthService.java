@@ -114,6 +114,22 @@ public class AuthService {
     // LOGOUT
     // =========================================================
 
+    // ⚠ LIMITACIÓN CONOCIDA — JWT stateless sin revocación (logout cosmético)
+    // El JWT emitido en login tiene una validez de 5 horas (VALIDEZ_SEG en JwtTokenUtil)
+    // y no existe ningún mecanismo de blacklist ni de revocación activa.
+    // Este método solo deja registro de auditoría del evento: el token sigue siendo
+    // criptográficamente válido y cualquier petición que lo incluya seguirá siendo
+    // aceptada por JwtRequestFilter hasta que expire naturalmente.
+    //
+    // Opciones evaluadas para corregirlo en el futuro (requiere decisión del equipo):
+    //   a) Tokens de vida corta (ej. 15 min) + refresh token de vida larga.
+    //      Pro: sin estado extra en el servidor. Con: complejidad en el cliente.
+    //   b) Blacklist de JTI en Redis o en tabla propia con TTL = VALIDEZ_SEG.
+    //      Pro: revocación inmediata. Con: introduce estado del lado del servidor
+    //      y rompe el modelo "stateless puro" que hoy simplifica el escalado.
+    //
+    // Por ahora se acepta la limitación como decisión de diseño consciente.
+    // No implementar ninguna de estas opciones sin definir el alcance con el equipo.
     public void logout(Authentication auth, String ip) {
         if (auth != null && auth.isAuthenticated()
                 && !auth.getPrincipal().equals("anonymousUser")) {

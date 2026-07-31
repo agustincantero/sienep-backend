@@ -21,6 +21,10 @@ import java.util.function.Function;
 public class JwtTokenUtil {
 
     private final SecretKey secretKey;
+
+    // Vida útil del token. Mientras no exista blacklist ni refresh token, este valor
+    // es el tiempo máximo que un token robado o de una sesión "cerrada" permanece válido.
+    // Ver comentario en AuthService.logout() antes de modificar este valor.
     private static final long VALIDEZ_SEG = 5 * 60 * 60;
 
     public JwtTokenUtil(@Value("${jwt.secret}") String secret) {
