@@ -9,6 +9,7 @@ import com.fides.sienep.model.Rol;
 import com.fides.sienep.model.RolPermiso;
 import com.fides.sienep.repository.PermisoRepository;
 import com.fides.sienep.repository.RolRepository;
+import com.fides.sienep.utils.ValidadorDePermisosDeRol;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -103,6 +104,10 @@ public class RolService {
             }
         }
 
+        // El actor no puede crear un rol con permisos que él mismo no tiene (ver
+        // ValidadorDePermisosDeRol) — blindaje para roles personalizados (RF34).
+        ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
+
         Rol rolGuardado = rolRepository.save(rol);
         return mapper.toDto(rolGuardado);
     }
@@ -171,6 +176,10 @@ public class RolService {
                 }
             }
         }
+
+        // El actor no puede dejar el rol con permisos que él mismo no tiene (ver
+        // ValidadorDePermisosDeRol) — blindaje para roles personalizados (RF34).
+        ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
 
         Rol rolActualizado = rolRepository.save(rol);
         return mapper.toDto(rolActualizado);

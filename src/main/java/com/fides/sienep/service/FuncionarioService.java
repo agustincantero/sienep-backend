@@ -12,22 +12,18 @@ import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
 import com.fides.sienep.utils.ValidadorDeCedulasUy;
+import com.fides.sienep.utils.ValidadorDePermisosDeRol;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -62,7 +58,7 @@ public class FuncionarioService {
 
         Rol rol = rolRepository.findById(dto.getIdRol())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado: " + dto.getIdRol()));
-        validarActorPuedeAsignarRol(rol);
+        ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
 
         String contraseniaPlana = passwordGeneratorService.generar();
 
@@ -172,34 +168,11 @@ public class FuncionarioService {
     private void aplicarCambios(Funcionario funcionario, FuncionarioUpdateDTO dto) {
         Rol rol = rolRepository.findById(dto.getIdRol())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado: " + dto.getIdRol()));
-        validarActorPuedeAsignarRol(rol);
+        ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
         funcionario.setNombre(dto.getNombre());
         funcionario.setApellido(dto.getApellido());
         funcionario.setEmail(dto.getEmail());
         funcionario.setRol(rol);
-    }
-
-    // Evita que alguien con CREAR_FUNCIONARIO/EDITAR_FUNCIONARIO otorgue (a sí mismo o a
-    // otro) un rol con permisos que el propio actor no tiene — sin esto, cualquier rol
-    // personalizado (RF34) que incluya alguno de esos dos permisos podría escalar a un
-    // rol con más privilegios, tanto dando de alta una cuenta nueva como editando una
-    // existente. Hoy ambos permisos solo los tiene ADMINISTRADOR, así que nunca falla
-    // en la práctica — queda como blindaje para cuando existan roles personalizados.
-    private void validarActorPuedeAsignarRol(Rol rolDestino) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Set<String> permisosDelActor = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toSet());
-
-        boolean tieneAlgunPermisoQueElActorNoTiene = rolDestino.getRolPermisos().stream()
-                .filter(rp -> rp.getEstado() == EstadoLogico.ACTIVO)
-                .map(rp -> rp.getPermiso().getNombre())
-                .anyMatch(permiso -> !permisosDelActor.contains(permiso));
-
-        if (tieneAlgunPermisoQueElActorNoTiene) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "No podés asignar un rol que tenga permisos que vos mismo no tenés.");
-        }
     }
 
     private void validarDocumento(FuncionarioRequestDTO dto) {

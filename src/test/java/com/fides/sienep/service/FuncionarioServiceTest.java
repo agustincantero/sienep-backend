@@ -28,10 +28,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -107,9 +106,10 @@ class FuncionarioServiceTest {
 
     private void mockAuthConPermisos(String... permisos) {
         Authentication auth = mock(Authentication.class);
-        List<GrantedAuthority> authorities = Arrays.stream(permisos)
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        for (String permiso : permisos) {
+            authorities.add(new SimpleGrantedAuthority(permiso));
+        }
         doReturn(authorities).when(auth).getAuthorities();
         SecurityContextHolder.getContext().setAuthentication(auth);
     }

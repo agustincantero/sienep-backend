@@ -10,6 +10,7 @@ import com.fides.sienep.model.RolPermiso;
 import com.fides.sienep.repository.PermisoRepository;
 import com.fides.sienep.repository.RolRepository;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,8 +22,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mapstruct.factory.Mappers;
 import com.fides.sienep.mapper.RolMapper;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,6 +65,21 @@ class RolServiceTest {
         rolExistente.setNombre("TUTOR");
         rolExistente.setDescripcion("Tutor de prueba");
         rolExistente.setEstado(EstadoLogico.ACTIVO);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void mockAuthConPermisos(String... permisos) {
+        Authentication auth = mock(Authentication.class);
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        for (String permiso : permisos) {
+            authorities.add(new SimpleGrantedAuthority(permiso));
+        }
+        doReturn(authorities).when(auth).getAuthorities();
+        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     @Test
@@ -100,6 +121,9 @@ class RolServiceTest {
         requestDTO.setDescripcion("Rol nuevo");
         requestDTO.setPermisosIds(List.of(1, 2));
 
+        // El actor tiene el permiso que le va a asignar al rol nuevo
+        mockAuthConPermisos("PERMISO_GENERICO");
+
         // Simulamos que el nombre limpio no existe en la BD
         when(rolRepository.existsByNombre("NUEVO_ROL")).thenReturn(false);
         // Simulamos que los 2 permisos existen
@@ -113,6 +137,7 @@ class RolServiceTest {
 
         // Simulamos que el EntityManager encuentra los permisos
         Permiso permisoFalso = new Permiso();
+        permisoFalso.setNombre("PERMISO_GENERICO");
         when(entityManager.getReference(eq(Permiso.class), anyInt())).thenReturn(permisoFalso);
 
         // Act
@@ -123,6 +148,33 @@ class RolServiceTest {
         assertEquals("NUEVO_ROL", resultado.getNombre()); // Verificamos que limpió el nombre
         assertEquals(EstadoLogico.ACTIVO, resultado.getEstado()); // Verificamos que forzó a ACTIVO
         verify(rolRepository).save(any(Rol.class));
+    }
+
+    @Test
+    @DisplayName("Crear Rol - Rechaza si el rol nuevo tiene un permiso que el actor no tiene (403)")
+    void crearRol_DebeLanzarForbidden_CuandoActorNoTieneAlgunPermiso() {
+        RolCreateDTO requestDTO = new RolCreateDTO();
+        requestDTO.setNombre("rol nuevo");
+        requestDTO.setPermisosIds(List.of(1, 2));
+
+        // El actor solo tiene PERMISO_1, no PERMISO_2 — no puede crear un rol con ambos
+        mockAuthConPermisos("PERMISO_1");
+
+        when(rolRepository.existsByNombre("ROL_NUEVO")).thenReturn(false);
+        when(permisoRepository.countByIdPermisoIn(requestDTO.getPermisosIds())).thenReturn(2L);
+
+        Permiso permiso1 = new Permiso();
+        permiso1.setNombre("PERMISO_1");
+        Permiso permiso2 = new Permiso();
+        permiso2.setNombre("PERMISO_2");
+        when(entityManager.getReference(Permiso.class, 1)).thenReturn(permiso1);
+        when(entityManager.getReference(Permiso.class, 2)).thenReturn(permiso2);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> rolService.crearRol(requestDTO));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(rolRepository, never()).save(any());
     }
 
     @Test
@@ -202,6 +254,9 @@ class RolServiceTest {
         updateDTO.setDescripcion("Nueva desc");
         updateDTO.setPermisosIds(List.of(2)); // Le mandamos solo el permiso 2 (quitando el 1 que tenía)
 
+        // El actor tiene el permiso que va a quedar activo en el rol tras la edición
+        mockAuthConPermisos("PERMISO_2");
+
         // Simulamos que el rol ya tenía el permiso 1 activo
         Permiso permiso1 = new Permiso("PERMISO_1", "Desc");
         permiso1.setIdPermiso(1);
@@ -211,9 +266,10 @@ class RolServiceTest {
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));
         when(rolRepository.existsByNombre("TUTOR_MODIFICADO")).thenReturn(false); // El nuevo nombre es válido
         when(permisoRepository.countByIdPermisoIn(updateDTO.getPermisosIds())).thenReturn(1L); // El permiso 2 existe
-        
+
         Permiso permiso2Falso = new Permiso();
         permiso2Falso.setIdPermiso(2);
+        permiso2Falso.setNombre("PERMISO_2");
         when(entityManager.getReference(eq(Permiso.class), eq(2))).thenReturn(permiso2Falso);
         
         when(rolRepository.save(any(Rol.class))).thenReturn(rolExistente);
@@ -229,6 +285,40 @@ class RolServiceTest {
         assertEquals(EstadoLogico.INACTIVO, rpExistente.getEstado());
         // Verificamos que ahora tiene 2 relaciones RolPermiso en total (el 1 inactivo, y el 2 activo recién creado)
         assertEquals(2, rolExistente.getRolPermisos().size()); 
+    }
+
+    @Test
+    @DisplayName("Actualizar Rol - Rechaza si el rol resultante tiene un permiso que el actor no tiene (403)")
+    void actualizarRol_DebeLanzarForbidden_CuandoActorNoTieneAlgunPermiso() {
+        // Arrange
+        RolUpdateDTO updateDTO = new RolUpdateDTO();
+        updateDTO.setNombre("TUTOR_MODIFICADO");
+        updateDTO.setDescripcion("Nueva desc");
+        updateDTO.setPermisosIds(List.of(2));
+
+        // El actor no tiene PERMISO_2, que es el que va a quedar activo tras la edición
+        mockAuthConPermisos("OTRO_PERMISO");
+
+        Permiso permiso1 = new Permiso("PERMISO_1", "Desc");
+        permiso1.setIdPermiso(1);
+        RolPermiso rpExistente = new RolPermiso(rolExistente, permiso1, EstadoLogico.ACTIVO);
+        rolExistente.getRolPermisos().add(rpExistente);
+
+        when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));
+        when(rolRepository.existsByNombre("TUTOR_MODIFICADO")).thenReturn(false);
+        when(permisoRepository.countByIdPermisoIn(updateDTO.getPermisosIds())).thenReturn(1L);
+
+        Permiso permiso2Falso = new Permiso();
+        permiso2Falso.setIdPermiso(2);
+        permiso2Falso.setNombre("PERMISO_2");
+        when(entityManager.getReference(eq(Permiso.class), eq(2))).thenReturn(permiso2Falso);
+
+        // Act & Assert
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> rolService.actualizarRol(1, updateDTO));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(rolRepository, never()).save(any(Rol.class));
     }
 
     @Test
