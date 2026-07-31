@@ -933,7 +933,7 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  ('GCAL_SYNC_RECORDATORIOS', 'Permite sincronizar recordatorios con Google Calendar'),
                                                                  ('NOTIFICAR_RECORDATORIOS', 'Permite enviar notificaciones de recordatorios'),
                                                                  -- Incidencias
-                                                                 ('REGISTRAR_INCIDENCIA',    'Permite registrar nuevas incidencias'),
+                                                                 ('CREAR_INCIDENCIA',    'Permite registrar nuevas incidencias'),
                                                                  ('VER_INCIDENCIAS',         'Permite visualizar las incidencias registradas'),
                                                                  ('HISTORIAL_INCIDENCIAS',   'Permite consultar el historial de incidencias'),
                                                                  ('EDITAR_INCIDENCIA',      'Permite editar incidencias existentes'),
@@ -1019,7 +1019,7 @@ FROM proyecto.roles r
                                                        'CATEGORIZAR_INSTANCIA', 'VER_BLOQUE_CONFIDENCIAL',
                                                        'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
                                                        'BAJA_RECORDATORIO', 'REACTIVAR_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
-                                                       'REGISTRAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
+                                                       'CREAR_INCIDENCIA', 'VER_INCIDENCIAS', 'HISTORIAL_INCIDENCIAS',
                                                        'EDITAR_INCIDENCIA', 'ELIMINAR_INCIDENCIA', 'REACTIVAR_INCIDENCIA',
                                                        'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
                                                        'EDITAR_COMENTARIO_NORMAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',

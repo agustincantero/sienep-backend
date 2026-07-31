@@ -43,7 +43,7 @@ public class IncidenciaService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('REGISTRAR_INCIDENCIA')")
+    @PreAuthorize("hasAuthority('CREAR_INCIDENCIA')")
     public IncidenciaResponseDTO crear(IncidenciaRequestDTO dto) {
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(
