@@ -69,6 +69,9 @@ public class CarreraService {
     @CacheEvict(value = "carreras", allEntries = true)
     public CarreraResponseDTO actualizar(Integer id, CarreraRequestDTO dto) {
         Carrera carrera = buscarOFallar(id);
+        if (carrera.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede editar una carrera que no está ACTIVA.");
+        }
         carrera.setNomCarrera(dto.getNomCarrera());
         return carreraMapper.toDto(carreraRepository.save(carrera));
     }

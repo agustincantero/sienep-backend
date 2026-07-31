@@ -84,6 +84,10 @@ public class GrupoService {
     public GrupoResponseDTO actualizar(Integer id, GrupoUpdateDTO dto) {
         Grupo grupo = buscarOFallar(id);
 
+        if (grupo.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede editar un grupo que no está ACTIVO.");
+        }
+
         validarGeneracion(dto.getGeneracion());
 
         grupoRepository.findByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
