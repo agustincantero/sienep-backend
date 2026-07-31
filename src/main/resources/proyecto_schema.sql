@@ -1016,6 +1016,7 @@ FROM proyecto.roles r
                                                        'CREAR_ESTUDIANTE', 'EDITAR_ESTUDIANTE', 'REACTIVAR_ESTUDIANTE',
                                                        'VER_ADJUNTOS', 'ADJUNTAR_INFORME',
                                                        'VER_INSTANCIAS', 'CREAR_INSTANCIA', 'EDITAR_INSTANCIA',
+                                                       'BAJA_INSTANCIA', 'REACTIVAR_INSTANCIA',
                                                        'CATEGORIZAR_INSTANCIA', 'VER_BLOQUE_CONFIDENCIAL',
                                                        'VER_RECORDATORIOS', 'CREAR_RECORDATORIO', 'EDITAR_RECORDATORIO',
                                                        'BAJA_RECORDATORIO', 'REACTIVAR_RECORDATORIO', 'CONFIG_RECURRENCIA', 'ETIQUETAR_TIPO',
