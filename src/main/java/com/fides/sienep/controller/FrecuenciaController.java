@@ -59,7 +59,7 @@ public class FrecuenciaController {
     }
 
     @Operation(summary = "Desactivar una frecuencia")
-    @ApiResponse(responseCode = "204", description = "Frecuencia dada de baja correctamente")
+    @ApiResponse(responseCode = "204", description = "Frecuencia desactivada correctamente")
     @ApiResponse(responseCode = "404", description = "Frecuencia no encontrada")
     @ApiResponse(responseCode = "409", description = "La frecuencia está en uso por recordatorios activos")
     @DeleteMapping("/{id}")

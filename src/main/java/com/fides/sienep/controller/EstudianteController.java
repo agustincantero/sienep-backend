@@ -180,7 +180,7 @@ public class EstudianteController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Desactivar un estudiante",
             description = "Requiere DESACTIVAR_ESTUDIANTE. No elimina datos — estado pasa a INACTIVO.")
-    @ApiResponse(responseCode = "204", description = "Estudiante dado de baja")
+    @ApiResponse(responseCode = "204", description = "Estudiante desactivado")
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
     public ResponseEntity<Void> desactivar(@PathVariable Integer id) {
         estudianteService.desactivar(id);
@@ -193,7 +193,7 @@ public class EstudianteController {
      * El DTO debe traer estado = ACTIVO. Si trae otro valor, se rechaza con 400.
      */
     @PatchMapping("/{id}/reactivar")
-    @Operation(summary = "Reactivar un estudiante dado de baja",
+    @Operation(summary = "Reactivar un estudiante desactivado",
             description = "Requiere REACTIVAR_ESTUDIANTE. Sin body — la URL define la acción.")
     @ApiResponse(responseCode = "204", description = "Estudiante reactivado")
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")

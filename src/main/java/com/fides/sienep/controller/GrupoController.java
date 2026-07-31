@@ -85,7 +85,7 @@ public class GrupoController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Desactivar un grupo", description = "Cambia el estado del grupo a INACTIVO.")
-    @ApiResponse(responseCode = "204", description = "Grupo dado de baja")
+    @ApiResponse(responseCode = "204", description = "Grupo desactivado")
     @ApiResponse(responseCode = "404", description = "Grupo no encontrado")
     public ResponseEntity<Void> desactivar(
             @PathVariable Integer id) {

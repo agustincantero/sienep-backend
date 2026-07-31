@@ -71,7 +71,7 @@ public class IncidenciaController {
     }
 
     @Operation(summary = "Desactivar una incidencia")
-    @ApiResponse(responseCode = "204", description = "Incidencia dada de baja correctamente")
+    @ApiResponse(responseCode = "204", description = "Incidencia desactivada correctamente")
     @ApiResponse(responseCode = "404", description = "Incidencia no encontrada")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desactivar(@PathVariable int id) {

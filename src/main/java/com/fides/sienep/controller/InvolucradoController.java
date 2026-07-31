@@ -55,7 +55,7 @@ public class InvolucradoController {
     @Operation(summary = "Desactivar involucrado",
             description = "Baja lógica del involucrado (estado INACTIVO).")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Baja realizada"),
+            @ApiResponse(responseCode = "204", description = "Desactivación realizada"),
             @ApiResponse(responseCode = "404", description = "Involucrado no encontrado")
     })
     public ResponseEntity<Void> desactivar(

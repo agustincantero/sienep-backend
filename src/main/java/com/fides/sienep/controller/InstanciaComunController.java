@@ -84,7 +84,7 @@ public class InstanciaComunController {
     }
 
     @Operation(summary = "Desactivar una instancia")
-    @ApiResponse(responseCode = "204", description = "Instancia dada de baja correctamente")
+    @ApiResponse(responseCode = "204", description = "Instancia desactivada correctamente")
     @ApiResponse(responseCode = "404", description = "Instancia no encontrada")
     @DeleteMapping("/{codInstancia}")
     public ResponseEntity<Void> desactivar(@PathVariable int codInstancia) {

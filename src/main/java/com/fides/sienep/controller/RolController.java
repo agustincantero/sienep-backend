@@ -55,7 +55,7 @@ public class RolController {
         return new ResponseEntity<>(nuevoRol, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Actualizar un rol existente", description = "Modifica los datos de un rol y actualiza su lista de permisos (realizando altas y bajas lógicas según corresponda). Si se envía una lista vacía de permisos, se eliminan todos los permisos asociados al rol.")
+    @Operation(summary = "Actualizar un rol existente", description = "Modifica los datos de un rol y actualiza su lista de permisos (activando o desactivando según corresponda). Si se envía una lista vacía de permisos, se eliminan todos los permisos asociados al rol.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Rol actualizado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
@@ -68,9 +68,9 @@ public class RolController {
         return ResponseEntity.ok(rolService.actualizarRol(id, requestDTO));
     }
 
-    @Operation(summary = "Desactivar un rol", description = "Realiza una baja lógica del rol cambiando su estado a INACTIVO.")
+    @Operation(summary = "Desactivar un rol", description = "Cambia el estado del rol a INACTIVO.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Rol dado de baja exitosamente (No Content)"),
+            @ApiResponse(responseCode = "204", description = "Rol desactivado exitosamente (No Content)"),
             @ApiResponse(responseCode = "404", description = "Rol no encontrado")
     })
     @DeleteMapping("/{id}")

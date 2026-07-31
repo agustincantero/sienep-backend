@@ -76,9 +76,9 @@ public class CategoriaRecordatorioController {
         return ResponseEntity.ok(categoriaService.actualizarCategoria(id, requestDTO));
     }
 
-    @Operation(summary = "Desactivar una categoría", description = "Realiza una baja lógica cambiando su estado a INACTIVO.")
+    @Operation(summary = "Desactivar una categoría", description = "Cambia el estado de la categoría a INACTIVO.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Baja exitosa (No Content)"),
+            @ApiResponse(responseCode = "204", description = "Categoría desactivada (No Content)"),
             @ApiResponse(responseCode = "404", description = "Categoría no encontrada")
     })
     @DeleteMapping("/{id}")
