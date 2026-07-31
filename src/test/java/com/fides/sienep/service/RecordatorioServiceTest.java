@@ -349,6 +349,21 @@ class RecordatorioServiceTest {
     }
 
     @Test
+    @DisplayName("Actualizar recordatorio - Reasignar a otra instancia lanza 409 (B11)")
+    void actualizar_LanzaConflict_CambioDeInstancia() {
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+
+        requestDTO.setCodInstancia(2);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> recordatorioService.actualizar(1, requestDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(recordatorioRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Actualizar recordatorio - No encontrado (404)")
     void actualizar_LanzaNotFound() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(99, EstadoLogico.ACTIVO))

@@ -175,6 +175,19 @@ public class RecordatorioService {
     public RecordatorioResponseDTO actualizar(int id, RecordatorioRequestDTO dto) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
 
+        // B11 — decisión: codInstancia es inmutable después de creado. No hay ningún
+        // caso de uso real que necesite "mover" un recordatorio a otra instancia (que
+        // podría ser hasta de otro estudiante), y permitirlo sin más validación que
+        // "existe y está activa" es el mismo tipo de problema que ya se corrigió para
+        // comentarios en M14 (romper la relación de pertenencia del recurso). Si en el
+        // futuro aparece un caso de uso real (ej. mover entre instancias del mismo
+        // estudiante), agregar esa validación puntual en vez de sacar este chequeo.
+        if (dto.getCodInstancia() != recordatorio.getInstancia().getCodInstancia()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede reasignar un recordatorio a otra instancia. "
+                            + "Si el recordatorio está mal asociado, eliminelo y créelo de nuevo bajo la instancia correcta.");
+        }
+
         Instancia instancia = instanciaRepository.findById(dto.getCodInstancia())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
