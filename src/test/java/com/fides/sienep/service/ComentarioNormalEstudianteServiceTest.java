@@ -23,6 +23,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -103,6 +105,15 @@ class ComentarioNormalEstudianteServiceTest {
         Authentication auth = mock(Authentication.class);
         lenient().when(auth.getName()).thenReturn(String.valueOf(id));
         lenient().when(auth.getAuthorities()).thenReturn(List.of());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    private void mockAutenticadoComoEstudiante(int id) {
+        Authentication auth = mock(Authentication.class);
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_ESTUDIANTE"));
+        lenient().when(auth.getName()).thenReturn(String.valueOf(id));
+        lenient().doReturn(authorities).when(auth).getAuthorities();
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
@@ -220,6 +231,22 @@ class ComentarioNormalEstudianteServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> comentarioService.obtenerPorId(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(comentarioMapper, never()).toDto(any());
+    }
+
+    @Test
+    @DisplayName("Obtener por ID - Comentario de otro estudiante → 404, no 403 (B13)")
+    void obtenerPorId_LanzaNotFound_ComentarioAjeno() {
+        // comentarioMock pertenece a estudianteMock (idUsuario=0 por defecto);
+        // se autentica un estudiante con un id distinto.
+        mockAutenticadoComoEstudiante(99);
+        when(comentarioRepository.findById(1)).thenReturn(Optional.of(comentarioMock));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> comentarioService.obtenerPorId(1));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioMapper, never()).toDto(any());

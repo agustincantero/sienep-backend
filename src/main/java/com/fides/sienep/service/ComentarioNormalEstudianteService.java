@@ -59,8 +59,12 @@ public class ComentarioNormalEstudianteService {
     public ComentarioNormalEstudianteResponseDTO obtenerPorId(Integer id) {
         ComentarioNormalEstudiante comentario = buscarOFallar(id);
 
+        // B13 — 404 (no 403): un 403 con mensaje explícito confirma que el comentario
+        // existe (solo que es de otro estudiante), lo cual es exactamente el tipo de
+        // fuga que ya se evitó en M14 para los comentarios de instancia. Un estudiante
+        // no debe poder distinguir "no existe" de "existe pero no es mío".
         if (esEstudiante() && comentario.getEstudiante().getIdUsuario() != getIdUsuarioAutenticado()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo podés ver tus propios comentarios");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario no encontrado: " + id);
         }
 
         return comentarioMapper.toDto(comentario);
