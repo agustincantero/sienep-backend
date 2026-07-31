@@ -101,20 +101,27 @@ public class RecordatorioService {
 
         // ── RF22: sincronizar con Google Calendar si el responsable tiene integración activa ──
         // No es bloqueante: si Google falla, el recordatorio ya fue persistido correctamente.
+        String eventIdGoogle = null;
         try {
-            funcionarioGcalRepository
+            Optional<FuncionarioGcal> gcalOpt = funcionarioGcalRepository
                     .findByFuncionarioIdUsuario(responsable.getIdUsuario())
-                    .filter(FuncionarioGcal::isAutorizado)
-                    .ifPresent(gcal -> {
-                        String eventId = googleCalendarService.crearEvento(guardado, gcal.getRefreshToken());
-                        if (eventId != null) {
-                            guardado.setEventIdGoogle(eventId);
-                            recordatorioRepository.save(guardado);
-                        }
-                    });
+                    .filter(FuncionarioGcal::isAutorizado);
+            if (gcalOpt.isPresent()) {
+                eventIdGoogle = googleCalendarService.crearEvento(guardado, gcalOpt.get().getRefreshToken());
+            }
         } catch (Exception e) {
             log.warn("[GCAL] Fallo al sincronizar recordatorio {} con Google Calendar: {}",
                     guardado.getIdNegRecordatorio(), e.getMessage());
+        }
+
+        if (eventIdGoogle != null) {
+            try {
+                guardado.setEventIdGoogle(eventIdGoogle);
+                recordatorioRepository.save(guardado);
+            } catch (Exception e) {
+                log.error("[GCAL-DESINCRONIZADO] Se creó el evento {} en Google Calendar para el recordatorio {}, pero falló su persistencia local: {}",
+                        eventIdGoogle, guardado.getIdNegRecordatorio(), e.getMessage());
+            }
         }
 
         // ── RF23: notificar por email al responsable del recordatorio ──
@@ -251,6 +258,7 @@ public class RecordatorioService {
     private void sincronizarEdicionConGoogleCalendar(Recordatorio recordatorio,
                                                       Funcionario responsableAnterior,
                                                       String eventIdAnterior) {
+        String nuevoEventIdGoogle = null;
         try {
             boolean cambioResponsable = responsableAnterior.getIdUsuario() != recordatorio.getResponsable().getIdUsuario();
             String eventIdParaActualizar = eventIdAnterior;
@@ -280,15 +288,21 @@ public class RecordatorioService {
                 googleCalendarService.actualizarEvento(recordatorio, eventIdParaActualizar, refreshToken);
             } else {
                 // No tenía evento (nunca se sincronizó, o cambió de responsable): se crea uno nuevo.
-                String eventId = googleCalendarService.crearEvento(recordatorio, refreshToken);
-                if (eventId != null) {
-                    recordatorio.setEventIdGoogle(eventId);
-                    recordatorioRepository.save(recordatorio);
-                }
+                nuevoEventIdGoogle = googleCalendarService.crearEvento(recordatorio, refreshToken);
             }
         } catch (Exception e) {
             log.warn("[GCAL] Fallo al sincronizar la edición del recordatorio {} con Google Calendar: {}",
                     recordatorio.getIdNegRecordatorio(), e.getMessage());
+        }
+
+        if (nuevoEventIdGoogle != null) {
+            try {
+                recordatorio.setEventIdGoogle(nuevoEventIdGoogle);
+                recordatorioRepository.save(recordatorio);
+            } catch (Exception e) {
+                log.error("[GCAL-DESINCRONIZADO] Se creó el nuevo evento {} en Google Calendar para la edición del recordatorio {}, pero falló su persistencia local: {}",
+                        nuevoEventIdGoogle, recordatorio.getIdNegRecordatorio(), e.getMessage());
+            }
         }
     }
 
