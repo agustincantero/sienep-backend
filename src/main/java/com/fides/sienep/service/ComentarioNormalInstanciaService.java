@@ -73,7 +73,7 @@ public class ComentarioNormalInstanciaService {
     // comentario de la instancia 1 se podría tocar entrando por la URL de la 2.
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_NORMAL_INSTANCIA')")
-    public ComentarioNormalInstanciaResponseDTO actualizar(int codInstancia, int idComentario,
+    public ComentarioNormalInstanciaResponseDTO editar(int codInstancia, int idComentario,
                                                            ComentarioNormalInstanciaRequestDTO dto) {
         ComentarioNormalInstancia comentario = buscarActivoOFallar(idComentario);
         validarPerteneceAInstancia(comentario, codInstancia);

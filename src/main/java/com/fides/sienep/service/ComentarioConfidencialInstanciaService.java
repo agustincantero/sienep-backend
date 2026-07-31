@@ -74,7 +74,7 @@ public class ComentarioConfidencialInstanciaService {
     // comentario de la instancia 1 se podría tocar entrando por la URL de la 2.
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
-    public ComentarioConfidencialInstanciaResponseDTO actualizar(int codInstancia, int idComConfidencial,
+    public ComentarioConfidencialInstanciaResponseDTO editar(int codInstancia, int idComConfidencial,
                                                                  ComentarioConfidencialInstanciaRequestDTO dto) {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
         validarPerteneceAInstancia(comentario, codInstancia);

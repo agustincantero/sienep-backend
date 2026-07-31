@@ -167,41 +167,41 @@ class ComentarioConfidencialInstanciaServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar comentario confidencial - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar comentario confidencial - Éxito")
+    void editar_Exito() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
         when(comentarioRepository.save(any(ComentarioConfidencialInstancia.class))).thenReturn(comentario);
         when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
 
         ComentarioConfidencialInstanciaResponseDTO resultado =
-                comentarioService.actualizar(1, 1, requestDTO);
+                comentarioService.editar(1, 1, requestDTO);
 
         assertNotNull(resultado);
         verify(comentarioRepository).save(comentario);
     }
 
     @Test
-    @DisplayName("Actualizar comentario confidencial - No encontrado (404)")
-    void actualizar_LanzaNotFound() {
+    @DisplayName("Editar comentario confidencial - No encontrado (404)")
+    void editar_LanzaNotFound() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> comentarioService.actualizar(1, 99, requestDTO));
+                () -> comentarioService.editar(1, 99, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar comentario confidencial - Pertenece a otra instancia (404, M14)")
-    void actualizar_LanzaNotFound_PerteneceAOtraInstancia() {
+    @DisplayName("Editar comentario confidencial - Pertenece a otra instancia (404)")
+    void editar_LanzaNotFound_PerteneceAOtraInstancia() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> comentarioService.actualizar(2, 1, requestDTO));
+                () -> comentarioService.editar(2, 1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());

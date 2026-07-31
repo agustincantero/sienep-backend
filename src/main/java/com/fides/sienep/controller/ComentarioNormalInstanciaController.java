@@ -52,17 +52,17 @@ public class ComentarioNormalInstanciaController {
     }
 
     @PutMapping("/{idComentario}")
-    @Operation(summary = "Actualizar comentario normal", description = "Edita el contenido de un comentario normal activo.")
+    @Operation(summary = "Editar comentario normal", description = "Edita el contenido de un comentario normal activo.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Comentario actualizado"),
             @ApiResponse(responseCode = "404", description = "Comentario no encontrado"),
             @ApiResponse(responseCode = "403", description = "Sin permisos")
     })
-    public ResponseEntity<ComentarioNormalInstanciaResponseDTO> actualizar(
+    public ResponseEntity<ComentarioNormalInstanciaResponseDTO> editar(
             @PathVariable int codInstancia,
             @PathVariable int idComentario,
             @RequestBody @Valid ComentarioNormalInstanciaRequestDTO dto) {
-        return ResponseEntity.ok(comentarioService.actualizar(codInstancia, idComentario, dto));
+        return ResponseEntity.ok(comentarioService.editar(codInstancia, idComentario, dto));
     }
 
     @DeleteMapping("/{idComentario}")
