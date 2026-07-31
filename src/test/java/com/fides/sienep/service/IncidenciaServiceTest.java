@@ -14,6 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -155,15 +159,18 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar activas - Éxito")
+    @DisplayName("Listar activas - Éxito, paginado (H2)")
     void listarActivas_Exito() {
-        when(incidenciaRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(incidencia));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(incidenciaRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        List<IncidenciaResponseDTO> resultado = incidenciaService.listarActivas();
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarActivas(pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals(1, resultado.getContent().size());
     }
 
     @Test
@@ -287,29 +294,31 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito")
+    @DisplayName("Listar por estudiante - Éxito, paginado (H2)")
     void listarPorEstudiante_Exito() {
-        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(incidencia));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        List<IncidenciaResponseDTO> resultado = incidenciaService.listarPorEstudiante(1);
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorEstudiante(1, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por funcionario - Éxito")
+    @DisplayName("Listar por funcionario - Éxito, paginado (H2)")
     void listarPorFuncionario_Exito() {
-        when(incidenciaRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(incidencia));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(incidenciaRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        List<IncidenciaResponseDTO> resultado = incidenciaService.listarPorFuncionario(2);
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorFuncionario(2, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test

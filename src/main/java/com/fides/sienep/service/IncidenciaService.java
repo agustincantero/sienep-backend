@@ -13,6 +13,9 @@ import com.fides.sienep.repository.IncidenciaRepository;
 import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -80,11 +83,16 @@ public class IncidenciaService {
         return incidenciaMapper.toDto(guardada);
     }
 
+    // H2 — GET /api/incidencias sin filtro es una tabla de alta continua sin
+    // ningún acotador; se pagina igual que las otras dos ramas del mismo
+    // endpoint para que el contrato de respuesta sea uniforme sin importar
+    // qué filtro se use.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public List<IncidenciaResponseDTO> listarActivas() {
-        return incidenciaMapper.toDtoList(
-                incidenciaRepository.findByEstado(EstadoLogico.ACTIVO));
+    public Page<IncidenciaResponseDTO> listarActivas(Pageable pageable) {
+        Page<Incidencia> pagina = incidenciaRepository.findByEstado(EstadoLogico.ACTIVO, pageable);
+        List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -95,16 +103,20 @@ public class IncidenciaService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public List<IncidenciaResponseDTO> listarPorEstudiante(int idEstudiante) {
-        return incidenciaMapper.toDtoList(
-                incidenciaRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
+    public Page<IncidenciaResponseDTO> listarPorEstudiante(int idEstudiante, Pageable pageable) {
+        Page<Incidencia> pagina = incidenciaRepository.findByEstudianteAndEstado(
+                idEstudiante, EstadoLogico.ACTIVO, pageable);
+        List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public List<IncidenciaResponseDTO> listarPorFuncionario(int idFuncionario) {
-        return incidenciaMapper.toDtoList(
-                incidenciaRepository.findByFuncionarioAndEstado(idFuncionario, EstadoLogico.ACTIVO));
+    public Page<IncidenciaResponseDTO> listarPorFuncionario(int idFuncionario, Pageable pageable) {
+        Page<Incidencia> pagina = incidenciaRepository.findByFuncionarioAndEstado(
+                idFuncionario, EstadoLogico.ACTIVO, pageable);
+        List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @PreAuthorize("hasRole('ESTUDIANTE')")

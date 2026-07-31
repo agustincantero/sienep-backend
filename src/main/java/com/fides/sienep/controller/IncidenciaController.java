@@ -8,6 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,20 +44,21 @@ public class IncidenciaController {
     }
 
     @Operation(summary = "Listar incidencias, con filtro opcional por estudiante o funcionario")
-    @ApiResponse(responseCode = "200", description = "Lista de incidencias")
+    @ApiResponse(responseCode = "200", description = "Página de incidencias")
     @ApiResponse(responseCode = "400", description = "Debe indicarse solo un filtro a la vez")
     @GetMapping
-    public ResponseEntity<List<IncidenciaResponseDTO>> listar(
+    public ResponseEntity<Page<IncidenciaResponseDTO>> listar(
             @RequestParam(required = false) Integer idEstudiante,
-            @RequestParam(required = false) Integer idFuncionario) {
+            @RequestParam(required = false) Integer idFuncionario,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
 
         if (idEstudiante != null) {
-            return ResponseEntity.ok(incidenciaService.listarPorEstudiante(idEstudiante));
+            return ResponseEntity.ok(incidenciaService.listarPorEstudiante(idEstudiante, pageable));
         }
         if (idFuncionario != null) {
-            return ResponseEntity.ok(incidenciaService.listarPorFuncionario(idFuncionario));
+            return ResponseEntity.ok(incidenciaService.listarPorFuncionario(idFuncionario, pageable));
         }
-        return ResponseEntity.ok(incidenciaService.listarActivas());
+        return ResponseEntity.ok(incidenciaService.listarActivas(pageable));
     }
 
     @Operation(summary = "Actualizar una incidencia")
