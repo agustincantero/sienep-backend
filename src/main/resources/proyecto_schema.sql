@@ -794,6 +794,24 @@ END;
         v_valor_nuevo := NULL;
 END IF;
 
+    -- Las observaciones/comentarios confidenciales no deben quedar legibles en la auditoría
+    -- para quien solo tiene VER_AUDITORIA (sin los permisos de confidencialidad específicos)
+    IF TG_TABLE_NAME = 'estu_obs_confidenciales' THEN
+        IF v_valor_anterior IS NOT NULL THEN
+            v_valor_anterior := v_valor_anterior - 'obs_confidencial';
+END IF;
+        IF v_valor_nuevo IS NOT NULL THEN
+            v_valor_nuevo := v_valor_nuevo - 'obs_confidencial';
+END IF;
+    ELSIF TG_TABLE_NAME = 'inst_com_confidenciales' THEN
+        IF v_valor_anterior IS NOT NULL THEN
+            v_valor_anterior := v_valor_anterior - 'comentario';
+END IF;
+        IF v_valor_nuevo IS NOT NULL THEN
+            v_valor_nuevo := v_valor_nuevo - 'comentario';
+END IF;
+END IF;
+
     -- Insertar en la tabla de auditoría (registrando también el usuario_bd)
 INSERT INTO proyecto.auditoria (entidad, accion, id_usuario, ip, usuario_bd, valor_anterior, valor_nuevo)
 VALUES (UPPER(TG_TABLE_NAME), v_accion, v_usuario_id, v_ip, CURRENT_USER, v_valor_anterior, v_valor_nuevo);
