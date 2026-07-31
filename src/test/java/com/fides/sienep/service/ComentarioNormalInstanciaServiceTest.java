@@ -162,7 +162,7 @@ class ComentarioNormalInstanciaServiceTest {
         when(comentarioRepository.save(any(ComentarioNormalInstancia.class))).thenReturn(comentario);
         when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
 
-        ComentarioNormalInstanciaResponseDTO resultado = comentarioService.actualizar(1, requestDTO);
+        ComentarioNormalInstanciaResponseDTO resultado = comentarioService.actualizar(1, 1, requestDTO);
 
         assertNotNull(resultado);
         verify(comentarioRepository).save(comentario);
@@ -175,7 +175,20 @@ class ComentarioNormalInstanciaServiceTest {
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> comentarioService.actualizar(99, requestDTO));
+                () -> comentarioService.actualizar(1, 99, requestDTO));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(comentarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Actualizar comentario normal - Pertenece a otra instancia (404, M14)")
+    void actualizar_LanzaNotFound_PerteneceAOtraInstancia() {
+        when(comentarioRepository.findByIdComentarioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(comentario));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> comentarioService.actualizar(2, 1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
@@ -187,7 +200,7 @@ class ComentarioNormalInstanciaServiceTest {
         when(comentarioRepository.findByIdComentarioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
-        comentarioService.darDeBaja(1);
+        comentarioService.darDeBaja(1, 1);
 
         assertEquals(EstadoLogico.ELIMINADO, comentario.getEstado());
         verify(comentarioRepository).save(comentario);
@@ -200,8 +213,21 @@ class ComentarioNormalInstanciaServiceTest {
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> comentarioService.darDeBaja(99));
+                () -> comentarioService.darDeBaja(1, 99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("Dar de baja comentario normal - Pertenece a otra instancia (404, M14)")
+    void darDeBaja_LanzaNotFound_PerteneceAOtraInstancia() {
+        when(comentarioRepository.findByIdComentarioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(comentario));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> comentarioService.darDeBaja(2, 1));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(comentarioRepository, never()).save(any());
     }
 }

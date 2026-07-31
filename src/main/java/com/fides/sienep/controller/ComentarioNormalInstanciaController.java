@@ -59,7 +59,7 @@ public class ComentarioNormalInstanciaController {
             @PathVariable int codInstancia,
             @PathVariable int idComentario,
             @RequestBody @Valid ComentarioNormalInstanciaRequestDTO dto) {
-        return ResponseEntity.ok(comentarioService.actualizar(idComentario, dto));
+        return ResponseEntity.ok(comentarioService.actualizar(codInstancia, idComentario, dto));
     }
 
     @DeleteMapping("/{idComentario}")
@@ -72,7 +72,7 @@ public class ComentarioNormalInstanciaController {
     public ResponseEntity<Void> darDeBaja(
             @PathVariable int codInstancia,
             @PathVariable int idComentario) {
-        comentarioService.darDeBaja(idComentario);
+        comentarioService.darDeBaja(codInstancia, idComentario);
         return ResponseEntity.noContent().build();
     }
 }

@@ -62,11 +62,18 @@ public class ComentarioConfidencialInstanciaService {
                 comentarioRepository.findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
     }
 
+    // M14 — el path es anidado (/instancias/{codInstancia}/comentarios-confidenciales/{id}),
+    // pero antes se editaba/eliminaba solo por idComConfidencial: un comentario de la
+    // instancia 1 se podía tocar entrando por la URL de la instancia 2, mientras el
+    // id existiera. Se valida que el comentario realmente pertenezca al codInstancia
+    // del path (404 si no, mismo criterio que "no encontrado" para no distinguir
+    // "no existe" de "existe pero es de otra instancia").
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
-    public ComentarioConfidencialInstanciaResponseDTO actualizar(int idComConfidencial,
+    public ComentarioConfidencialInstanciaResponseDTO actualizar(int codInstancia, int idComConfidencial,
                                                                  ComentarioConfidencialInstanciaRequestDTO dto) {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
+        validarPerteneceAInstancia(comentario, codInstancia);
         comentario.setContenido(dto.getContenido());
         return comentarioMapper.toDto(comentarioRepository.save(comentario));
     }
@@ -76,13 +83,22 @@ public class ComentarioConfidencialInstanciaService {
     // Estudiante.
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
-    public void darDeBaja(int idComConfidencial) {
+    public void darDeBaja(int codInstancia, int idComConfidencial) {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
+        validarPerteneceAInstancia(comentario, codInstancia);
         comentario.setEstado(EstadoLogico.ELIMINADO);
         comentarioRepository.save(comentario);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
+
+    private void validarPerteneceAInstancia(ComentarioConfidencialInstancia comentario, int codInstancia) {
+        if (comentario.getInstancia().getCodInstancia() != codInstancia) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No se encontró el comentario " + comentario.getId().getIdComConfidencial()
+                            + " en la instancia " + codInstancia);
+        }
+    }
 
     private Instancia buscarInstanciaOFallar(int codInstancia) {
         return instanciaRepository.findById(codInstancia)

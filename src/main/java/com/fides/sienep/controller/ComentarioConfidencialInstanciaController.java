@@ -60,7 +60,7 @@ public class ComentarioConfidencialInstanciaController {
             @PathVariable int codInstancia,
             @PathVariable int idComConfidencial,
             @RequestBody @Valid ComentarioConfidencialInstanciaRequestDTO dto) {
-        return ResponseEntity.ok(comentarioService.actualizar(idComConfidencial, dto));
+        return ResponseEntity.ok(comentarioService.actualizar(codInstancia, idComConfidencial, dto));
     }
 
     @DeleteMapping("/{idComConfidencial}")
@@ -73,7 +73,7 @@ public class ComentarioConfidencialInstanciaController {
     public ResponseEntity<Void> darDeBaja(
             @PathVariable int codInstancia,
             @PathVariable int idComConfidencial) {
-        comentarioService.darDeBaja(idComConfidencial);
+        comentarioService.darDeBaja(codInstancia, idComConfidencial);
         return ResponseEntity.noContent().build();
     }
 }
