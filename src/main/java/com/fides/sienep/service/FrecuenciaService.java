@@ -37,11 +37,16 @@ public class FrecuenciaService {
         return frecuenciaMapper.toDto(frecuenciaRepository.save(frecuencia));
     }
 
+    // B10 — antes solo existía listarActivas() (ACTIVO fijo, sin forma de ver
+    // frecuencias INACTIVAS, p. ej. para decidir cuáles reactivar). estado=null
+    // lista todas, sin filtrar — mismo criterio que CategoriaInstanciaService.obtenerTodas().
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public List<FrecuenciaResponseDTO> listarActivas() {
-        return frecuenciaMapper.toDtoList(
-                frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO));
+    public List<FrecuenciaResponseDTO> listar(EstadoLogico estado) {
+        List<Frecuencia> frecuencias = estado != null
+                ? frecuenciaRepository.findByEstado(estado)
+                : frecuenciaRepository.findAll();
+        return frecuenciaMapper.toDtoList(frecuencias);
     }
 
     @Transactional(readOnly = true)

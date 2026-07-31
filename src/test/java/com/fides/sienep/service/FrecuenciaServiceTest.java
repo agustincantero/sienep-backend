@@ -182,15 +182,29 @@ class FrecuenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar activas - Éxito")
-    void listarActivas_Exito() {
+    @DisplayName("Listar - Con estado filtra por ese estado")
+    void listar_ConEstado_Exito() {
         when(frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(frecuencia));
         when(frecuenciaMapper.toDtoList(List.of(frecuencia))).thenReturn(List.of(responseDTO));
 
-        List<FrecuenciaResponseDTO> resultado = frecuenciaService.listarActivas();
+        List<FrecuenciaResponseDTO> resultado = frecuenciaService.listar(EstadoLogico.ACTIVO);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.size());
+        verify(frecuenciaRepository, never()).findAll();
+    }
+
+    @Test
+    @DisplayName("Listar - Sin estado (B10) devuelve todas sin filtrar")
+    void listar_SinEstado_DevuelveTodas() {
+        when(frecuenciaRepository.findAll()).thenReturn(List.of(frecuencia));
+        when(frecuenciaMapper.toDtoList(List.of(frecuencia))).thenReturn(List.of(responseDTO));
+
+        List<FrecuenciaResponseDTO> resultado = frecuenciaService.listar(null);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        verify(frecuenciaRepository, never()).findByEstado(any());
     }
 
     @Test

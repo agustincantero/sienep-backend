@@ -2,8 +2,10 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.FrecuenciaRequestDTO;
 import com.fides.sienep.dto.FrecuenciaResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.FrecuenciaService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,11 +32,13 @@ public class FrecuenciaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(frecuenciaService.crear(dto));
     }
 
-    @Operation(summary = "Listar frecuencias activas")
-    @ApiResponse(responseCode = "200", description = "Lista de frecuencias activas")
+    @Operation(summary = "Listar frecuencias", description = "Lista frecuencias. Sin el parámetro estado, las devuelve todas; con estado, filtra (ej. ACTIVO, INACTIVO).")
+    @ApiResponse(responseCode = "200", description = "Lista de frecuencias")
     @GetMapping
-    public ResponseEntity<List<FrecuenciaResponseDTO>> listar() {
-        return ResponseEntity.ok(frecuenciaService.listarActivas());
+    public ResponseEntity<List<FrecuenciaResponseDTO>> listar(
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO)", required = false)
+            @RequestParam(required = false) EstadoLogico estado) {
+        return ResponseEntity.ok(frecuenciaService.listar(estado));
     }
 
     @Operation(summary = "Buscar frecuencia por ID")
