@@ -13,6 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -41,14 +43,11 @@ public class InformeAdjuntoService {
 
     @PreAuthorize("hasAuthority('VER_ADJUNTOS')")
     @Transactional(readOnly = true)
-    public List<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario) {
-        List<InformeAdjunto> informes = informeRepository
-                .findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO);
-        List<InformeAdjuntoResponseDTO> resultado = new ArrayList<>();
-        for (InformeAdjunto i : informes) {
-            resultado.add(informeMapper.toDto(i));
-        }
-        return resultado;
+    public Page<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario, Pageable pageable) {
+        Page<InformeAdjunto> pagina = informeRepository
+                .findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO, pageable);
+        List<InformeAdjuntoResponseDTO> dtos = informeMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @PreAuthorize("hasAuthority('VER_ADJUNTOS')")

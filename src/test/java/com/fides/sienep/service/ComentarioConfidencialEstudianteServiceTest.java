@@ -21,6 +21,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -293,20 +297,18 @@ class ComentarioConfidencialEstudianteServiceTest {
 
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito")
+    @DisplayName("Listar por estudiante - Éxito, paginado (H18)")
     void listarPorEstudiante_Exito() {
-        List<ComentarioConfidencialEstudiante> comentarios = List.of(comentarioMock);
-        List<ComentarioConfidencialEstudianteResponseDTO> dtos = List.of(responseDTO);
+        Pageable pageable = PageRequest.of(0, 20);
+        when(comentarioRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(comentarioMock), pageable, 1));
+        when(comentarioMapper.toDtoList(List.of(comentarioMock))).thenReturn(List.of(responseDTO));
 
-        when(comentarioRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(comentarios);
-        when(comentarioMapper.toDto(comentarioMock)).thenReturn(responseDTO);
-
-        List<ComentarioConfidencialEstudianteResponseDTO> result =
-                comentarioService.listarPorEstudiante(1);
+        Page<ComentarioConfidencialEstudianteResponseDTO> result =
+                comentarioService.listarPorEstudiante(1, pageable);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        verify(comentarioRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO);
+        assertEquals(1, result.getTotalElements());
+        verify(comentarioRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable);
     }
 }

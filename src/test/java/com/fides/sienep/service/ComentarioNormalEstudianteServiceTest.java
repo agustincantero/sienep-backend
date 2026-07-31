@@ -21,6 +21,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -320,13 +324,12 @@ class ComentarioNormalEstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito (funcionario consulta cualquier estudiante)")
+    @DisplayName("Listar por estudiante - Éxito (funcionario consulta cualquier estudiante), paginado (H18)")
     void listarPorEstudiante_Exito() {
-        List<ComentarioNormalEstudiante> comentarios = List.of(comentarioMock);
-
-        when(comentarioRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(comentarios);
-        when(comentarioMapper.toDto(comentarioMock)).thenReturn(responseDTO);
+        Pageable pageable = PageRequest.of(0, 20);
+        when(comentarioRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(comentarioMock), pageable, 1));
+        when(comentarioMapper.toDtoList(List.of(comentarioMock))).thenReturn(List.of(responseDTO));
 
         // Simulamos un usuario autenticado que NO es estudiante
         org.springframework.security.core.Authentication auth =
@@ -335,17 +338,18 @@ class ComentarioNormalEstudianteServiceTest {
         org.springframework.security.core.context.SecurityContextHolder
                 .getContext().setAuthentication(auth);
 
-        List<ComentarioNormalEstudianteResponseDTO> result =
-                comentarioService.listarPorEstudiante(1);
+        Page<ComentarioNormalEstudianteResponseDTO> result =
+                comentarioService.listarPorEstudiante(1, pageable);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        verify(comentarioRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO);
+        assertEquals(1, result.getTotalElements());
+        verify(comentarioRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable);
     }
 
     @Test
     @DisplayName("Listar por estudiante - Falta idEstudiante → 400")
     void listarPorEstudiante_LanzaExcepcion_SinIdEstudiante() {
+        Pageable pageable = PageRequest.of(0, 20);
 
         // Simulamos un usuario autenticado que NO es estudiante
         // y no pasa idEstudiante → el service lanza 400
@@ -357,9 +361,9 @@ class ComentarioNormalEstudianteServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> comentarioService.listarPorEstudiante(null));
+                () -> comentarioService.listarPorEstudiante(null, pageable));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        verify(comentarioRepository, never()).findByEstudianteIdUsuarioAndEstado(any(), any());
+        verify(comentarioRepository, never()).findByEstudianteIdUsuarioAndEstado(any(), any(), any());
     }
 }

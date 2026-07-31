@@ -19,6 +19,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -286,17 +290,17 @@ class InformeAdjuntoServiceTest {
     // ── Listar ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito")
+    @DisplayName("Listar por estudiante - Éxito, paginado (H18)")
     void listarPorEstudiante_Exito() {
-        List<InformeAdjunto> informes = List.of(informeMock);
-        when(informeRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(informes);
-        when(informeMapper.toDto(informeMock)).thenReturn(responseDTO);
+        Pageable pageable = PageRequest.of(0, 20);
+        when(informeRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(informeMock), pageable, 1));
+        when(informeMapper.toDtoList(List.of(informeMock))).thenReturn(List.of(responseDTO));
 
-        List<InformeAdjuntoResponseDTO> result = informeService.listarPorEstudiante(1);
+        Page<InformeAdjuntoResponseDTO> result = informeService.listarPorEstudiante(1, pageable);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        verify(informeRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO);
+        assertEquals(1, result.getTotalElements());
+        verify(informeRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable);
     }
 }

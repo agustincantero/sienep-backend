@@ -17,6 +17,8 @@ import com.fides.sienep.repository.RolRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -108,8 +110,9 @@ class ComentarioConfidencialInstanciaIT {
         assertTrue(recargado.isPresent());
         assertEquals("Observación confidencial de integración (M15)", recargado.get().getContenido());
 
-        List<ComentarioConfidencialInstancia> porInstancia = comentarioRepository
-                .findByInstancia_CodInstanciaAndEstado(instancia.getCodInstancia(), EstadoLogico.ACTIVO);
-        assertEquals(1, porInstancia.size());
+        Page<ComentarioConfidencialInstancia> porInstancia = comentarioRepository
+                .findByInstancia_CodInstanciaAndEstado(instancia.getCodInstancia(), EstadoLogico.ACTIVO,
+                        PageRequest.of(0, 20));
+        assertEquals(1, porInstancia.getTotalElements());
     }
 }

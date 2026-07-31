@@ -14,6 +14,9 @@ import com.fides.sienep.repository.FuncionarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -22,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -38,14 +40,11 @@ public class ComentarioConfidencialEstudianteService {
 
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
     @Transactional(readOnly = true)
-    public List<ComentarioConfidencialEstudianteResponseDTO> listarPorEstudiante(Integer idEstudiante) {
-        List<ComentarioConfidencialEstudiante> comentarios = comentarioRepository
-                .findByEstudianteIdUsuarioAndEstado(idEstudiante, EstadoLogico.ACTIVO);
-        List<ComentarioConfidencialEstudianteResponseDTO> resultado = new ArrayList<>();
-        for (ComentarioConfidencialEstudiante c : comentarios) {
-            resultado.add(comentarioMapper.toDto(c));
-        }
-        return resultado;
+    public Page<ComentarioConfidencialEstudianteResponseDTO> listarPorEstudiante(Integer idEstudiante, Pageable pageable) {
+        Page<ComentarioConfidencialEstudiante> pagina = comentarioRepository
+                .findByEstudianteIdUsuarioAndEstado(idEstudiante, EstadoLogico.ACTIVO, pageable);
+        List<ComentarioConfidencialEstudianteResponseDTO> dtos = comentarioMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")

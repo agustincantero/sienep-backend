@@ -15,6 +15,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -130,26 +134,28 @@ class ComentarioNormalInstanciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por instancia - Éxito")
+    @DisplayName("Listar por instancia - Éxito, paginado (H18)")
     void listarPorInstancia_Exito() {
+        Pageable pageable = PageRequest.of(0, 20);
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
-        when(comentarioRepository.findByInstancia_CodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(comentario));
+        when(comentarioRepository.findByInstancia_CodInstanciaAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(comentario), pageable, 1));
         when(comentarioMapper.toDtoList(List.of(comentario))).thenReturn(List.of(responseDTO));
 
-        List<ComentarioNormalInstanciaResponseDTO> resultado = comentarioService.listarPorInstancia(1);
+        Page<ComentarioNormalInstanciaResponseDTO> resultado = comentarioService.listarPorInstancia(1, pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
     @DisplayName("Listar por instancia - Instancia no encontrada (404)")
     void listarPorInstancia_LanzaNotFound() {
+        Pageable pageable = PageRequest.of(0, 20);
         when(instanciaRepository.findById(1)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> comentarioService.listarPorInstancia(1));
+                () -> comentarioService.listarPorInstancia(1, pageable));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }

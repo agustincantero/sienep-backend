@@ -9,11 +9,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/instancias/{codInstancia}/comentarios-normales")
@@ -40,12 +42,13 @@ public class ComentarioNormalInstanciaController {
     @GetMapping
     @Operation(summary = "Listar comentarios normales", description = "Lista todos los comentarios normales activos de una instancia.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Lista obtenida"),
+            @ApiResponse(responseCode = "200", description = "Página obtenida"),
             @ApiResponse(responseCode = "404", description = "Instancia no encontrada")
     })
-    public ResponseEntity<List<ComentarioNormalInstanciaResponseDTO>> listar(
-            @PathVariable int codInstancia) {
-        return ResponseEntity.ok(comentarioService.listarPorInstancia(codInstancia));
+    public ResponseEntity<Page<ComentarioNormalInstanciaResponseDTO>> listar(
+            @PathVariable int codInstancia,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(comentarioService.listarPorInstancia(codInstancia, pageable));
     }
 
     @PutMapping("/{idComentario}")

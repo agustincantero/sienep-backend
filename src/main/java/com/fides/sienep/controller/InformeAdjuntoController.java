@@ -9,14 +9,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/informes-adjuntos")
@@ -28,10 +30,11 @@ public class InformeAdjuntoController {
 
     @GetMapping
     @Operation(summary = "Listar informes de un estudiante")
-    @ApiResponse(responseCode = "200", description = "Lista de informes")
-    public ResponseEntity<List<InformeAdjuntoResponseDTO>> listar(
-            @RequestParam Integer idUsuario) {
-        return ResponseEntity.ok(informeService.listarPorEstudiante(idUsuario));
+    @ApiResponse(responseCode = "200", description = "Página de informes")
+    public ResponseEntity<Page<InformeAdjuntoResponseDTO>> listar(
+            @RequestParam Integer idUsuario,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(informeService.listarPorEstudiante(idUsuario, pageable));
     }
 
     @GetMapping("/{id}")

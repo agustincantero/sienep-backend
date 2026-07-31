@@ -11,6 +11,9 @@ import com.fides.sienep.repository.ComentarioConfidencialInstanciaRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.InstanciaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -56,10 +59,12 @@ public class ComentarioConfidencialInstanciaService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
-    public List<ComentarioConfidencialInstanciaResponseDTO> listarPorInstancia(int codInstancia) {
+    public Page<ComentarioConfidencialInstanciaResponseDTO> listarPorInstancia(int codInstancia, Pageable pageable) {
         buscarInstanciaOFallar(codInstancia);
-        return comentarioMapper.toDtoList(
-                comentarioRepository.findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO));
+        Page<ComentarioConfidencialInstancia> pagina = comentarioRepository
+                .findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO, pageable);
+        List<ComentarioConfidencialInstanciaResponseDTO> dtos = comentarioMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     // El path es anidado (/instancias/{codInstancia}/comentarios-confidenciales/{id}):
