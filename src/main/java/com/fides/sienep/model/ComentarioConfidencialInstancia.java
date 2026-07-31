@@ -36,7 +36,26 @@ public class ComentarioConfidencialInstancia
     public static class ComentarioConfidencialInstanciaId
             implements Serializable {
 
+        // M15 — sin este @GeneratedValue, Spring Data no puede distinguir un
+        // ComentarioConfidencialInstancia nuevo de uno existente (el @EmbeddedId
+        // en sí no es null, aunque sus campos sí lo sean), así que save() llamaba
+        // a merge() en vez de persist() y el INSERT nunca llegaba a ejecutarse
+        // — sin lanzar ninguna excepción. Confirmado con un test de integración
+        // real contra Postgres (Mockito no lo detecta porque nunca toca un
+        // EntityManager de verdad).
+        // Hibernate no soporta GenerationType.IDENTITY dentro de un @EmbeddedId
+        // ("Identity generation isn't supported for composite ids"), así que se
+        // usa SEQUENCE apuntando directo a la secuencia que ya respalda el SERIAL
+        // de la columna (misma secuencia, no una nueva). allocationSize=1 porque
+        // esa secuencia también la usa el DEFAULT nextval(...) de la columna a
+        // nivel de Postgres — con el allocationSize=50 por defecto de Hibernate,
+        // "reservaría" de a 50 ids en memoria y se desincronizaría de cualquier
+        // otro insert que no pase por esta misma sesión de Hibernate.
         @Column(name = "id_com_confidencial")
+        @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "inst_com_conf_seq")
+        @SequenceGenerator(name = "inst_com_conf_seq",
+                sequenceName = "proyecto.inst_com_confidenciales_id_com_confidencial_seq",
+                allocationSize = 1)
         private Integer idComConfidencial;
 
         @Column(name = "cod_instancia")
