@@ -79,7 +79,7 @@ public class GrupoService {
         return grupoMapper.toDtoList(grupos);
     }
 
-    @PreAuthorize("hasAuthority('EDITAR_GRUPOS')")
+    @PreAuthorize("hasAuthority('EDITAR_GRUPO')")
     @Transactional
     public GrupoResponseDTO actualizar(Integer id, GrupoUpdateDTO dto) {
         Grupo grupo = buscarOFallar(id);
@@ -104,7 +104,7 @@ public class GrupoService {
         return grupoMapper.toDto(grupoRepository.save(grupo));
     }
 
-    @PreAuthorize("hasAuthority('ELIMINAR_GRUPOS')")
+    @PreAuthorize("hasAuthority('ELIMINAR_GRUPO')")
     @Transactional
     public void darDeBaja(Integer id) {
         Grupo grupo = buscarOFallar(id);
@@ -112,7 +112,7 @@ public class GrupoService {
         grupoRepository.save(grupo);
     }
 
-    @PreAuthorize("hasAuthority('REACTIVAR_GRUPOS')")
+    @PreAuthorize("hasAuthority('REACTIVAR_GRUPO')")
     @Transactional
     public void reactivar(Integer id) {
         Grupo grupo = buscarOFallar(id);

@@ -977,9 +977,9 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  -- Grupos
                                                                  ('CREAR_GRUPO', 'Permite crear nuevos grupos'),
                                                                  ('VER_GRUPOS', 'Permite visualizar grupos existentes'),
-                                                                 ('EDITAR_GRUPOS', 'Permite editar grupos existentes'),
-                                                                 ('ELIMINAR_GRUPOS', 'Permite eliminar grupos'),
-                                                                 ('REACTIVAR_GRUPOS', 'Permite reactivar grupos'),
+                                                                 ('EDITAR_GRUPO', 'Permite editar grupos existentes'),
+                                                                 ('ELIMINAR_GRUPO', 'Permite eliminar grupos'),
+                                                                 ('REACTIVAR_GRUPO', 'Permite reactivar grupos'),
                                                                  -- Carreras
                                                                  ('VER_CARRERAS', 'Permite ver la lista de carreras del sistema'),
                                                                  ('CREAR_CARRERA', 'Permite registrar una nueva carrera'),
