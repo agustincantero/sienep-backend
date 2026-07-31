@@ -136,10 +136,10 @@ class TelefonoServiceTest {
 
         telefonoService.eliminar(1, "099123456");
 
-        // El service no llama a save() explícitamente: el cambio de estado se persiste
-        // por dirty-checking de Hibernate dentro del @Transactional (entidad managed).
-        // Acá solo podemos verificar el estado del objeto en memoria.
+        // B3 — save() explícito por consistencia con el resto de los services,
+        // aunque el dirty-checking de Hibernate ya hubiera persistido el cambio.
         assertEquals(EstadoLogico.ELIMINADO, telefono.getEstado());
+        verify(telefonoRepository).save(telefono);
     }
 
     @Test

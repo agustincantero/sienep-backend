@@ -63,6 +63,7 @@ public class TelefonoService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Teléfono no encontrado"));
         telefono.setEstado(EstadoLogico.ELIMINADO);
+        telefonoRepository.save(telefono);
         log.info("[AUDIT] Teléfono {} del estudiante {} dado de baja", numero, idUsuario);
     }
 }
