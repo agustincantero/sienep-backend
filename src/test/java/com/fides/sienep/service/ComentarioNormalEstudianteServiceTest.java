@@ -67,6 +67,7 @@ class ComentarioNormalEstudianteServiceTest {
                 PaisDocumento.ARG, "hash",
                 "ana.lopez@utec.edu.uy", rol
         );
+        autorMock.setEstado(EstadoLogico.ACTIVO);
 
         estudianteMock = new Estudiante();
         estudianteMock.setNombre("Pedro");
@@ -164,6 +165,46 @@ class ComentarioNormalEstudianteServiceTest {
                 () -> comentarioService.crear(dto));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(comentarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear comentario - Estudiante inactivo → 422 (M12)")
+    void crear_LanzaUnprocessable_EstudianteInactivo() {
+        estudianteMock.setEstado(EstadoLogico.INACTIVO);
+
+        ComentarioNormalEstudianteRequestDTO dto = new ComentarioNormalEstudianteRequestDTO();
+        dto.setContenido("Contenido");
+        dto.setIdEstudiante(1);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> comentarioService.crear(dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(comentarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear comentario - Autor inactivo → 422 (M12)")
+    void crear_LanzaUnprocessable_AutorInactivo() {
+        autorMock.setEstado(EstadoLogico.INACTIVO);
+        mockAutenticadoComoFuncionario(1);
+
+        ComentarioNormalEstudianteRequestDTO dto = new ComentarioNormalEstudianteRequestDTO();
+        dto.setContenido("Contenido");
+        dto.setIdEstudiante(1);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(autorMock));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> comentarioService.crear(dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
     }
 

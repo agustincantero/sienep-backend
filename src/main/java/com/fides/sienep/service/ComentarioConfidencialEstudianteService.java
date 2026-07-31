@@ -61,9 +61,19 @@ public class ComentarioConfidencialEstudianteService {
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdEstudiante()));
 
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El estudiante con id " + dto.getIdEstudiante() + " no está activo");
+        }
+
         Integer idAutor = getIdUsuarioAutenticado();
         Funcionario autor = funcionarioRepository.findById(idAutor)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado: " + idAutor));
+
+        if (autor.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El funcionario autenticado no está activo");
+        }
 
         ComentarioConfidencialEstudiante comentario =
                 new ComentarioConfidencialEstudiante(dto.getContenido(), autor, estudiante);
