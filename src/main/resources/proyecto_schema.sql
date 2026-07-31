@@ -956,7 +956,6 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
                                                                  -- Permisos y perfil
                                                                  ('VER_PERMISOS',               'Permite visualizar la lista de permisos del sistema'),
                                                                  ('EDITAR_PERMISO',             'Permite editar la descripción de los permisos'),
-                                                                 ('EDITAR_MIS_DATOS',            'Permite editar los datos personales del usuario logueado'),
                                                                  ('VER_AUDITORIA',              'Permite consultar el historial de eventos y auditoría del sistema'),
                                                                  -- Comentarios de estudiante
                                                                  ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),
