@@ -108,18 +108,33 @@ class ItrServiceTest {
     }
 
     @Test
-    @DisplayName("listar: Retorna lista de ITRs mapeados")
-    void listar_Exito() {
+    @DisplayName("listar: Sin parámetro estado, devuelve solo ACTIVOS")
+    void listar_SinEstado_DevuelveSoloActivos() {
         List<Itr> itrs = List.of(new Itr("Norte"));
         List<ItrResponseDTO> dtos = List.of(ItrResponseDTO.builder().build());
 
-        when(itrRepository.findAll()).thenReturn(itrs);
+        when(itrRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(itrs);
         when(itrMapper.toDtoList(itrs)).thenReturn(dtos);
 
-        List<ItrResponseDTO> result = itrService.listar();
+        List<ItrResponseDTO> result = itrService.listar(null);
 
         assertEquals(1, result.size());
-        verify(itrRepository, times(1)).findAll();
+        verify(itrRepository, times(1)).findByEstado(EstadoLogico.ACTIVO);
+    }
+
+    @Test
+    @DisplayName("listar: Con estado explícito, filtra por ese estado")
+    void listar_ConEstado_FiltraPorEseEstado() {
+        List<Itr> itrs = List.of(new Itr("Norte"));
+        List<ItrResponseDTO> dtos = List.of(ItrResponseDTO.builder().build());
+
+        when(itrRepository.findByEstado(EstadoLogico.INACTIVO)).thenReturn(itrs);
+        when(itrMapper.toDtoList(itrs)).thenReturn(dtos);
+
+        List<ItrResponseDTO> result = itrService.listar(EstadoLogico.INACTIVO);
+
+        assertEquals(1, result.size());
+        verify(itrRepository, times(1)).findByEstado(EstadoLogico.INACTIVO);
     }
 
     @Test
@@ -146,8 +161,8 @@ class ItrServiceTest {
     }
 
     @Test
-    @DisplayName("actualizar: Lanza excepción si ITR está inactivo")
-    void actualizar_LanzaExcepcion_SiItrInactivo() {
+    @DisplayName("editar: Lanza excepción si ITR está inactivo")
+    void editar_LanzaExcepcion_SiItrInactivo() {
         Itr itr = new Itr("Norte");
         itr.setEstado(EstadoLogico.INACTIVO);
 
@@ -155,14 +170,14 @@ class ItrServiceTest {
 
         ItrRequestDTO dto = new ItrRequestDTO();
         
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> itrService.actualizar(1, dto));
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> itrService.editar(1, dto));
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals("No se puede modificar ni asociar carreras a un ITR inactivo.", exception.getReason());
     }
 
     @Test
-    @DisplayName("actualizar: Lanza excepción si el nuevo nombre ya está en uso")
-    void actualizar_LanzaExcepcion_SiNombreEnUso() {
+    @DisplayName("editar: Lanza excepción si el nuevo nombre ya está en uso")
+    void editar_LanzaExcepcion_SiNombreEnUso() {
         Itr itr = new Itr("Norte");
         itr.setIdItr(1);
 
@@ -172,14 +187,14 @@ class ItrServiceTest {
         ItrRequestDTO dto = new ItrRequestDTO();
         dto.setNomItr("Suroeste");
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> itrService.actualizar(1, dto));
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> itrService.editar(1, dto));
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals("El nombre del ITR ya está en uso.", exception.getReason());
     }
 
     @Test
-    @DisplayName("actualizar: Éxito con lógica de asociarCarreras (altas y bajas)")
-    void actualizar_Exito_ConAsociacionCarreras() {
+    @DisplayName("editar: Éxito con lógica de asociarCarreras (altas y bajas)")
+    void editar_Exito_ConAsociacionCarreras() {
         Itr itr = new Itr("Norte");
         itr.setIdItr(1);
         
@@ -204,7 +219,7 @@ class ItrServiceTest {
         when(itrRepository.save(itr)).thenReturn(itr);
         when(itrMapper.toDto(itr)).thenReturn(responseMock);
 
-        ItrResponseDTO result = itrService.actualizar(1, dto);
+        ItrResponseDTO result = itrService.editar(1, dto);
 
         assertNotNull(result);
         assertEquals("Suroeste", itr.getNomItr());
@@ -219,8 +234,8 @@ class ItrServiceTest {
     }
 
     @Test
-    @DisplayName("actualizar: Lanza excepción si la nueva carrera a asociar no existe")
-    void actualizar_CarreraInexistente() {
+    @DisplayName("editar: Lanza excepción si la nueva carrera a asociar no existe")
+    void editar_CarreraInexistente() {
         Itr itr = new Itr("Norte");
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
         
@@ -230,14 +245,14 @@ class ItrServiceTest {
 
         when(carreraRepository.findById(99)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> itrService.actualizar(1, dto));
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> itrService.editar(1, dto));
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
         assertEquals("Carrera con ID 99 no encontrada.", exception.getReason());
     }
 
     @Test
-    @DisplayName("actualizar: Lanza 422 si la nueva carrera a asociar no está ACTIVA")
-    void actualizar_LanzaUnprocessable_CarreraNuevaInactiva() {
+    @DisplayName("editar: Lanza 422 si la nueva carrera a asociar no está ACTIVA")
+    void editar_LanzaUnprocessable_CarreraNuevaInactiva() {
         Itr itr = new Itr("Norte");
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
 
@@ -251,15 +266,15 @@ class ItrServiceTest {
         dto.setCarrerasIds(List.of(2));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> itrService.actualizar(1, dto));
+                () -> itrService.editar(1, dto));
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(itrRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("actualizar: Lanza 422 al reactivar un vínculo si la carrera ya no está ACTIVA")
-    void actualizar_LanzaUnprocessable_AlReactivarVinculoConCarreraInactiva() {
+    @DisplayName("editar: Lanza 422 al reactivar un vínculo si la carrera ya no está ACTIVA")
+    void editar_LanzaUnprocessable_AlReactivarVinculoConCarreraInactiva() {
         Itr itr = new Itr("Norte");
         itr.setIdItr(1);
 
@@ -278,7 +293,7 @@ class ItrServiceTest {
         dto.setCarrerasIds(List.of(1)); // intenta reactivar el vínculo con la carrera 1
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> itrService.actualizar(1, dto));
+                () -> itrService.editar(1, dto));
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(itrRepository, never()).save(any());

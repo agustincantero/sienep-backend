@@ -9,7 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Datos para actualizar un funcionario")
+@Schema(description = "Datos para editar un funcionario")
 public class FuncionarioUpdateDTO {
 
     @NotBlank(message = "El nombre es obligatorio")

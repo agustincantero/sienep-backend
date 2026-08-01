@@ -159,14 +159,14 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar activas - Éxito, paginado")
-    void listarActivas_Exito() {
+    @DisplayName("Listar - Sin estado, devuelve solo ACTIVAS, paginado")
+    void listar_SinEstado_DevuelveSoloActivas() {
         Pageable pageable = PageRequest.of(0, 20);
         when(incidenciaRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarActivas(pageable);
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listar(null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
@@ -175,12 +175,12 @@ class IncidenciaServiceTest {
 
     @Test
     @DisplayName("Buscar por ID - Éxito")
-    void buscarPorId_Exito() {
+    void obtenerPorId_Exito() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(incidencia));
         when(incidenciaMapper.toDto(incidencia)).thenReturn(responseDTO);
 
-        IncidenciaResponseDTO resultado = incidenciaService.buscarPorId(1);
+        IncidenciaResponseDTO resultado = incidenciaService.obtenerPorId(1);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodInstancia());
@@ -188,39 +188,39 @@ class IncidenciaServiceTest {
 
     @Test
     @DisplayName("Buscar por ID - No encontrada (404)")
-    void buscarPorId_LanzaNotFound() {
+    void obtenerPorId_LanzaNotFound() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> incidenciaService.buscarPorId(99));
+                () -> incidenciaService.obtenerPorId(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
-    @DisplayName("Actualizar incidencia - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar incidencia - Éxito")
+    void editar_Exito() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(incidencia));
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
         when(incidenciaRepository.save(any(Incidencia.class))).thenReturn(incidencia);
         when(incidenciaMapper.toDto(incidencia)).thenReturn(responseDTO);
 
-        IncidenciaResponseDTO resultado = incidenciaService.actualizar(1, requestDTO);
+        IncidenciaResponseDTO resultado = incidenciaService.editar(1, requestDTO);
 
         assertNotNull(resultado);
         verify(incidenciaRepository).save(incidencia);
     }
 
     @Test
-    @DisplayName("Actualizar incidencia - No encontrada (404)")
-    void actualizar_LanzaNotFound() {
+    @DisplayName("Editar incidencia - No encontrada (404)")
+    void editar_LanzaNotFound() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> incidenciaService.actualizar(99, requestDTO));
+                () -> incidenciaService.editar(99, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(incidenciaRepository, never()).save(any());
@@ -304,57 +304,57 @@ class IncidenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar incidencia - Estudiante no encontrado (404)")
-    void actualizar_LanzaNotFound_EstudianteNoExiste() {
+    @DisplayName("Editar incidencia - Estudiante no encontrado (404)")
+    void editar_LanzaNotFound_EstudianteNoExiste() {
         when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(incidencia));
         when(estudianteRepository.findById(1)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> incidenciaService.actualizar(1, requestDTO));
+                () -> incidenciaService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(incidenciaRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar incidencia - Estudiante inactivo (422)")
-    void actualizar_LanzaUnprocessable_EstudianteInactivo() {
+    @DisplayName("Editar incidencia - Estudiante inactivo (422)")
+    void editar_LanzaUnprocessable_EstudianteInactivo() {
         estudiante.setEstado(EstadoLogico.INACTIVO);
         when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(incidencia));
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> incidenciaService.actualizar(1, requestDTO));
+                () -> incidenciaService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(incidenciaRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito, paginado")
+    @DisplayName("Listar por estudiante - Sin estado, devuelve solo ACTIVAS, paginado")
     void listarPorEstudiante_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorEstudiante(1, pageable);
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorEstudiante(1, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por funcionario - Éxito, paginado")
+    @DisplayName("Listar por funcionario - Sin estado, devuelve solo ACTIVAS, paginado")
     void listarPorFuncionario_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(incidenciaRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorFuncionario(2, pageable);
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorFuncionario(2, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());

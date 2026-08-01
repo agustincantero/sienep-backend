@@ -3,8 +3,10 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.GrupoRequestDTO;
 import com.fides.sienep.dto.GrupoResponseDTO;
 import com.fides.sienep.dto.GrupoUpdateDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.GrupoService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -56,28 +58,30 @@ public class GrupoController {
 
     @GetMapping
     @Operation(
-            summary = "Listar grupos activos",
-            description = "Devuelve grupos activos. Filtrá por idCarrera y/o generacion para acotar resultados."
+            summary = "Listar grupos",
+            description = "Filtrá por idCarrera y/o generacion para acotar resultados. Sin el parámetro estado, devuelve solo los ACTIVOS."
     )
     @ApiResponse(responseCode = "200", description = "Listado obtenido")
     public ResponseEntity<List<GrupoResponseDTO>> listar(
             @RequestParam(required = false) Integer idCarrera,
-            @RequestParam(required = false) Integer generacion) {
+            @RequestParam(required = false) Integer generacion,
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado) {
 
-        return ResponseEntity.ok(grupoService.listar(idCarrera, generacion));
+        return ResponseEntity.ok(grupoService.listar(idCarrera, generacion, estado));
     }
 
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar grupo", description = "Actualiza nombre y generación de un grupo. La carrera no es modificable.")
-    @ApiResponse(responseCode = "200", description = "Grupo actualizado")
+    @Operation(summary = "Editar grupo", description = "Edita nombre y generación de un grupo. La carrera no es modificable.")
+    @ApiResponse(responseCode = "200", description = "Grupo editado")
     @ApiResponse(responseCode = "404", description = "Grupo no encontrado")
     @ApiResponse(responseCode = "409", description = "Ya existe un grupo activo con ese nombre para esa carrera y generación")
-    public ResponseEntity<GrupoResponseDTO> actualizar(
+    public ResponseEntity<GrupoResponseDTO> editar(
             @PathVariable Integer id,
             @Valid @RequestBody GrupoUpdateDTO dto) {
 
-        return ResponseEntity.ok(grupoService.actualizar(id, dto));
+        return ResponseEntity.ok(grupoService.editar(id, dto));
     }
 
 

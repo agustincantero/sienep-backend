@@ -106,29 +106,45 @@ class CarreraServiceTest {
     }
 
     @Test
-    @DisplayName("Listar - Éxito")
-    void listar_Exito() {
+    @DisplayName("Listar - Sin parámetro estado, devuelve solo ACTIVAS")
+    void listar_SinEstado_DevuelveSoloActivas() {
         List<Carrera> carreras = List.of(carreraMock);
         List<CarreraResponseDTO> responseDTOs = List.of(responseDTO);
 
-        when(carreraRepository.findAll()).thenReturn(carreras);
+        when(carreraRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(carreras);
         when(carreraMapper.toDtoList(carreras)).thenReturn(responseDTOs);
 
-        List<CarreraResponseDTO> result = carreraService.listar();
+        List<CarreraResponseDTO> result = carreraService.listar(null);
 
         assertNotNull(result);
         assertEquals(1, result.size());
+        verify(carreraRepository).findByEstado(EstadoLogico.ACTIVO);
     }
 
     @Test
-    @DisplayName("Actualizar carrera - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Listar - Con estado explícito, filtra por ese estado")
+    void listar_ConEstado_FiltraPorEseEstado() {
+        List<Carrera> carreras = List.of(carreraMock);
+        List<CarreraResponseDTO> responseDTOs = List.of(responseDTO);
+
+        when(carreraRepository.findByEstado(EstadoLogico.INACTIVO)).thenReturn(carreras);
+        when(carreraMapper.toDtoList(carreras)).thenReturn(responseDTOs);
+
+        List<CarreraResponseDTO> result = carreraService.listar(EstadoLogico.INACTIVO);
+
+        assertNotNull(result);
+        verify(carreraRepository).findByEstado(EstadoLogico.INACTIVO);
+    }
+
+    @Test
+    @DisplayName("Editar carrera - Éxito")
+    void editar_Exito() {
         when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
         when(carreraRepository.save(any(Carrera.class))).thenReturn(carreraMock);
         when(carreraMapper.toDto(any(Carrera.class))).thenReturn(responseDTO);
 
         requestDTO.setNomCarrera("Nuevo Nombre");
-        CarreraResponseDTO result = carreraService.actualizar(1, requestDTO);
+        CarreraResponseDTO result = carreraService.editar(1, requestDTO);
 
         assertNotNull(result);
         assertEquals("Nuevo Nombre", carreraMock.getNomCarrera()); // Verificamos que se seteó en la entidad
@@ -136,24 +152,24 @@ class CarreraServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar carrera - Rechaza editar una carrera inactiva (M3)")
-    void actualizar_LanzaConflicto_CarreraInactiva() {
+    @DisplayName("Editar carrera - Rechaza editar una carrera inactiva (M3)")
+    void editar_LanzaConflicto_CarreraInactiva() {
         carreraMock.setEstado(EstadoLogico.INACTIVO);
         when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> carreraService.actualizar(1, requestDTO));
+                () -> carreraService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(carreraRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar carrera - No encontrada")
-    void actualizar_LanzaExcepcion_NoEncontrada() {
+    @DisplayName("Editar carrera - No encontrada")
+    void editar_LanzaExcepcion_NoEncontrada() {
         when(carreraRepository.findById(99)).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> carreraService.actualizar(99, requestDTO));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> carreraService.editar(99, requestDTO));
         
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(carreraRepository, never()).save(any());

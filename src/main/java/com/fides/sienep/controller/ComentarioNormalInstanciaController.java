@@ -54,7 +54,7 @@ public class ComentarioNormalInstanciaController {
     @PutMapping("/{idComentario}")
     @Operation(summary = "Editar comentario normal", description = "Edita el contenido de un comentario normal activo.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Comentario actualizado"),
+            @ApiResponse(responseCode = "200", description = "Comentario editado"),
             @ApiResponse(responseCode = "404", description = "Comentario no encontrado"),
             @ApiResponse(responseCode = "403", description = "Sin permisos")
     })

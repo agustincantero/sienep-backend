@@ -110,13 +110,14 @@ public class FuncionarioService {
 
     @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
     @Transactional(readOnly = true)
-    public List<FuncionarioResponseDTO> obtenerTodos() {
-        return funcionarioMapper.toDtoList(funcionarioRepository.findAll());
+    public List<FuncionarioResponseDTO> listar(EstadoLogico estado) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        return funcionarioMapper.toDtoList(funcionarioRepository.findByEstado(estadoEfectivo));
     }
 
     @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
     @Transactional
-    public FuncionarioResponseDTO actualizar(Integer id, FuncionarioUpdateDTO dto) {
+    public FuncionarioResponseDTO editar(Integer id, FuncionarioUpdateDTO dto) {
 
         Funcionario funcionario = buscarOFallar(id);
 

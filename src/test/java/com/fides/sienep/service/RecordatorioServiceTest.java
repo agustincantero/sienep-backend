@@ -299,14 +299,14 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Listar activos - Éxito, paginado")
-    void listarActivos_Exito() {
+    @DisplayName("Listar - Sin estado, devuelve solo ACTIVOS, paginado")
+    void listar_SinEstado_DevuelveSoloActivos() {
         Pageable pageable = PageRequest.of(0, 20);
         when(recordatorioRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(recordatorio), pageable, 1));
         when(recordatorioMapper.toDtoList(List.of(recordatorio))).thenReturn(List.of(responseDTO));
 
-        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarActivos(pageable);
+        Page<RecordatorioResponseDTO> resultado = recordatorioService.listar(null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
@@ -314,12 +314,12 @@ class RecordatorioServiceTest {
 
     @Test
     @DisplayName("Buscar por ID - Éxito")
-    void buscarPorId_Exito() {
+    void obtenerPorId_Exito() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
-        RecordatorioResponseDTO resultado = recordatorioService.buscarPorId(1);
+        RecordatorioResponseDTO resultado = recordatorioService.obtenerPorId(1);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodRecordatorio());
@@ -327,19 +327,19 @@ class RecordatorioServiceTest {
 
     @Test
     @DisplayName("Buscar por ID - No encontrado (404)")
-    void buscarPorId_LanzaNotFound() {
+    void obtenerPorId_LanzaNotFound() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.buscarPorId(99));
+                () -> recordatorioService.obtenerPorId(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar recordatorio - Éxito")
+    void editar_Exito() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
@@ -348,87 +348,87 @@ class RecordatorioServiceTest {
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
-        RecordatorioResponseDTO resultado = recordatorioService.actualizar(1, requestDTO);
+        RecordatorioResponseDTO resultado = recordatorioService.editar(1, requestDTO);
 
         assertNotNull(resultado);
         verify(recordatorioRepository).save(recordatorio);
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Reasignar a otra instancia lanza 409 (B11)")
-    void actualizar_LanzaConflict_CambioDeInstancia() {
+    @DisplayName("Editar recordatorio - Reasignar a otra instancia lanza 409 (B11)")
+    void editar_LanzaConflict_CambioDeInstancia() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
 
         requestDTO.setCodInstancia(2);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.actualizar(1, requestDTO));
+                () -> recordatorioService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - No encontrado (404)")
-    void actualizar_LanzaNotFound() {
+    @DisplayName("Editar recordatorio - No encontrado (404)")
+    void editar_LanzaNotFound() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.actualizar(99, requestDTO));
+                () -> recordatorioService.editar(99, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Instancia no encontrada (404)")
-    void actualizar_LanzaNotFound_InstanciaNoExiste() {
+    @DisplayName("Editar recordatorio - Instancia no encontrada (404)")
+    void editar_LanzaNotFound_InstanciaNoExiste() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.actualizar(1, requestDTO));
+                () -> recordatorioService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Instancia inactiva (422)")
-    void actualizar_LanzaUnprocessable_InstanciaInactiva() {
+    @DisplayName("Editar recordatorio - Instancia inactiva (422)")
+    void editar_LanzaUnprocessable_InstanciaInactiva() {
         when(instancia.getEstado()).thenReturn(EstadoLogico.INACTIVO);
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.actualizar(1, requestDTO));
+                () -> recordatorioService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Categoría no encontrada (404)")
-    void actualizar_LanzaNotFound_CategoriaNoExiste() {
+    @DisplayName("Editar recordatorio - Categoría no encontrada (404)")
+    void editar_LanzaNotFound_CategoriaNoExiste() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.actualizar(1, requestDTO));
+                () -> recordatorioService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Responsable no encontrado (404)")
-    void actualizar_LanzaNotFound_ResponsableNoExiste() {
+    @DisplayName("Editar recordatorio - Responsable no encontrado (404)")
+    void editar_LanzaNotFound_ResponsableNoExiste() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
@@ -436,15 +436,15 @@ class RecordatorioServiceTest {
         when(funcionarioRepository.findById(2)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.actualizar(1, requestDTO));
+                () -> recordatorioService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Frecuencia no encontrada (404)")
-    void actualizar_LanzaNotFound_FrecuenciaNoExiste() {
+    @DisplayName("Editar recordatorio - Frecuencia no encontrada (404)")
+    void editar_LanzaNotFound_FrecuenciaNoExiste() {
         requestDTO.setIdFrecuencia(99);
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
@@ -454,15 +454,15 @@ class RecordatorioServiceTest {
         when(frecuenciaRepository.findById(99)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.actualizar(1, requestDTO));
+                () -> recordatorioService.editar(1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(recordatorioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Limpiar frecuencia cuando es null")
-    void actualizar_LimpiaFrecuencia_CuandoIdFrecuenciaEsNull() {
+    @DisplayName("Editar recordatorio - Limpiar frecuencia cuando es null")
+    void editar_LimpiaFrecuencia_CuandoIdFrecuenciaEsNull() {
         requestDTO.setIdFrecuencia(null);
         recordatorio.setFrecuencia(new Frecuencia());
 
@@ -474,17 +474,17 @@ class RecordatorioServiceTest {
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
-        recordatorioService.actualizar(1, requestDTO);
+        recordatorioService.editar(1, requestDTO);
 
         assertNull(recordatorio.getFrecuencia());
         verify(recordatorioRepository).save(recordatorio);
     }
 
-    // ── Actualizar - RF22 (sync Calendar) / RF23 (reset notificación) ──
+    // ── Editar - RF22 (sync Calendar) / RF23 (reset notificación) ──
 
     @Test
-    @DisplayName("Actualizar recordatorio - Resetea notificadoProximidad cuando cambia la fecha (RF23)")
-    void actualizar_ReseteaNotificadoProximidad_CuandoCambiaFecha() {
+    @DisplayName("Editar recordatorio - Resetea notificadoProximidad cuando cambia la fecha (RF23)")
+    void editar_ReseteaNotificadoProximidad_CuandoCambiaFecha() {
         recordatorio.setNotificadoProximidad(true);
         requestDTO.setFechaHora(recordatorio.getFechaHora().plusDays(3));
 
@@ -496,14 +496,14 @@ class RecordatorioServiceTest {
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
-        recordatorioService.actualizar(1, requestDTO);
+        recordatorioService.editar(1, requestDTO);
 
         assertFalse(recordatorio.isNotificadoProximidad());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - No resetea notificadoProximidad cuando la fecha no cambia (RF23)")
-    void actualizar_NoReseteaNotificadoProximidad_CuandoFechaNoCambia() {
+    @DisplayName("Editar recordatorio - No resetea notificadoProximidad cuando la fecha no cambia (RF23)")
+    void editar_NoReseteaNotificadoProximidad_CuandoFechaNoCambia() {
         LocalDateTime mismaFecha = LocalDateTime.now().plusDays(1);
         recordatorio.setFechaHora(mismaFecha);
         recordatorio.setNotificadoProximidad(true);
@@ -517,14 +517,14 @@ class RecordatorioServiceTest {
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
-        recordatorioService.actualizar(1, requestDTO);
+        recordatorioService.editar(1, requestDTO);
 
         assertTrue(recordatorio.isNotificadoProximidad());
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Actualiza el evento existente cuando el responsable no cambió (RF22)")
-    void actualizar_ActualizaEventoGoogle_CuandoResponsableNoCambia() {
+    @DisplayName("Editar recordatorio - Actualiza el evento existente cuando el responsable no cambió (RF22)")
+    void editar_ActualizaEventoGoogle_CuandoResponsableNoCambia() {
         recordatorio.setEventIdGoogle("evento-existente-id");
         FuncionarioGcal gcal = new FuncionarioGcal(responsable, "refresh-token", "juan@gmail.com");
 
@@ -537,7 +537,7 @@ class RecordatorioServiceTest {
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
         when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcal));
 
-        recordatorioService.actualizar(1, requestDTO);
+        recordatorioService.editar(1, requestDTO);
 
         verify(googleCalendarService).actualizarEvento(recordatorio, "evento-existente-id", "refresh-token");
         verify(googleCalendarService, never()).crearEvento(any(), any());
@@ -545,8 +545,8 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Cambia responsable: borra el evento viejo y crea uno nuevo (RF22)")
-    void actualizar_CambiaResponsable_BorraYCreaEvento() {
+    @DisplayName("Editar recordatorio - Cambia responsable: borra el evento viejo y crea uno nuevo (RF22)")
+    void editar_CambiaResponsable_BorraYCreaEvento() {
         recordatorio.setEventIdGoogle("evento-viejo-id");
 
         Funcionario responsableNuevo = new Funcionario();
@@ -571,7 +571,7 @@ class RecordatorioServiceTest {
         when(funcionarioGcalRepository.findByFuncionarioIdUsuario(3)).thenReturn(Optional.of(gcalNuevo));
         when(googleCalendarService.crearEvento(any(), eq("refresh-token-nuevo"))).thenReturn("evento-nuevo-id");
 
-        recordatorioService.actualizar(1, requestDTO);
+        recordatorioService.editar(1, requestDTO);
 
         verify(googleCalendarService).eliminarEvento("evento-viejo-id", "refresh-token-viejo");
         verify(googleCalendarService).crearEvento(recordatorio, "refresh-token-nuevo");
@@ -580,8 +580,8 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Evento nuevo creado en Google pero falla el guardado local, no propaga")
-    void actualizar_CambiaResponsable_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
+    @DisplayName("Editar recordatorio - Evento nuevo creado en Google pero falla el guardado local, no propaga")
+    void editar_CambiaResponsable_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
         recordatorio.setEventIdGoogle("evento-viejo-id");
 
         Funcionario responsableNuevo = new Funcionario();
@@ -609,7 +609,7 @@ class RecordatorioServiceTest {
         when(googleCalendarService.crearEvento(any(), eq("refresh-token-nuevo"))).thenReturn("evento-nuevo-id");
 
         RecordatorioResponseDTO resultado = assertDoesNotThrow(
-                () -> recordatorioService.actualizar(1, requestDTO));
+                () -> recordatorioService.editar(1, requestDTO));
 
         assertNotNull(resultado);
         verify(googleCalendarService).crearEvento(recordatorio, "refresh-token-nuevo");
@@ -617,8 +617,8 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar recordatorio - Responsable sin Google Calendar vinculado: no sincroniza")
-    void actualizar_NoSincroniza_CuandoResponsableSinGcal() {
+    @DisplayName("Editar recordatorio - Responsable sin Google Calendar vinculado: no sincroniza")
+    void editar_NoSincroniza_CuandoResponsableSinGcal() {
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
@@ -628,7 +628,7 @@ class RecordatorioServiceTest {
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
         // funcionarioGcalRepository sin stub → Optional.empty() por defecto
 
-        recordatorioService.actualizar(1, requestDTO);
+        recordatorioService.editar(1, requestDTO);
 
         verifyNoInteractions(googleCalendarService);
     }
@@ -658,28 +658,28 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por instancia - Éxito, paginado")
+    @DisplayName("Listar por instancia - Sin estado, devuelve solo ACTIVOS, paginado")
     void listarPorInstancia_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(recordatorioRepository.findByInstanciaAndEstado(1, EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(recordatorio), pageable, 1));
         when(recordatorioMapper.toDtoList(List.of(recordatorio))).thenReturn(List.of(responseDTO));
 
-        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarPorInstancia(1, pageable);
+        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarPorInstancia(1, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por responsable - Éxito, paginado")
+    @DisplayName("Listar por responsable - Sin estado, devuelve solo ACTIVOS, paginado")
     void listarPorResponsable_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(recordatorioRepository.findByResponsableAndEstado(2, EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(recordatorio), pageable, 1));
         when(recordatorioMapper.toDtoList(List.of(recordatorio))).thenReturn(List.of(responseDTO));
 
-        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarPorResponsable(2, pageable);
+        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarPorResponsable(2, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());

@@ -226,41 +226,45 @@ public class InstanciaComunService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public Page<InstanciaComunResponseDTO> listarActivas(Pageable pageable) {
-        Page<InstanciaComun> pagina = instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO, pageable);
+    public Page<InstanciaComunResponseDTO> listar(EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        Page<InstanciaComun> pagina = instanciaComunRepository.findByEstado(estadoEfectivo, pageable);
         List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public InstanciaComunResponseDTO buscarPorId(int codInstancia) {
+    public InstanciaComunResponseDTO obtenerPorId(int codInstancia) {
         return instanciaComunMapper.toDto(buscarActivaOFallar(codInstancia));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public Page<InstanciaComunResponseDTO> listarPorEstudiante(int idEstudiante, Pageable pageable) {
+    public Page<InstanciaComunResponseDTO> listarPorEstudiante(int idEstudiante, EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<InstanciaComun> pagina = instanciaComunRepository.findByEstudianteAndEstado(
-                idEstudiante, EstadoLogico.ACTIVO, pageable);
+                idEstudiante, estadoEfectivo, pageable);
         List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public Page<InstanciaComunResponseDTO> listarPorFuncionario(int idFuncionario, Pageable pageable) {
+    public Page<InstanciaComunResponseDTO> listarPorFuncionario(int idFuncionario, EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<InstanciaComun> pagina = instanciaComunRepository.findByFuncionarioAndEstado(
-                idFuncionario, EstadoLogico.ACTIVO, pageable);
+                idFuncionario, estadoEfectivo, pageable);
         List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
-    public Page<InstanciaComunResponseDTO> listarPorCategoria(int idCategoria, Pageable pageable) {
+    public Page<InstanciaComunResponseDTO> listarPorCategoria(int idCategoria, EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<InstanciaComun> pagina = instanciaComunRepository.findByCategoriaAndEstado(
-                idCategoria, EstadoLogico.ACTIVO, pageable);
+                idCategoria, estadoEfectivo, pageable);
         List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
@@ -275,7 +279,7 @@ public class InstanciaComunService {
 
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_INSTANCIA')")
-    public InstanciaComunResponseDTO actualizar(int codInstancia, InstanciaComunUpdateDTO dto) {
+    public InstanciaComunResponseDTO editar(int codInstancia, InstanciaComunUpdateDTO dto) {
         InstanciaComun instancia = buscarActivaOFallar(codInstancia);
 
         CategoriaInstancia categoria = categoriaInstanciaRepository.findById(dto.getIdCategoria())

@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * DTO de entrada para crear o actualizar un Estudiante.
+ * DTO de entrada para crear o editar un Estudiante.
  *
  * Separa la entidad JPA de lo que llega por HTTP.
  * Ventajas:
@@ -28,7 +28,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Datos para registrar o actualizar un estudiante")
+@Schema(description = "Datos para registrar o editar un estudiante")
 public class EstudianteRequestDTO {
 
     @NotBlank

@@ -276,15 +276,15 @@ class FuncionarioServiceTest {
     }
 
     @Test
-    @DisplayName("Obtener todos - Éxito")
-    void obtenerTodos_Exito() {
+    @DisplayName("Listar - Sin parámetro estado, devuelve solo ACTIVOS")
+    void listar_SinEstado_DevuelveSoloActivos() {
         List<Funcionario> funcionarios = List.of(funcionarioMock);
         List<FuncionarioResponseDTO> dtos = List.of(responseDTO);
 
-        when(funcionarioRepository.findAll()).thenReturn(funcionarios);
+        when(funcionarioRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(funcionarios);
         when(funcionarioMapper.toDtoList(funcionarios)).thenReturn(dtos);
 
-        List<FuncionarioResponseDTO> result = funcionarioService.obtenerTodos();
+        List<FuncionarioResponseDTO> result = funcionarioService.listar(null);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -295,8 +295,8 @@ class FuncionarioServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Actualizar funcionario - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar funcionario - Éxito")
+    void editar_Exito() {
         mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
 
         FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
@@ -311,7 +311,7 @@ class FuncionarioServiceTest {
         when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
         when(funcionarioMapper.toDto(any(Funcionario.class))).thenReturn(responseDTO);
 
-        FuncionarioResponseDTO result = funcionarioService.actualizar(1, updateDTO);
+        FuncionarioResponseDTO result = funcionarioService.editar(1, updateDTO);
 
         assertNotNull(result);
         assertEquals("González", funcionarioMock.getApellido());
@@ -319,8 +319,8 @@ class FuncionarioServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar funcionario - Éxito cuando el actor ya tiene todos los permisos del rol destino")
-    void actualizar_Exito_CuandoActorTieneLosPermisosDelRolDestino() {
+    @DisplayName("Editar funcionario - Éxito cuando el actor ya tiene todos los permisos del rol destino")
+    void editar_Exito_CuandoActorTieneLosPermisosDelRolDestino() {
         Rol rolAdmin = new Rol("ADMINISTRADOR");
         rolAdmin.setIdRol(2);
         rolAdmin.agregarPermiso(new Permiso("EDITAR_FUNCIONARIO", "Permite editar funcionarios"));
@@ -338,15 +338,15 @@ class FuncionarioServiceTest {
         when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
         when(funcionarioMapper.toDto(any(Funcionario.class))).thenReturn(responseDTO);
 
-        FuncionarioResponseDTO result = funcionarioService.actualizar(1, updateDTO);
+        FuncionarioResponseDTO result = funcionarioService.editar(1, updateDTO);
 
         assertNotNull(result);
         verify(funcionarioRepository).save(funcionarioMock);
     }
 
     @Test
-    @DisplayName("Actualizar funcionario - Rechaza asignar un rol con permisos que el actor no tiene (403)")
-    void actualizar_LanzaForbidden_CuandoRolDestinoTienePermisoQueElActorNoTiene() {
+    @DisplayName("Editar funcionario - Rechaza asignar un rol con permisos que el actor no tiene (403)")
+    void editar_LanzaForbidden_CuandoRolDestinoTienePermisoQueElActorNoTiene() {
         Rol rolAdmin = new Rol("ADMINISTRADOR");
         rolAdmin.setIdRol(2);
         rolAdmin.agregarPermiso(new Permiso("EDITAR_FUNCIONARIO", "Permite editar funcionarios"));
@@ -366,15 +366,15 @@ class FuncionarioServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> funcionarioService.actualizar(1, updateDTO));
+                () -> funcionarioService.editar(1, updateDTO));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(funcionarioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar funcionario - No encontrado → 404")
-    void actualizar_LanzaExcepcion_NoEncontrado() {
+    @DisplayName("Editar funcionario - No encontrado → 404")
+    void editar_LanzaExcepcion_NoEncontrado() {
         FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
         updateDTO.setNombre("Carlos");
         updateDTO.setApellido("González");
@@ -385,7 +385,7 @@ class FuncionarioServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> funcionarioService.actualizar(99, updateDTO));
+                () -> funcionarioService.editar(99, updateDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(funcionarioRepository, never()).save(any());

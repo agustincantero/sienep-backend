@@ -3,8 +3,10 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.InstanciaComunRequestDTO;
 import com.fides.sienep.dto.InstanciaComunResponseDTO;
 import com.fides.sienep.dto.InstanciaComunUpdateDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.InstanciaComunService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -43,44 +45,47 @@ public class InstanciaComunController {
         return ResponseEntity.status(HttpStatus.CREATED).body(instanciaComunService.crear(dto));
     }
 
-    @Operation(summary = "Buscar instancia por ID")
+    @Operation(summary = "Obtener instancia por ID")
     @ApiResponse(responseCode = "200", description = "Instancia encontrada")
     @ApiResponse(responseCode = "404", description = "Instancia no encontrada")
     @GetMapping("/{codInstancia}")
-    public ResponseEntity<InstanciaComunResponseDTO> buscarPorId(@PathVariable int codInstancia) {
-        return ResponseEntity.ok(instanciaComunService.buscarPorId(codInstancia));
+    public ResponseEntity<InstanciaComunResponseDTO> obtenerPorId(@PathVariable int codInstancia) {
+        return ResponseEntity.ok(instanciaComunService.obtenerPorId(codInstancia));
     }
 
-    @Operation(summary = "Listar instancias con filtros opcionales")
+    @Operation(summary = "Listar instancias con filtros opcionales",
+            description = "Sin el parámetro estado, devuelve solo las ACTIVAS.")
     @ApiResponse(responseCode = "200", description = "Página de instancias")
     @GetMapping
     public ResponseEntity<Page<InstanciaComunResponseDTO>> listar(
             @RequestParam(required = false) Integer idEstudiante,
             @RequestParam(required = false) Integer idFuncionario,
             @RequestParam(required = false) Integer idCategoria,
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado,
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
 
         if (idEstudiante != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorEstudiante(idEstudiante, pageable));
+            return ResponseEntity.ok(instanciaComunService.listarPorEstudiante(idEstudiante, estado, pageable));
         }
         if (idFuncionario != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorFuncionario(idFuncionario, pageable));
+            return ResponseEntity.ok(instanciaComunService.listarPorFuncionario(idFuncionario, estado, pageable));
         }
         if (idCategoria != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorCategoria(idCategoria, pageable));
+            return ResponseEntity.ok(instanciaComunService.listarPorCategoria(idCategoria, estado, pageable));
         }
-        return ResponseEntity.ok(instanciaComunService.listarActivas(pageable));
+        return ResponseEntity.ok(instanciaComunService.listar(estado, pageable));
     }
 
-    @Operation(summary = "Actualizar una instancia")
-    @ApiResponse(responseCode = "200", description = "Instancia actualizada correctamente")
+    @Operation(summary = "Editar una instancia")
+    @ApiResponse(responseCode = "200", description = "Instancia editada correctamente")
     @ApiResponse(responseCode = "400", description = "Datos inválidos")
     @ApiResponse(responseCode = "404", description = "Instancia o categoría no encontrada")
     @PutMapping("/{codInstancia}")
-    public ResponseEntity<InstanciaComunResponseDTO> actualizar(
+    public ResponseEntity<InstanciaComunResponseDTO> editar(
             @PathVariable int codInstancia,
             @Valid @RequestBody InstanciaComunUpdateDTO dto) {
-        return ResponseEntity.ok(instanciaComunService.actualizar(codInstancia, dto));
+        return ResponseEntity.ok(instanciaComunService.editar(codInstancia, dto));
     }
 
     @Operation(summary = "Desactivar una instancia")

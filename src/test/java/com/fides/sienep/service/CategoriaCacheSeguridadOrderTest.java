@@ -70,12 +70,12 @@ class CategoriaCacheSeguridadOrderTest {
         dto.setNomCategoria("REUNION");
         dto.setEstado(EstadoLogico.ACTIVO);
 
-        when(categoriaRepository.buscarConFiltros(null, null)).thenReturn(List.of(categoria));
+        when(categoriaRepository.buscarConFiltros(null, EstadoLogico.ACTIVO)).thenReturn(List.of(categoria));
         when(categoriaMapper.toDtoList(List.of(categoria))).thenReturn(List.of(dto));
 
         // 1) Usuario CON el permiso: pasa el chequeo y puebla la caché
         autenticarCon("VER_CATEGORIAS_INSTANCIA");
-        List<CategoriaInstanciaResponseDTO> primero = categoriaInstanciaService.obtenerTodas(null, null);
+        List<CategoriaInstanciaResponseDTO> primero = categoriaInstanciaService.listar(null, null);
         assertEquals(1, primero.size());
 
         // 2) Usuario SIN el permiso, misma clave de caché (mismos parámetros: null, null).
@@ -84,7 +84,7 @@ class CategoriaCacheSeguridadOrderTest {
         // sin importar que la respuesta ya esté en caché.
         autenticarCon("ALGUN_OTRO_PERMISO");
         assertThrows(AccessDeniedException.class,
-                () -> categoriaInstanciaService.obtenerTodas(null, null));
+                () -> categoriaInstanciaService.listar(null, null));
     }
 
     private void autenticarCon(String permiso) {

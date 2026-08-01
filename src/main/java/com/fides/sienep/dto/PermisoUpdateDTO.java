@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-@Schema(description = "DTO para actualizar la descripción de un permiso. El nombre y el estado son inmutables.")
+@Schema(description = "DTO para editar la descripción de un permiso. El nombre y el estado son inmutables.")
 public class PermisoUpdateDTO {
 
     @Schema(description = "Nueva descripción aclaratoria del permiso", example = "Permite a los usuarios acceder al panel de instancias")

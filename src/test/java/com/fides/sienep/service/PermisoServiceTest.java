@@ -38,15 +38,15 @@ public class PermisoServiceTest {
     private PermisoService permisoService;
 
     @Test
-    @DisplayName("Obtener todos los permisos - Éxito")
-    void obtenerTodos_DebeRetornarListaDePermisos() {
+    @DisplayName("Listar permisos - Éxito")
+    void listar_DebeRetornarListaDePermisos() {
         // Arrange
         Permiso p1 = new Permiso("PERMISO_1", 1, "desc 1", EstadoLogico.ACTIVO);
         Permiso p2 = new Permiso("PERMISO_2", 2, "desc 2", EstadoLogico.ACTIVO);
         when(permisoRepository.findAll()).thenReturn(List.of(p1, p2));
 
         // Act
-        List<PermisoResponseDTO> resultado = permisoService.obtenerTodos();
+        List<PermisoResponseDTO> resultado = permisoService.listar();
 
         // Assert
         assertNotNull(resultado);
@@ -56,8 +56,8 @@ public class PermisoServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar descripción del permiso - Éxito")
-    void actualizarDescripcion_Exito() {
+    @DisplayName("Editar descripción del permiso - Éxito")
+    void editarDescripcion_Exito() {
         // Arrange
         int permisoId = 1;
         Permiso permisoExistente = new Permiso("EDITAR_ALGO", permisoId, "Vieja descripcion", EstadoLogico.ACTIVO);
@@ -69,7 +69,7 @@ public class PermisoServiceTest {
         when(permisoRepository.save(any(Permiso.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        PermisoResponseDTO resultado = permisoService.actualizarDescripcion(permisoId, updateDTO);
+        PermisoResponseDTO resultado = permisoService.editarDescripcion(permisoId, updateDTO);
 
         // Assert
         assertNotNull(resultado);
@@ -79,8 +79,8 @@ public class PermisoServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar descripción - Permiso no encontrado (404)")
-    void actualizarDescripcion_LanzaNotFound_CuandoPermisoNoExiste() {
+    @DisplayName("Editar descripción - Permiso no encontrado (404)")
+    void editarDescripcion_LanzaNotFound_CuandoPermisoNoExiste() {
         // Arrange
         int permisoId = 99;
         PermisoUpdateDTO updateDTO = new PermisoUpdateDTO();
@@ -90,7 +90,7 @@ public class PermisoServiceTest {
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            permisoService.actualizarDescripcion(permisoId, updateDTO);
+            permisoService.editarDescripcion(permisoId, updateDTO);
         });
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());

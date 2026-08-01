@@ -182,39 +182,39 @@ class FrecuenciaServiceTest {
     }
 
     @Test
-    @DisplayName("Listar - Con estado filtra por ese estado")
+    @DisplayName("Listar - Con estado explícito filtra por ese estado")
     void listar_ConEstado_Exito() {
-        when(frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(frecuencia));
+        when(frecuenciaRepository.findByEstado(EstadoLogico.INACTIVO)).thenReturn(List.of(frecuencia));
         when(frecuenciaMapper.toDtoList(List.of(frecuencia))).thenReturn(List.of(responseDTO));
 
-        List<FrecuenciaResponseDTO> resultado = frecuenciaService.listar(EstadoLogico.ACTIVO);
+        List<FrecuenciaResponseDTO> resultado = frecuenciaService.listar(EstadoLogico.INACTIVO);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.size());
-        verify(frecuenciaRepository, never()).findAll();
+        verify(frecuenciaRepository).findByEstado(EstadoLogico.INACTIVO);
     }
 
     @Test
-    @DisplayName("Listar - Sin estado (B10) devuelve todas sin filtrar")
-    void listar_SinEstado_DevuelveTodas() {
-        when(frecuenciaRepository.findAll()).thenReturn(List.of(frecuencia));
+    @DisplayName("Listar - Sin estado, devuelve solo ACTIVAS")
+    void listar_SinEstado_DevuelveSoloActivas() {
+        when(frecuenciaRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(frecuencia));
         when(frecuenciaMapper.toDtoList(List.of(frecuencia))).thenReturn(List.of(responseDTO));
 
         List<FrecuenciaResponseDTO> resultado = frecuenciaService.listar(null);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.size());
-        verify(frecuenciaRepository, never()).findByEstado(any());
+        verify(frecuenciaRepository).findByEstado(EstadoLogico.ACTIVO);
     }
 
     @Test
     @DisplayName("Buscar por ID - Éxito")
-    void buscarPorId_Exito() {
+    void obtenerPorId_Exito() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(frecuencia));
         when(frecuenciaMapper.toDto(frecuencia)).thenReturn(responseDTO);
 
-        FrecuenciaResponseDTO resultado = frecuenciaService.buscarPorId(1);
+        FrecuenciaResponseDTO resultado = frecuenciaService.obtenerPorId(1);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getIdFrecuencia());
@@ -222,38 +222,38 @@ class FrecuenciaServiceTest {
 
     @Test
     @DisplayName("Buscar por ID - No encontrada (404)")
-    void buscarPorId_LanzaNotFound() {
+    void obtenerPorId_LanzaNotFound() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> frecuenciaService.buscarPorId(99));
+                () -> frecuenciaService.obtenerPorId(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
-    @DisplayName("Actualizar frecuencia - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar frecuencia - Éxito")
+    void editar_Exito() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(frecuencia));
         when(frecuenciaRepository.save(any(Frecuencia.class))).thenReturn(frecuencia);
         when(frecuenciaMapper.toDto(frecuencia)).thenReturn(responseDTO);
 
-        FrecuenciaResponseDTO resultado = frecuenciaService.actualizar(1, requestDTO);
+        FrecuenciaResponseDTO resultado = frecuenciaService.editar(1, requestDTO);
 
         assertNotNull(resultado);
         verify(frecuenciaRepository).save(frecuencia);
     }
 
     @Test
-    @DisplayName("Actualizar frecuencia - No encontrada (404)")
-    void actualizar_LanzaNotFound() {
+    @DisplayName("Editar frecuencia - No encontrada (404)")
+    void editar_LanzaNotFound() {
         when(frecuenciaRepository.findByIdFrecuenciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> frecuenciaService.actualizar(99, requestDTO));
+                () -> frecuenciaService.editar(99, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(frecuenciaRepository, never()).save(any());

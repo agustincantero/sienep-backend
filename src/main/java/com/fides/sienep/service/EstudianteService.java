@@ -173,7 +173,7 @@ public class EstudianteService {
 
     @PreAuthorize("hasAuthority('EDITAR_ESTUDIANTE')")
     @Transactional
-    public EstudianteResponseDTO actualizar(Integer id, EstudianteUpdateDTO dto) {
+    public EstudianteResponseDTO editar(Integer id, EstudianteUpdateDTO dto) {
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambios(estudiante, dto);
         return estudianteMapper.toDto(estudianteRepository.save(estudiante));

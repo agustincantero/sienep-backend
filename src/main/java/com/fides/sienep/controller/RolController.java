@@ -3,6 +3,7 @@ package com.fides.sienep.controller;
 import com.fides.sienep.dto.RolRequestDTO;
 import com.fides.sienep.dto.RolUpdateDTO;
 import com.fides.sienep.dto.RolResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.RolService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,11 +26,13 @@ public class RolController {
 
     private final RolService rolService;
 
-    @Operation(summary = "Obtener todos los roles", description = "Retorna una lista con todos los roles registrados en el sistema, incluyendo sus permisos activos.")
+    @Operation(summary = "Listar roles", description = "Retorna los roles registrados en el sistema, incluyendo sus permisos activos. Sin el parámetro estado, devuelve solo los ACTIVOS.")
     @ApiResponse(responseCode = "200", description = "Operación exitosa")
     @GetMapping
-    public ResponseEntity<List<RolResponseDTO>> obtenerTodos() {
-        return ResponseEntity.ok(rolService.obtenerTodos());
+    public ResponseEntity<List<RolResponseDTO>> listar(
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado) {
+        return ResponseEntity.ok(rolService.listar(estado));
     }
 
     @Operation(summary = "Obtener un rol por ID", description = "Busca y retorna los detalles de un rol específico dado su ID.")
@@ -49,23 +52,23 @@ public class RolController {
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos (ej. nombre repetido o faltan campos obligatorios)")
     })
     @PostMapping
-    public ResponseEntity<RolResponseDTO> crearRol(
+    public ResponseEntity<RolResponseDTO> crear(
             @Parameter(description = "Objeto con los datos del nuevo rol", required = true) @Valid @RequestBody RolRequestDTO requestDTO) {
-        RolResponseDTO nuevoRol = rolService.crearRol(requestDTO);
+        RolResponseDTO nuevoRol = rolService.crear(requestDTO);
         return new ResponseEntity<>(nuevoRol, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Actualizar un rol existente", description = "Modifica los datos de un rol y actualiza su lista de permisos (activando o desactivando según corresponda). Si se envía una lista vacía de permisos, se eliminan todos los permisos asociados al rol.")
+    @Operation(summary = "Editar un rol existente", description = "Modifica los datos de un rol y actualiza su lista de permisos (activando o desactivando según corresponda). Si se envía una lista vacía de permisos, se eliminan todos los permisos asociados al rol.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Rol actualizado exitosamente"),
+            @ApiResponse(responseCode = "200", description = "Rol editado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
             @ApiResponse(responseCode = "404", description = "Rol no encontrado")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<RolResponseDTO> actualizarRol(
-            @Parameter(description = "ID del rol a actualizar", required = true) @PathVariable int id,
+    public ResponseEntity<RolResponseDTO> editar(
+            @Parameter(description = "ID del rol a editar", required = true) @PathVariable int id,
             @Parameter(description = "Objeto con los datos actualizados", required = true) @Valid @RequestBody RolUpdateDTO requestDTO) {
-        return ResponseEntity.ok(rolService.actualizarRol(id, requestDTO));
+        return ResponseEntity.ok(rolService.editar(id, requestDTO));
     }
 
     @Operation(summary = "Desactivar un rol", description = "Cambia el estado del rol a INACTIVO.")
@@ -74,9 +77,9 @@ public class RolController {
             @ApiResponse(responseCode = "404", description = "Rol no encontrado")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> desactivarRol(
+    public ResponseEntity<Void> desactivar(
             @Parameter(description = "ID del rol a desactivar", required = true) @PathVariable int id) {
-        rolService.desactivarRol(id);
+        rolService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -87,8 +90,8 @@ public class RolController {
             @ApiResponse(responseCode = "409", description = "El rol ya está activo")
     })
     @PatchMapping("/{id}/reactivar")
-    public ResponseEntity<RolResponseDTO> reactivarRol(
+    public ResponseEntity<RolResponseDTO> reactivar(
             @Parameter(description = "ID del rol a reactivar", required = true) @PathVariable int id) {
-        return ResponseEntity.ok(rolService.reactivarRol(id));
+        return ResponseEntity.ok(rolService.reactivar(id));
     }
 }

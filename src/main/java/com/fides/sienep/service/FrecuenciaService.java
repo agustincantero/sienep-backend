@@ -37,25 +37,23 @@ public class FrecuenciaService {
         return frecuenciaMapper.toDto(frecuenciaRepository.save(frecuencia));
     }
 
-    // estado=null lista todas, sin filtrar — mismo criterio que CategoriaInstanciaService.obtenerTodas().
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
     public List<FrecuenciaResponseDTO> listar(EstadoLogico estado) {
-        List<Frecuencia> frecuencias = estado != null
-                ? frecuenciaRepository.findByEstado(estado)
-                : frecuenciaRepository.findAll();
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        List<Frecuencia> frecuencias = frecuenciaRepository.findByEstado(estadoEfectivo);
         return frecuenciaMapper.toDtoList(frecuencias);
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public FrecuenciaResponseDTO buscarPorId(int id) {
+    public FrecuenciaResponseDTO obtenerPorId(int id) {
         return frecuenciaMapper.toDto(buscarActivaOFallar(id));
     }
 
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
-    public FrecuenciaResponseDTO actualizar(int id, FrecuenciaRequestDTO dto) {
+    public FrecuenciaResponseDTO editar(int id, FrecuenciaRequestDTO dto) {
         validarCoherenciaFrecuencia(dto);
         Frecuencia frecuencia = buscarActivaOFallar(id);
         frecuencia.setDescripcion(dto.getDescripcion());

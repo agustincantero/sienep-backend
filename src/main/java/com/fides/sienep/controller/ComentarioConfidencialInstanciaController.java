@@ -55,7 +55,7 @@ public class ComentarioConfidencialInstanciaController {
     @PutMapping("/{idComConfidencial}")
     @Operation(summary = "Editar comentario confidencial", description = "Edita el contenido de un comentario confidencial activo.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Comentario actualizado"),
+            @ApiResponse(responseCode = "200", description = "Comentario editado"),
             @ApiResponse(responseCode = "404", description = "Comentario no encontrado"),
             @ApiResponse(responseCode = "403", description = "Sin permisos")
     })

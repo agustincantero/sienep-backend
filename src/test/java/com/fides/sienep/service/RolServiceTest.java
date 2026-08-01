@@ -114,7 +114,7 @@ class RolServiceTest {
 
     @Test
     @DisplayName("Crear Rol - Éxito (Guarda y formatea el nombre)")
-    void crearRol_DebeGuardarYRetornarDTO_CuandoDatosSonValidos() {
+    void crear_DebeGuardarYRetornarDTO_CuandoDatosSonValidos() {
         // Arrange
         RolRequestDTO requestDTO = new RolRequestDTO();
         requestDTO.setNombre("nuevo rol  "); // Lo mandamos con espacios y minúsculas
@@ -141,7 +141,7 @@ class RolServiceTest {
         when(entityManager.getReference(eq(Permiso.class), anyInt())).thenReturn(permisoFalso);
 
         // Act
-        RolResponseDTO resultado = rolService.crearRol(requestDTO);
+        RolResponseDTO resultado = rolService.crear(requestDTO);
 
         // Assert
         assertNotNull(resultado);
@@ -152,7 +152,7 @@ class RolServiceTest {
 
     @Test
     @DisplayName("Crear Rol - Rechaza si el rol nuevo tiene un permiso que el actor no tiene (403)")
-    void crearRol_DebeLanzarForbidden_CuandoActorNoTieneAlgunPermiso() {
+    void crear_DebeLanzarForbidden_CuandoActorNoTieneAlgunPermiso() {
         RolRequestDTO requestDTO = new RolRequestDTO();
         requestDTO.setNombre("rol nuevo");
         requestDTO.setPermisosIds(List.of(1, 2));
@@ -171,7 +171,7 @@ class RolServiceTest {
         when(entityManager.getReference(Permiso.class, 2)).thenReturn(permiso2);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> rolService.crearRol(requestDTO));
+                () -> rolService.crear(requestDTO));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(rolRepository, never()).save(any());
@@ -179,7 +179,7 @@ class RolServiceTest {
 
     @Test
     @DisplayName("Crear Rol - Conflicto si el nombre ya existe (409)")
-    void crearRol_DebeLanzarExcepcion_CuandoNombreYaExiste() {
+    void crear_DebeLanzarExcepcion_CuandoNombreYaExiste() {
         // Arrange
         RolRequestDTO requestDTO = new RolRequestDTO();
         requestDTO.setNombre("TUTOR");
@@ -188,7 +188,7 @@ class RolServiceTest {
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            rolService.crearRol(requestDTO);
+            rolService.crear(requestDTO);
         });
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
@@ -198,7 +198,7 @@ class RolServiceTest {
 
     @Test
     @DisplayName("Desactivar Rol - Lanza Forbidden si intenta borrar ADMINISTRADOR")
-    void desactivarRol_DebeLanzarExcepcion_SiEsAdministrador() {
+    void desactivar_DebeLanzarExcepcion_SiEsAdministrador() {
         // Arrange
         Rol admin = new Rol();
         admin.setIdRol(1);
@@ -208,7 +208,7 @@ class RolServiceTest {
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            rolService.desactivarRol(1);
+            rolService.desactivar(1);
         });
 
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
@@ -218,12 +218,12 @@ class RolServiceTest {
 
     @Test
     @DisplayName("Desactivar Rol - Éxito (Baja lógica)")
-    void desactivarRol_DebeDarDeBajaCorrectamente_CuandoEsRolValido() {
+    void desactivar_DebeDarDeBajaCorrectamente_CuandoEsRolValido() {
         // Arrange
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolExistente));
         
         // Act
-        rolService.desactivarRol(1);
+        rolService.desactivar(1);
         
         // Assert
         assertEquals(EstadoLogico.INACTIVO, rolExistente.getEstado());
@@ -231,13 +231,13 @@ class RolServiceTest {
     }
 
     @Test
-    @DisplayName("Listar todos los roles - Éxito")
-    void obtenerTodos_DebeRetornarListaDeDTOs() {
+    @DisplayName("Listar roles - Sin parámetro estado, devuelve solo ACTIVOS")
+    void listar_SinEstado_DevuelveSoloActivos() {
         // Arrange
-        when(rolRepository.findAll()).thenReturn(List.of(rolExistente));
+        when(rolRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(rolExistente));
 
         // Act
-        List<RolResponseDTO> resultado = rolService.obtenerTodos();
+        List<RolResponseDTO> resultado = rolService.listar(null);
 
         // Assert
         assertFalse(resultado.isEmpty());
@@ -246,8 +246,8 @@ class RolServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar Rol - Modifica datos y sincroniza permisos con éxito")
-    void actualizarRol_DebeActualizarDatosYManejarPermisosCorrectamente() {
+    @DisplayName("Editar Rol - Modifica datos y sincroniza permisos con éxito")
+    void editar_DebeEditarDatosYManejarPermisosCorrectamente() {
         // Arrange
         RolUpdateDTO updateDTO = new RolUpdateDTO();
         updateDTO.setNombre("TUTOR_MODIFICADO");
@@ -275,7 +275,7 @@ class RolServiceTest {
         when(rolRepository.save(any(Rol.class))).thenReturn(rolExistente);
 
         // Act
-        RolResponseDTO resultado = rolService.actualizarRol(1, updateDTO);
+        RolResponseDTO resultado = rolService.editar(1, updateDTO);
 
         // Assert
         assertNotNull(resultado);
@@ -288,8 +288,8 @@ class RolServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar Rol - Rechaza si el rol resultante tiene un permiso que el actor no tiene (403)")
-    void actualizarRol_DebeLanzarForbidden_CuandoActorNoTieneAlgunPermiso() {
+    @DisplayName("Editar Rol - Rechaza si el rol resultante tiene un permiso que el actor no tiene (403)")
+    void editar_DebeLanzarForbidden_CuandoActorNoTieneAlgunPermiso() {
         // Arrange
         RolUpdateDTO updateDTO = new RolUpdateDTO();
         updateDTO.setNombre("TUTOR_MODIFICADO");
@@ -315,15 +315,15 @@ class RolServiceTest {
 
         // Act & Assert
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> rolService.actualizarRol(1, updateDTO));
+                () -> rolService.editar(1, updateDTO));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(rolRepository, never()).save(any(Rol.class));
     }
 
     @Test
-    @DisplayName("Actualizar Rol - Conflicto si intenta usar un nombre existente")
-    void actualizarRol_DebeLanzarExcepcion_SiIntentaPonerUnNombreQueYaExiste() {
+    @DisplayName("Editar Rol - Conflicto si intenta usar un nombre existente")
+    void editar_DebeLanzarExcepcion_SiIntentaPonerUnNombreQueYaExiste() {
         // Arrange
         RolUpdateDTO updateDTO = new RolUpdateDTO();
         updateDTO.setNombre("OTRO_ROL_EXISTENTE");
@@ -333,7 +333,7 @@ class RolServiceTest {
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            rolService.actualizarRol(1, updateDTO);
+            rolService.editar(1, updateDTO);
         });
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());

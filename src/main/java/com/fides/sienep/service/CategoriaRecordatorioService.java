@@ -42,8 +42,9 @@ public class CategoriaRecordatorioService {
     @PreAuthorize("hasAuthority('VER_CATEGORIAS_RECORDATORIO')")
     @Transactional(readOnly = true)
     @Cacheable("categoriasRecordatorio")
-    public List<CategoriaRecordatorioResponseDTO> obtenerTodas(String nombre, EstadoLogico estado) {
-        List<CategoriaRecordatorio> categorias = categoriaRepository.buscarConFiltros(nombre, estado);
+    public List<CategoriaRecordatorioResponseDTO> listar(String nombre, EstadoLogico estado) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        List<CategoriaRecordatorio> categorias = categoriaRepository.buscarConFiltros(nombre, estadoEfectivo);
         return mapper.toDtoList(categorias);
     }
 
@@ -59,7 +60,7 @@ public class CategoriaRecordatorioService {
     @PreAuthorize("hasAuthority('CREAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     @CacheEvict(value = "categoriasRecordatorio", allEntries = true)
-    public CategoriaRecordatorioResponseDTO crearCategoria(CategoriaRecordatorioRequestDTO requestDTO) {
+    public CategoriaRecordatorioResponseDTO crear(CategoriaRecordatorioRequestDTO requestDTO) {
         String nombreNormalizado = requestDTO.getNomCategoria().trim().toUpperCase().replaceAll("\\s+", "_");
 
         if (categoriaRepository.existsByNomCategoria(nombreNormalizado)) {
@@ -78,7 +79,7 @@ public class CategoriaRecordatorioService {
     @PreAuthorize("hasAuthority('EDITAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     @CacheEvict(value = "categoriasRecordatorio", allEntries = true)
-    public CategoriaRecordatorioResponseDTO actualizarCategoria(int id, CategoriaRecordatorioUpdateDTO requestDTO) {
+    public CategoriaRecordatorioResponseDTO editar(int id, CategoriaRecordatorioUpdateDTO requestDTO) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
 
@@ -95,14 +96,14 @@ public class CategoriaRecordatorioService {
         categoria.setNomCategoria(nombreNormalizado);
         categoria.setDescripcion(requestDTO.getDescripcion());
 
-        CategoriaRecordatorio actualizada = categoriaRepository.save(categoria);
-        return mapper.toDto(actualizada);
+        CategoriaRecordatorio editada = categoriaRepository.save(categoria);
+        return mapper.toDto(editada);
     }
 
     @PreAuthorize("hasAuthority('DESACTIVAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     @CacheEvict(value = "categoriasRecordatorio", allEntries = true)
-    public void desactivarCategoria(int id) {
+    public void desactivar(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
 
@@ -121,7 +122,7 @@ public class CategoriaRecordatorioService {
     @PreAuthorize("hasAuthority('REACTIVAR_CATEGORIA_RECORDATORIO')")
     @Transactional
     @CacheEvict(value = "categoriasRecordatorio", allEntries = true)
-    public CategoriaRecordatorioResponseDTO reactivarCategoria(int id) {
+    public CategoriaRecordatorioResponseDTO reactivar(int id) {
         CategoriaRecordatorio categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría de recordatorio no encontrada"));
 

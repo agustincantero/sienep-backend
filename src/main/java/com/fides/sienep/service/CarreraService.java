@@ -60,14 +60,15 @@ public class CarreraService {
     @PreAuthorize("hasAuthority('VER_CARRERAS')")
     @Transactional(readOnly = true)
     @Cacheable("carreras")
-    public List<CarreraResponseDTO> listar() {
-        return carreraMapper.toDtoList(carreraRepository.findAll());
+    public List<CarreraResponseDTO> listar(EstadoLogico estado) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        return carreraMapper.toDtoList(carreraRepository.findByEstado(estadoEfectivo));
     }
 
     @PreAuthorize("hasAuthority('EDITAR_CARRERA')")
     @Transactional
     @CacheEvict(value = "carreras", allEntries = true)
-    public CarreraResponseDTO actualizar(Integer id, CarreraRequestDTO dto) {
+    public CarreraResponseDTO editar(Integer id, CarreraRequestDTO dto) {
         Carrera carrera = buscarOFallar(id);
         if (carrera.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede editar una carrera que no está ACTIVA.");

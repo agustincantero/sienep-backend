@@ -57,8 +57,9 @@ public class RolService {
     @PreAuthorize("hasAuthority('VER_ROLES')")
     @Transactional(readOnly = true)
     @Cacheable("roles")
-    public List<RolResponseDTO> obtenerTodos() {
-        List<Rol> roles = rolRepository.findAll();
+    public List<RolResponseDTO> listar(EstadoLogico estado) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        List<Rol> roles = rolRepository.findByEstado(estadoEfectivo);
         return mapper.toDtoList(roles);
     }
 
@@ -74,7 +75,7 @@ public class RolService {
     @PreAuthorize("hasAuthority('CREAR_ROL')")
     @Transactional
     @CacheEvict(value = "roles", allEntries = true)
-    public RolResponseDTO crearRol(RolRequestDTO requestDTO) {
+    public RolResponseDTO crear(RolRequestDTO requestDTO) {
         // Normalización del nombre
         String nombreNormalizado = requestDTO.getNombre().trim().toUpperCase().replaceAll("\\s+", "_");
 
@@ -115,7 +116,7 @@ public class RolService {
     @PreAuthorize("hasAuthority('EDITAR_ROL')")
     @Transactional
     @CacheEvict(value = "roles", allEntries = true)
-    public RolResponseDTO actualizarRol(int id, RolUpdateDTO requestDTO) {
+    public RolResponseDTO editar(int id, RolUpdateDTO requestDTO) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
 
@@ -181,14 +182,14 @@ public class RolService {
         // ValidadorDePermisosDeRol) — blindaje para roles personalizados (RF34).
         ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
 
-        Rol rolActualizado = rolRepository.save(rol);
-        return mapper.toDto(rolActualizado);
+        Rol rolEditado = rolRepository.save(rol);
+        return mapper.toDto(rolEditado);
     }
 
     @PreAuthorize("hasAuthority('DESACTIVAR_ROL')")
     @Transactional
     @CacheEvict(value = "roles", allEntries = true)
-    public void desactivarRol(int id) {
+    public void desactivar(int id) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
         
@@ -205,7 +206,7 @@ public class RolService {
     @PreAuthorize("hasAuthority('REACTIVAR_ROL')")
     @Transactional
     @CacheEvict(value = "roles", allEntries = true)
-    public RolResponseDTO reactivarRol(int id) {
+    public RolResponseDTO reactivar(int id) {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
 

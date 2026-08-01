@@ -11,7 +11,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Datos para crear o actualizar un grupo")
+@Schema(description = "Datos para crear o editar un grupo")
 public class GrupoRequestDTO {
 
     @NotBlank

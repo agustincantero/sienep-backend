@@ -28,7 +28,7 @@ public class PermisoService {
     @PreAuthorize("hasAuthority('VER_PERMISOS')")
     @Transactional(readOnly = true)
     @Cacheable("permisos")
-    public List<PermisoResponseDTO> obtenerTodos() {
+    public List<PermisoResponseDTO> listar() {
         List<Permiso> permisos = permisoRepository.findAll();
         return mapper.toDtoList(permisos);
     }
@@ -36,7 +36,7 @@ public class PermisoService {
     @PreAuthorize("hasAuthority('EDITAR_PERMISO')")
     @Transactional
     @CacheEvict(value = "permisos", allEntries = true)
-    public PermisoResponseDTO actualizarDescripcion(int id, PermisoUpdateDTO requestDTO) {
+    public PermisoResponseDTO editarDescripcion(int id, PermisoUpdateDTO requestDTO) {
         Permiso permiso = permisoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permiso no encontrado"));
 

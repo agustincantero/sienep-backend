@@ -11,7 +11,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Datos para actualizar un grupo existente (no permite cambiar la carrera)")
+@Schema(description = "Datos para editar un grupo existente (no permite cambiar la carrera)")
 public class GrupoUpdateDTO {
 
     @NotBlank

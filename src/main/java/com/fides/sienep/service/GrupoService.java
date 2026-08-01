@@ -63,18 +63,19 @@ public class GrupoService {
 
     @PreAuthorize("hasAuthority('VER_GRUPOS')")
     @Transactional(readOnly = true)
-    public List<GrupoResponseDTO> listar(Integer idCarrera, Integer generacion) {
+    public List<GrupoResponseDTO> listar(Integer idCarrera, Integer generacion, EstadoLogico estado) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
 
         List<Grupo> grupos;
 
         if (idCarrera != null && generacion != null) {
-            grupos = grupoRepository.findByCarreraIdCarreraAndGeneracionAndEstado(idCarrera, generacion, EstadoLogico.ACTIVO);
+            grupos = grupoRepository.findByCarreraIdCarreraAndGeneracionAndEstado(idCarrera, generacion, estadoEfectivo);
         } else if (idCarrera != null) {
-            grupos = grupoRepository.findByCarreraIdCarreraAndEstado(idCarrera, EstadoLogico.ACTIVO);
+            grupos = grupoRepository.findByCarreraIdCarreraAndEstado(idCarrera, estadoEfectivo);
         } else if (generacion != null) {
-            grupos = grupoRepository.findByGeneracionAndEstado(generacion, EstadoLogico.ACTIVO);
+            grupos = grupoRepository.findByGeneracionAndEstado(generacion, estadoEfectivo);
         } else {
-            grupos = grupoRepository.findByEstado(EstadoLogico.ACTIVO);
+            grupos = grupoRepository.findByEstado(estadoEfectivo);
         }
 
         return grupoMapper.toDtoList(grupos);
@@ -82,7 +83,7 @@ public class GrupoService {
 
     @PreAuthorize("hasAuthority('EDITAR_GRUPO')")
     @Transactional
-    public GrupoResponseDTO actualizar(Integer id, GrupoUpdateDTO dto) {
+    public GrupoResponseDTO editar(Integer id, GrupoUpdateDTO dto) {
         Grupo grupo = buscarOFallar(id);
 
         if (grupo.getEstado() != EstadoLogico.ACTIVO) {

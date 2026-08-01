@@ -2,8 +2,10 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.CarreraRequestDTO;
 import com.fides.sienep.dto.CarreraResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.CarreraService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,10 +33,12 @@ public class CarreraController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar carreras", description = "Devuelve todas las carreras.")
+    @Operation(summary = "Listar carreras", description = "Devuelve las carreras. Sin el parámetro estado, devuelve solo las ACTIVAS.")
     @ApiResponse(responseCode = "200", description = "Listado obtenido")
-    public ResponseEntity<List<CarreraResponseDTO>> listar() {
-        return ResponseEntity.ok(carreraService.listar());
+    public ResponseEntity<List<CarreraResponseDTO>> listar(
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado) {
+        return ResponseEntity.ok(carreraService.listar(estado));
     }
 
     @GetMapping("/{id}")
@@ -46,11 +50,11 @@ public class CarreraController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar carrera", description = "Actualiza el nombre de una carrera.")
-    @ApiResponse(responseCode = "200", description = "Carrera actualizada")
+    @Operation(summary = "Editar carrera", description = "Edita el nombre de una carrera.")
+    @ApiResponse(responseCode = "200", description = "Carrera editada")
     @ApiResponse(responseCode = "404", description = "Carrera no encontrada")
-    public ResponseEntity<CarreraResponseDTO> actualizar(@PathVariable Integer id, @Valid @RequestBody CarreraRequestDTO dto) {
-        return ResponseEntity.ok(carreraService.actualizar(id, dto));
+    public ResponseEntity<CarreraResponseDTO> editar(@PathVariable Integer id, @Valid @RequestBody CarreraRequestDTO dto) {
+        return ResponseEntity.ok(carreraService.editar(id, dto));
     }
 
     @DeleteMapping("/{id}")

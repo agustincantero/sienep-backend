@@ -62,7 +62,7 @@ public class GoogleCalendarService {
     }
 
     // ── Actualizar evento ─────────────────────────────────────────────────
-    // Se llama desde RecordatorioService.actualizar() cuando el recordatorio ya
+    // Se llama desde RecordatorioService.editar() cuando el recordatorio ya
     // tenía un evento sincronizado y el responsable no cambió (RF22).
 
     public void actualizarEvento(Recordatorio recordatorio, String eventIdGoogle, String refreshToken) {

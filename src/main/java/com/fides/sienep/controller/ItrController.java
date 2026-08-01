@@ -2,8 +2,10 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.ItrRequestDTO;
 import com.fides.sienep.dto.ItrResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.ItrService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,12 +37,14 @@ public class ItrController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar ITRs", description = "Retorna una lista de todos los ITRs junto con sus carreras activas (optimizado con caché).")
+    @Operation(summary = "Listar ITRs", description = "Retorna los ITRs junto con sus carreras activas (optimizado con caché). Sin el parámetro estado, devuelve solo los ACTIVOS.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Listado obtenido correctamente")
     })
-    public ResponseEntity<List<ItrResponseDTO>> listar() {
-        return ResponseEntity.ok(itrService.listar());
+    public ResponseEntity<List<ItrResponseDTO>> listar(
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado) {
+        return ResponseEntity.ok(itrService.listar(estado));
     }
 
     @GetMapping("/{id}")
@@ -54,15 +58,15 @@ public class ItrController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar ITR", description = "Modifica los datos de un ITR existente y actualiza sus asociaciones de carreras.")
+    @Operation(summary = "Editar ITR", description = "Modifica los datos de un ITR existente y actualiza sus asociaciones de carreras.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "ITR actualizado con éxito"),
+            @ApiResponse(responseCode = "200", description = "ITR editado con éxito"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos"),
             @ApiResponse(responseCode = "404", description = "ITR o Carrera no encontrada"),
             @ApiResponse(responseCode = "409", description = "ITR inactivo o nombre en uso")
     })
-    public ResponseEntity<ItrResponseDTO> actualizar(@PathVariable Integer id, @Valid @RequestBody ItrRequestDTO dto) {
-        return ResponseEntity.ok(itrService.actualizar(id, dto));
+    public ResponseEntity<ItrResponseDTO> editar(@PathVariable Integer id, @Valid @RequestBody ItrRequestDTO dto) {
+        return ResponseEntity.ok(itrService.editar(id, dto));
     }
 
     @DeleteMapping("/{id}")

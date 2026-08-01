@@ -147,39 +147,42 @@ public class RecordatorioService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public Page<RecordatorioResponseDTO> listarActivos(Pageable pageable) {
-        Page<Recordatorio> pagina = recordatorioRepository.findByEstado(EstadoLogico.ACTIVO, pageable);
+    public Page<RecordatorioResponseDTO> listar(EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        Page<Recordatorio> pagina = recordatorioRepository.findByEstado(estadoEfectivo, pageable);
         List<RecordatorioResponseDTO> dtos = recordatorioMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public RecordatorioResponseDTO buscarPorId(int id) {
+    public RecordatorioResponseDTO obtenerPorId(int id) {
         return recordatorioMapper.toDto(buscarActivoOFallar(id));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public Page<RecordatorioResponseDTO> listarPorInstancia(int codInstancia, Pageable pageable) {
+    public Page<RecordatorioResponseDTO> listarPorInstancia(int codInstancia, EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<Recordatorio> pagina = recordatorioRepository.findByInstanciaAndEstado(
-                codInstancia, EstadoLogico.ACTIVO, pageable);
+                codInstancia, estadoEfectivo, pageable);
         List<RecordatorioResponseDTO> dtos = recordatorioMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public Page<RecordatorioResponseDTO> listarPorResponsable(int idResponsable, Pageable pageable) {
+    public Page<RecordatorioResponseDTO> listarPorResponsable(int idResponsable, EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<Recordatorio> pagina = recordatorioRepository.findByResponsableAndEstado(
-                idResponsable, EstadoLogico.ACTIVO, pageable);
+                idResponsable, estadoEfectivo, pageable);
         List<RecordatorioResponseDTO> dtos = recordatorioMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
-    public RecordatorioResponseDTO actualizar(int id, RecordatorioRequestDTO dto) {
+    public RecordatorioResponseDTO editar(int id, RecordatorioRequestDTO dto) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
 
         // codInstancia es inmutable después de creado: no hay ningún caso de uso
@@ -390,7 +393,7 @@ public class RecordatorioService {
                     HttpStatus.CONFLICT, "El recordatorio ya se encuentra activo");
         }
 
-        // Mismas validaciones que crear()/actualizar(): mientras estuvo INACTIVO, la
+        // Mismas validaciones que crear()/editar(): mientras estuvo INACTIVO, la
         // instancia, categoría o responsable pudieron haberse dado de baja también.
         if (recordatorio.getInstancia().getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,

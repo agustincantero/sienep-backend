@@ -26,19 +26,19 @@ public class CategoriaInstanciaController {
 
     private final CategoriaInstanciaService categoriaService;
 
-    @Operation(summary = "Obtener categorías con filtros", description = "Retorna una lista de categorías. Permite filtrar por coincidencias parciales en el nombre y/o por su estado actual.")
+    @Operation(summary = "Listar categorías con filtros", description = "Retorna las categorías. Permite filtrar por coincidencias parciales en el nombre. Sin el parámetro estado, devuelve solo las ACTIVAS.")
     @ApiResponse(responseCode = "200", description = "Operación exitosa")
     @GetMapping
-    public ResponseEntity<List<CategoriaInstanciaResponseDTO>> obtenerTodas(
-            @Parameter(description = "Texto opcional para filtrar por nombre", required = false) 
+    public ResponseEntity<List<CategoriaInstanciaResponseDTO>> listar(
+            @Parameter(description = "Texto opcional para filtrar por nombre", required = false)
             @RequestParam(required = false) String nombre,
 
-            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO)", required = false) 
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
             @RequestParam(required = false) EstadoLogico estado) {
 
         String nombreLimpio = (nombre != null && !nombre.trim().isEmpty()) ? nombre.trim() : null;
 
-        return ResponseEntity.ok(categoriaService.obtenerTodas(nombreLimpio, estado));
+        return ResponseEntity.ok(categoriaService.listar(nombreLimpio, estado));
     }
 
     @Operation(summary = "Obtener una categoría por ID", description = "Busca y retorna los detalles de una categoría específica dado su ID.")
@@ -58,23 +58,23 @@ public class CategoriaInstanciaController {
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos (ej. nombre repetido o faltan campos obligatorios)")
     })
     @PostMapping
-    public ResponseEntity<CategoriaInstanciaResponseDTO> crearCategoria(
+    public ResponseEntity<CategoriaInstanciaResponseDTO> crear(
             @Parameter(description = "Objeto con los datos de la nueva categoría", required = true) @Valid @RequestBody CategoriaInstanciaRequestDTO requestDTO) {
-        CategoriaInstanciaResponseDTO nueva = categoriaService.crearCategoria(requestDTO);
+        CategoriaInstanciaResponseDTO nueva = categoriaService.crear(requestDTO);
         return new ResponseEntity<>(nueva, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Actualizar una categoría existente", description = "Realiza un reemplazo total (PUT) de la categoría. Se deben enviar TODOS los campos (Nombre, Descripción, Estado) en el JSON, incluso si no cambiaron, ya que los campos omitidos podrían ser tratados como nulos.")
+    @Operation(summary = "Editar una categoría existente", description = "Realiza un reemplazo total (PUT) de la categoría. Se deben enviar TODOS los campos (Nombre, Descripción, Estado) en el JSON, incluso si no cambiaron, ya que los campos omitidos podrían ser tratados como nulos.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Categoría actualizada exitosamente"),
+            @ApiResponse(responseCode = "200", description = "Categoría editada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
             @ApiResponse(responseCode = "404", description = "Categoría no encontrada")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<CategoriaInstanciaResponseDTO> actualizarCategoria(
-            @Parameter(description = "ID de la categoría a actualizar", required = true) @PathVariable int id,
+    public ResponseEntity<CategoriaInstanciaResponseDTO> editar(
+            @Parameter(description = "ID de la categoría a editar", required = true) @PathVariable int id,
             @Parameter(description = "Objeto con los datos actualizados", required = true) @Valid @RequestBody CategoriaInstanciaUpdateDTO requestDTO) {
-        return ResponseEntity.ok(categoriaService.actualizarCategoria(id, requestDTO));
+        return ResponseEntity.ok(categoriaService.editar(id, requestDTO));
     }
 
     @Operation(summary = "Desactivar una categoría", description = "Cambia el estado de la categoría a INACTIVO.")
@@ -83,9 +83,9 @@ public class CategoriaInstanciaController {
             @ApiResponse(responseCode = "404", description = "Categoría no encontrada")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> desactivarCategoria(
+    public ResponseEntity<Void> desactivar(
             @Parameter(description = "ID de la categoría a desactivar", required = true) @PathVariable int id) {
-        categoriaService.desactivarCategoria(id);
+        categoriaService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -96,7 +96,7 @@ public class CategoriaInstanciaController {
             @ApiResponse(responseCode = "409", description = "La categoría ya está activa")
     })
     @PatchMapping("/{id}/reactivar")
-    public ResponseEntity<CategoriaInstanciaResponseDTO> reactivarCategoria(@Parameter(description = "ID de la categoría a reactivar", required = true) @PathVariable int id) {
-        return ResponseEntity.ok(categoriaService.reactivarCategoria(id));
+    public ResponseEntity<CategoriaInstanciaResponseDTO> reactivar(@Parameter(description = "ID de la categoría a reactivar", required = true) @PathVariable int id) {
+        return ResponseEntity.ok(categoriaService.reactivar(id));
     }
 }

@@ -4,9 +4,11 @@ import com.fides.sienep.dto.InstanciaComunResponseDTO;
 import com.fides.sienep.dto.InstanciaDesdeRecordatorioDTO;
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.InstanciaComunService;
 import com.fides.sienep.service.RecordatorioService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -39,47 +41,53 @@ public class RecordatorioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(recordatorioService.crear(dto));
     }
 
-    @Operation(summary = "Listar recordatorios activos")
-    @ApiResponse(responseCode = "200", description = "Página de recordatorios activos")
+    @Operation(summary = "Listar recordatorios", description = "Sin el parámetro estado, devuelve solo los ACTIVOS.")
+    @ApiResponse(responseCode = "200", description = "Página de recordatorios")
     @GetMapping
     public ResponseEntity<Page<RecordatorioResponseDTO>> listar(
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado,
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(recordatorioService.listarActivos(pageable));
+        return ResponseEntity.ok(recordatorioService.listar(estado, pageable));
     }
 
-    @Operation(summary = "Buscar recordatorio por ID")
+    @Operation(summary = "Obtener recordatorio por ID")
     @ApiResponse(responseCode = "200", description = "Recordatorio encontrado")
     @ApiResponse(responseCode = "404", description = "Recordatorio no encontrado")
     @GetMapping("/{id}")
-    public ResponseEntity<RecordatorioResponseDTO> buscarPorId(@PathVariable int id) {
-        return ResponseEntity.ok(recordatorioService.buscarPorId(id));
+    public ResponseEntity<RecordatorioResponseDTO> obtenerPorId(@PathVariable int id) {
+        return ResponseEntity.ok(recordatorioService.obtenerPorId(id));
     }
 
-    @Operation(summary = "Listar recordatorios por instancia")
+    @Operation(summary = "Listar recordatorios por instancia", description = "Sin el parámetro estado, devuelve solo los ACTIVOS.")
     @ApiResponse(responseCode = "200", description = "Página de recordatorios de la instancia")
     @GetMapping("/instancia/{codInstancia}")
     public ResponseEntity<Page<RecordatorioResponseDTO>> listarPorInstancia(
             @PathVariable int codInstancia,
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado,
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(recordatorioService.listarPorInstancia(codInstancia, pageable));
+        return ResponseEntity.ok(recordatorioService.listarPorInstancia(codInstancia, estado, pageable));
     }
 
-    @Operation(summary = "Listar recordatorios por responsable")
+    @Operation(summary = "Listar recordatorios por responsable", description = "Sin el parámetro estado, devuelve solo los ACTIVOS.")
     @ApiResponse(responseCode = "200", description = "Página de recordatorios del responsable")
     @GetMapping("/responsable/{idResponsable}")
     public ResponseEntity<Page<RecordatorioResponseDTO>> listarPorResponsable(
             @PathVariable int idResponsable,
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado,
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(recordatorioService.listarPorResponsable(idResponsable, pageable));
+        return ResponseEntity.ok(recordatorioService.listarPorResponsable(idResponsable, estado, pageable));
     }
 
-    @Operation(summary = "Actualizar un recordatorio")
-    @ApiResponse(responseCode = "200", description = "Recordatorio actualizado correctamente")
+    @Operation(summary = "Editar un recordatorio")
+    @ApiResponse(responseCode = "200", description = "Recordatorio editado correctamente")
     @ApiResponse(responseCode = "400", description = "Datos inválidos")
     @ApiResponse(responseCode = "404", description = "Recordatorio no encontrado")
     @PutMapping("/{id}")
-    public ResponseEntity<RecordatorioResponseDTO> actualizar(@PathVariable int id, @Valid @RequestBody RecordatorioRequestDTO dto) {
-        return ResponseEntity.ok(recordatorioService.actualizar(id, dto));
+    public ResponseEntity<RecordatorioResponseDTO> editar(@PathVariable int id, @Valid @RequestBody RecordatorioRequestDTO dto) {
+        return ResponseEntity.ok(recordatorioService.editar(id, dto));
     }
 
     @Operation(summary = "Desactivar un recordatorio")

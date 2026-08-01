@@ -4,8 +4,10 @@ import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
 import com.fides.sienep.dto.FuncionarioUpdateDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.FuncionarioService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,12 +26,14 @@ public class FuncionarioController {
 
     private final FuncionarioService funcionarioService;
 
-    @Operation(summary = "Obtener todos los funcionarios")
+    @Operation(summary = "Listar funcionarios", description = "Sin el parámetro estado, devuelve solo los ACTIVOS.")
     @ApiResponse(responseCode = "200", description = "Funcionarios obtenidos correctamente")
     @GetMapping
-    public ResponseEntity<List<FuncionarioResponseDTO>> obtenerTodos() {
+    public ResponseEntity<List<FuncionarioResponseDTO>> listar(
+            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) EstadoLogico estado) {
 
-        return ResponseEntity.ok(funcionarioService.obtenerTodos());
+        return ResponseEntity.ok(funcionarioService.listar(estado));
     }
 
     @Operation(summary = "Obtener funcionario por ID")
@@ -53,15 +57,15 @@ public class FuncionarioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
-    @Operation(summary = "Actualizar funcionario")
-    @ApiResponse(responseCode = "200", description = "Funcionario actualizado correctamente")
+    @Operation(summary = "Editar funcionario")
+    @ApiResponse(responseCode = "200", description = "Funcionario editado correctamente")
     @ApiResponse(responseCode = "404", description = "Funcionario no encontrado")
     @PutMapping("/{id}")
-    public ResponseEntity<FuncionarioResponseDTO> actualizar(
+    public ResponseEntity<FuncionarioResponseDTO> editar(
             @PathVariable Integer id,
             @Valid @RequestBody FuncionarioUpdateDTO dto) {
 
-        return ResponseEntity.ok(funcionarioService.actualizar(id, dto));
+        return ResponseEntity.ok(funcionarioService.editar(id, dto));
     }
 
     @Operation(summary = "Desactivar funcionario")

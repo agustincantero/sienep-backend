@@ -14,7 +14,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Datos para crear o actualizar un ITR")
+@Schema(description = "Datos para crear o editar un ITR")
 public class ItrRequestDTO {
 
     @NotBlank(message = "El nombre del ITR es obligatorio.")

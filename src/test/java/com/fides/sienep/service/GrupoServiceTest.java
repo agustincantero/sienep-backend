@@ -197,7 +197,7 @@ class GrupoServiceTest {
         when(grupoRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(grupos);
         when(grupoMapper.toDtoList(grupos)).thenReturn(dtos);
 
-        List<GrupoResponseDTO> result = grupoService.listar(null, null);
+        List<GrupoResponseDTO> result = grupoService.listar(null, null, null);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -213,7 +213,7 @@ class GrupoServiceTest {
                 .thenReturn(grupos);
         when(grupoMapper.toDtoList(grupos)).thenReturn(dtos);
 
-        List<GrupoResponseDTO> result = grupoService.listar(1, null);
+        List<GrupoResponseDTO> result = grupoService.listar(1, null, null);
 
         assertEquals(1, result.size());
         assertEquals(1, result.get(0).getIdCarrera());
@@ -224,8 +224,8 @@ class GrupoServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Actualizar grupo - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar grupo - Éxito")
+    void editar_Exito() {
         GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
         updateDTO.setNomGrupo("Grupo B");
         updateDTO.setGeneracion(LocalDate.now().getYear());
@@ -236,7 +236,7 @@ class GrupoServiceTest {
         when(grupoRepository.save(any(Grupo.class))).thenReturn(grupoMock);
         when(grupoMapper.toDto(any(Grupo.class))).thenReturn(responseDTO);
 
-        GrupoResponseDTO result = grupoService.actualizar(1, updateDTO);
+        GrupoResponseDTO result = grupoService.editar(1, updateDTO);
 
         assertNotNull(result);
         assertEquals("Grupo B", grupoMock.getNomGrupo());
@@ -244,8 +244,8 @@ class GrupoServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar grupo - Rechaza editar un grupo inactivo")
-    void actualizar_LanzaConflicto_GrupoInactivo() {
+    @DisplayName("Editar grupo - Rechaza editar un grupo inactivo")
+    void editar_LanzaConflicto_GrupoInactivo() {
         grupoMock.setEstado(EstadoLogico.INACTIVO);
         GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
         updateDTO.setNomGrupo("Grupo B");
@@ -254,15 +254,15 @@ class GrupoServiceTest {
         when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> grupoService.actualizar(1, updateDTO));
+                () -> grupoService.editar(1, updateDTO));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(grupoRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar grupo - No encontrado → 404")
-    void actualizar_LanzaExcepcion_NoEncontrado() {
+    @DisplayName("Editar grupo - No encontrado → 404")
+    void editar_LanzaExcepcion_NoEncontrado() {
         GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
         updateDTO.setNomGrupo("Grupo B");
         updateDTO.setGeneracion(LocalDate.now().getYear());
@@ -271,7 +271,7 @@ class GrupoServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> grupoService.actualizar(99, updateDTO));
+                () -> grupoService.editar(99, updateDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(grupoRepository, never()).save(any());

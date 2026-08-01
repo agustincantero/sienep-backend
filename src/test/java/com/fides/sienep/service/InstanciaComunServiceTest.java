@@ -451,56 +451,56 @@ class InstanciaComunServiceTest {
     // ── Listar ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Listar activas - Éxito, paginado")
-    void listarActivas_Exito() {
+    @DisplayName("Listar - Sin estado, devuelve solo ACTIVAS, paginado")
+    void listar_SinEstado_DevuelveSoloActivas() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarActivas(pageable);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listar(null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Éxito, paginado")
+    @DisplayName("Listar por estudiante - Sin estado, devuelve solo ACTIVAS, paginado")
     void listarPorEstudiante_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorEstudiante(1, pageable);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorEstudiante(1, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por funcionario - Éxito, paginado")
+    @DisplayName("Listar por funcionario - Sin estado, devuelve solo ACTIVAS, paginado")
     void listarPorFuncionario_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorFuncionario(2, pageable);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorFuncionario(2, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
-    @DisplayName("Listar por categoría - Éxito, paginado")
+    @DisplayName("Listar por categoría - Sin estado, devuelve solo ACTIVAS, paginado")
     void listarPorCategoria_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaComunRepository.findByCategoriaAndEstado(1, EstadoLogico.ACTIVO, pageable))
                 .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorCategoria(1, pageable);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorCategoria(1, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
@@ -524,12 +524,12 @@ class InstanciaComunServiceTest {
 
     @Test
     @DisplayName("Buscar por ID - Éxito")
-    void buscarPorId_Exito() {
+    void obtenerPorId_Exito() {
         when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(instancia));
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
 
-        InstanciaComunResponseDTO resultado = instanciaComunService.buscarPorId(1);
+        InstanciaComunResponseDTO resultado = instanciaComunService.obtenerPorId(1);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodInstancia());
@@ -537,21 +537,21 @@ class InstanciaComunServiceTest {
 
     @Test
     @DisplayName("Buscar por ID - No encontrada (404)")
-    void buscarPorId_LanzaNotFound() {
+    void obtenerPorId_LanzaNotFound() {
         when(instanciaComunRepository.findByCodInstanciaAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.buscarPorId(99));
+                () -> instanciaComunService.obtenerPorId(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
-    // ── Actualizar ────────────────────────────────────────────
+    // ── Editar ────────────────────────────────────────────
 
     @Test
-    @DisplayName("Actualizar instancia común - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar instancia común - Éxito")
+    void editar_Exito() {
         InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
         updateDTO.setTitulo("Nuevo título");
         updateDTO.setFechaHora(LocalDateTime.now());
@@ -563,15 +563,15 @@ class InstanciaComunServiceTest {
         when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
 
-        InstanciaComunResponseDTO resultado = instanciaComunService.actualizar(1, updateDTO);
+        InstanciaComunResponseDTO resultado = instanciaComunService.editar(1, updateDTO);
 
         assertNotNull(resultado);
         verify(instanciaComunRepository).save(instancia);
     }
 
     @Test
-    @DisplayName("Actualizar instancia común - Categoría no encontrada (404)")
-    void actualizar_LanzaNotFound_CategoriaNoExiste() {
+    @DisplayName("Editar instancia común - Categoría no encontrada (404)")
+    void editar_LanzaNotFound_CategoriaNoExiste() {
         InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
         updateDTO.setTitulo("Nuevo título");
         updateDTO.setFechaHora(LocalDateTime.now());
@@ -582,15 +582,15 @@ class InstanciaComunServiceTest {
         when(categoriaInstanciaRepository.findById(99)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.actualizar(1, updateDTO));
+                () -> instanciaComunService.editar(1, updateDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar instancia común - Categoría inactiva (422)")
-    void actualizar_LanzaUnprocessable_CategoriaInactiva() {
+    @DisplayName("Editar instancia común - Categoría inactiva (422)")
+    void editar_LanzaUnprocessable_CategoriaInactiva() {
         InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
         updateDTO.setTitulo("Nuevo título");
         updateDTO.setFechaHora(LocalDateTime.now());
@@ -602,7 +602,7 @@ class InstanciaComunServiceTest {
         when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> instanciaComunService.actualizar(1, updateDTO));
+                () -> instanciaComunService.editar(1, updateDTO));
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(instanciaComunRepository, never()).save(any());

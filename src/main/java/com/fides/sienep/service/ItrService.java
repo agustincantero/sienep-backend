@@ -72,15 +72,16 @@ public class ItrService {
     }
 
     /**
-     * Lista todos los ITRs utilizando caché en memoria.
-     * Gracias a @Cacheable("itrs"), la primera consulta va a la BD, pero las siguientes
-     * se leen instantáneamente desde la RAM hasta que ocurra un @CacheEvict.
+     * Lista los ITRs por estado (ACTIVO por defecto si no se especifica), utilizando
+     * caché en memoria. Gracias a @Cacheable("itrs"), la primera consulta va a la BD,
+     * pero las siguientes se leen instantáneamente desde la RAM hasta que ocurra un @CacheEvict.
      */
     @PreAuthorize("hasAuthority('VER_ITRS')")
     @Cacheable("itrs")
     @Transactional(readOnly = true)
-    public List<ItrResponseDTO> listar() {
-        return itrMapper.toDtoList(itrRepository.findAll()); 
+    public List<ItrResponseDTO> listar(EstadoLogico estado) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        return itrMapper.toDtoList(itrRepository.findByEstado(estadoEfectivo));
     }
 
     @PreAuthorize("hasAuthority('VER_ITRS')")
@@ -90,13 +91,13 @@ public class ItrService {
     }
 
     /**
-     * Actualiza un ITR y purga la caché para evitar que los usuarios 
+     * Edita un ITR y purga la caché para evitar que los usuarios 
      * sigan viendo datos viejos en el listado.
      */
     @PreAuthorize("hasAuthority('EDITAR_ITR')")
     @CacheEvict(value = "itrs", allEntries = true)
     @Transactional
-    public ItrResponseDTO actualizar(Integer id, ItrRequestDTO dto) {
+    public ItrResponseDTO editar(Integer id, ItrRequestDTO dto) {
         Itr itr = buscarOFallar(id);
 
         if (itr.getEstado() == EstadoLogico.INACTIVO) {

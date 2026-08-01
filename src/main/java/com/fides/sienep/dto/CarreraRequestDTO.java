@@ -10,7 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Datos para crear o actualizar una carrera")
+@Schema(description = "Datos para crear o editar una carrera")
 public class CarreraRequestDTO {
 
     @NotBlank(message = "El nombre de la carrera es obligatorio y no puede estar vacío.")

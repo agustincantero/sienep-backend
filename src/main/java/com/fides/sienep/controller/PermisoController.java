@@ -22,19 +22,19 @@ public class PermisoController {
 
     private final PermisoService permisoService;
 
-    @Operation(summary = "Obtener catálogo de permisos", description = "Retorna la lista inmutable de permisos registrados en el sistema.")
+    @Operation(summary = "Listar catálogo de permisos", description = "Retorna la lista inmutable de permisos registrados en el sistema.")
     @ApiResponse(responseCode = "200", description = "Operación exitosa")
     @GetMapping
-    public ResponseEntity<List<PermisoResponseDTO>> obtenerTodos() {
-        return ResponseEntity.ok(permisoService.obtenerTodos());
+    public ResponseEntity<List<PermisoResponseDTO>> listar() {
+        return ResponseEntity.ok(permisoService.listar());
     }
 
-    @Operation(summary = "Actualizar descripción del permiso", description = "Permite modificar únicamente la descripción del permiso para mayor claridad. El nombre del permiso y su estado lógico son inmutables.")
-    @ApiResponse(responseCode = "200", description = "Descripción actualizada exitosamente")
+    @Operation(summary = "Editar descripción del permiso", description = "Permite modificar únicamente la descripción del permiso para mayor claridad. El nombre del permiso y su estado lógico son inmutables.")
+    @ApiResponse(responseCode = "200", description = "Descripción editada exitosamente")
     @PutMapping("/{id}")
-    public ResponseEntity<PermisoResponseDTO> actualizarDescripcion(
-            @Parameter(description = "ID del permiso a actualizar", required = true) @PathVariable int id,
+    public ResponseEntity<PermisoResponseDTO> editarDescripcion(
+            @Parameter(description = "ID del permiso a editar", required = true) @PathVariable int id,
             @Parameter(description = "Objeto con la nueva descripción", required = true) @Valid @RequestBody PermisoUpdateDTO requestDTO) {
-        return ResponseEntity.ok(permisoService.actualizarDescripcion(id, requestDTO));
+        return ResponseEntity.ok(permisoService.editarDescripcion(id, requestDTO));
     }
 }

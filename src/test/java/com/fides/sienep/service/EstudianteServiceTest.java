@@ -516,8 +516,8 @@ class EstudianteServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Actualizar - Éxito")
-    void actualizar_Exito() {
+    @DisplayName("Editar - Éxito")
+    void editar_Exito() {
         EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
         dto.setNombre("Ana");
         dto.setApellido("González");
@@ -528,15 +528,15 @@ class EstudianteServiceTest {
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
         when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
 
-        EstudianteResponseDTO resultado = estudianteService.actualizar(1, dto);
+        EstudianteResponseDTO resultado = estudianteService.editar(1, dto);
 
         assertNotNull(resultado);
         verify(estudianteRepository).save(estudianteExistente);
     }
 
     @Test
-    @DisplayName("Actualizar - Da de baja lógica los teléfonos que ya no vienen en la lista")
-    void actualizar_DaDeBajaTelefonosRemovidos() {
+    @DisplayName("Editar - Da de baja lógica los teléfonos que ya no vienen en la lista")
+    void editar_DaDeBajaTelefonosRemovidos() {
         Telefono telefonoViejo = new Telefono(estudianteExistente, "099111111");
         telefonoViejo.setEstado(EstadoLogico.ACTIVO);
         estudianteExistente.setTelefonos(new ArrayList<>(List.of(telefonoViejo)));
@@ -552,7 +552,7 @@ class EstudianteServiceTest {
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
         when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
 
-        estudianteService.actualizar(1, dto);
+        estudianteService.editar(1, dto);
 
         assertEquals(EstadoLogico.ELIMINADO, telefonoViejo.getEstado());
         boolean nuevoTelefonoActivo = false;
@@ -565,8 +565,8 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Actualizar - Reactiva un teléfono previamente eliminado que vuelve a la lista")
-    void actualizar_ReactivaTelefonoEliminado() {
+    @DisplayName("Editar - Reactiva un teléfono previamente eliminado que vuelve a la lista")
+    void editar_ReactivaTelefonoEliminado() {
         Telefono telefonoEliminado = new Telefono(estudianteExistente, "099111111");
         telefonoEliminado.setEstado(EstadoLogico.ELIMINADO);
         estudianteExistente.setTelefonos(new ArrayList<>(List.of(telefonoEliminado)));
@@ -582,15 +582,15 @@ class EstudianteServiceTest {
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
         when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
 
-        estudianteService.actualizar(1, dto);
+        estudianteService.editar(1, dto);
 
         assertEquals(EstadoLogico.ACTIVO, telefonoEliminado.getEstado());
         assertEquals(1, estudianteExistente.getTelefonos().size());
     }
 
     @Test
-    @DisplayName("Actualizar - Rechaza asignar un grupo que no está ACTIVO")
-    void actualizar_LanzaExcepcion_GrupoNoActivo() {
+    @DisplayName("Editar - Rechaza asignar un grupo que no está ACTIVO")
+    void editar_LanzaExcepcion_GrupoNoActivo() {
         Grupo grupoInactivo = new Grupo();
         grupoInactivo.setIdGrupo(1);
         grupoInactivo.setEstado(EstadoLogico.INACTIVO);
@@ -606,15 +606,15 @@ class EstudianteServiceTest {
         when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoInactivo));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> estudianteService.actualizar(1, dto));
+                () -> estudianteService.editar(1, dto));
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(estudianteRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Actualizar - No encontrado → 404")
-    void actualizar_LanzaExcepcion_NoEncontrado() {
+    @DisplayName("Editar - No encontrado → 404")
+    void editar_LanzaExcepcion_NoEncontrado() {
         EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
         dto.setNombre("Ana");
         dto.setApellido("González");
@@ -625,7 +625,7 @@ class EstudianteServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> estudianteService.actualizar(99, dto));
+                () -> estudianteService.editar(99, dto));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(estudianteRepository, never()).save(any());

@@ -102,21 +102,21 @@ public class EstudianteController {
     // =========================================================
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar datos de un estudiante",
+    @Operation(summary = "Editar datos de un estudiante",
             description = "Requiere EDITAR_ESTUDIANTE.")
-    @ApiResponse(responseCode = "200", description = "Estudiante actualizado")
+    @ApiResponse(responseCode = "200", description = "Estudiante editado")
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
-    public ResponseEntity<EstudianteResponseDTO> actualizar(
+    public ResponseEntity<EstudianteResponseDTO> editar(
             @PathVariable Integer id,
             @Valid @RequestBody EstudianteUpdateDTO dto) {
-        return ResponseEntity.ok(estudianteService.actualizar(id, dto));
+        return ResponseEntity.ok(estudianteService.editar(id, dto));
     }
 
     @PutMapping("/{id}/mis-datos")
     @Operation(summary = "El estudiante edita sus propios datos de contacto",
             description = "Solo para el estudiante autenticado (ROLE_ESTUDIANTE) sobre su propia cuenta. " +
                     "Permite editar dirección y teléfonos únicamente.")
-    @ApiResponse(responseCode = "200", description = "Datos actualizados")
+    @ApiResponse(responseCode = "200", description = "Datos editados")
     @ApiResponse(responseCode = "403", description = "Intento de editar datos de otra cuenta")
     public ResponseEntity<EstudianteResponseDTO> editarMisDatos(
             @PathVariable Integer id,

@@ -85,32 +85,35 @@ public class IncidenciaService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public Page<IncidenciaResponseDTO> listarActivas(Pageable pageable) {
-        Page<Incidencia> pagina = incidenciaRepository.findByEstado(EstadoLogico.ACTIVO, pageable);
+    public Page<IncidenciaResponseDTO> listar(EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+        Page<Incidencia> pagina = incidenciaRepository.findByEstado(estadoEfectivo, pageable);
         List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public IncidenciaResponseDTO buscarPorId(int id) {
+    public IncidenciaResponseDTO obtenerPorId(int id) {
         return incidenciaMapper.toDto(buscarActivaOFallar(id));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public Page<IncidenciaResponseDTO> listarPorEstudiante(int idEstudiante, Pageable pageable) {
+    public Page<IncidenciaResponseDTO> listarPorEstudiante(int idEstudiante, EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<Incidencia> pagina = incidenciaRepository.findByEstudianteAndEstado(
-                idEstudiante, EstadoLogico.ACTIVO, pageable);
+                idEstudiante, estadoEfectivo, pageable);
         List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public Page<IncidenciaResponseDTO> listarPorFuncionario(int idFuncionario, Pageable pageable) {
+    public Page<IncidenciaResponseDTO> listarPorFuncionario(int idFuncionario, EstadoLogico estado, Pageable pageable) {
+        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<Incidencia> pagina = incidenciaRepository.findByFuncionarioAndEstado(
-                idFuncionario, EstadoLogico.ACTIVO, pageable);
+                idFuncionario, estadoEfectivo, pageable);
         List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
@@ -125,7 +128,7 @@ public class IncidenciaService {
 
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_INCIDENCIA')")
-    public IncidenciaResponseDTO actualizar(int id, IncidenciaRequestDTO dto) {
+    public IncidenciaResponseDTO editar(int id, IncidenciaRequestDTO dto) {
         Incidencia incidencia = buscarActivaOFallar(id);
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
@@ -145,7 +148,7 @@ public class IncidenciaService {
         incidencia.setCanal(dto.getCanal());
         incidencia.setLugar(dto.getLugar());
 
-        log.info("Incidencia actualizada: {}", id);
+        log.info("Incidencia editada: {}", id);
         return incidenciaMapper.toDto(incidenciaRepository.save(incidencia));
     }
 
