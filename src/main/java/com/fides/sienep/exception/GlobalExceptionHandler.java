@@ -1,6 +1,8 @@
 package com.fides.sienep.exception;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -212,7 +215,47 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.METHOD_NOT_ALLOWED);
     }
 
-    // 12. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
+    // 12. Ataja ordenar (?sort=) por una propiedad que no existe en la entidad —
+    // sin este handler caía en el genérico de abajo y devolvía 500 en vez de 400.
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<Map<String, Object>> handlePropertyReference(PropertyReferenceException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Parámetro inválido");
+        body.put("message", "La propiedad '" + ex.getPropertyName() + "' no existe y no se puede usar para ordenar.");
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // 13. Ataja un ?page= tan grande que el offset calculado desborda Integer —
+    // sin este handler caía en el genérico de abajo y devolvía 500 en vez de 400.
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidDataAccessApiUsage(InvalidDataAccessApiUsageException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Parámetro inválido");
+        body.put("message", "Los parámetros de paginación enviados son inválidos.");
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // 14. Ataja un multipart mal armado (ej. un nombre de archivo con un byte nulo,
+    // que Tomcat rechaza) — sin este handler caía en el genérico de abajo y
+    // devolvía 500 en vez de 400.
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<Map<String, Object>> handleMultipartException(MultipartException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Solicitud multipart inválida");
+        body.put("message", "El archivo o los datos del formulario enviados son inválidos.");
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // 15. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         // Imprime la traza en consola para el desarrollador
