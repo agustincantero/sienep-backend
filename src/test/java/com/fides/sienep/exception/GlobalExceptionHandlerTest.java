@@ -5,8 +5,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.HttpMethod;
 
@@ -63,5 +66,38 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.getBody().get("status"));
+    }
+
+    @Test
+    @DisplayName("MissingServletRequestPartException - Responde 400 en vez de 500")
+    void handleMissingServletRequestPart_Responde400() {
+        MissingServletRequestPartException ex = new MissingServletRequestPartException("archivo");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleMissingServletRequestPart(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.getBody().get("status"));
+    }
+
+    @Test
+    @DisplayName("HttpMediaTypeNotSupportedException - Responde 415 en vez de 500")
+    void handleHttpMediaTypeNotSupported_Responde415() {
+        HttpMediaTypeNotSupportedException ex = new HttpMediaTypeNotSupportedException("Content-Type no soportado");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleHttpMediaTypeNotSupported(ex);
+
+        assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE, response.getStatusCode());
+        assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), response.getBody().get("status"));
+    }
+
+    @Test
+    @DisplayName("HttpRequestMethodNotSupportedException - Responde 405 en vez de 500")
+    void handleHttpRequestMethodNotSupported_Responde405() {
+        HttpRequestMethodNotSupportedException ex = new HttpRequestMethodNotSupportedException("PATCH");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleHttpRequestMethodNotSupported(ex);
+
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED.value(), response.getBody().get("status"));
     }
 }

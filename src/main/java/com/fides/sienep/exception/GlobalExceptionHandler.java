@@ -5,11 +5,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.access.AccessDeniedException;
@@ -167,7 +170,49 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // 9. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
+    // 9. Ataja falta de una parte requerida en un multipart (ej. POST
+    // /api/reportes/validar sin el archivo) — sin este handler caía en el
+    // genérico de abajo y devolvía 500 en vez de 400.
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingServletRequestPart(MissingServletRequestPartException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Parámetro faltante");
+        body.put("message", "Falta el archivo obligatorio '" + ex.getRequestPartName() + "'.");
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // 10. Ataja Content-Type no soportado (ej. mandar texto plano a un endpoint
+    // JSON, o pegarle a un endpoint multipart sin el Content-Type multipart) —
+    // sin este handler caía en el genérico de abajo y devolvía 500 en vez de 415.
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.UNSUPPORTED_MEDIA_TYPE.value());
+        body.put("error", "Tipo de contenido no soportado");
+        body.put("message", "El Content-Type enviado no es soportado por este endpoint.");
+
+        return new ResponseEntity<>(body, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    // 11. Ataja método HTTP no soportado en una ruta existente (ej. PATCH
+    // /api/carreras) — sin este handler caía en el genérico de abajo y
+    // devolvía 500 en vez de 405.
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpRequestMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.METHOD_NOT_ALLOWED.value());
+        body.put("error", "Método no permitido");
+        body.put("message", "El método '" + ex.getMethod() + "' no está permitido para esta ruta.");
+
+        return new ResponseEntity<>(body, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    // 12. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         // Imprime la traza en consola para el desarrollador
