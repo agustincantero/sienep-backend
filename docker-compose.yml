@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: sienep
       POSTGRES_USER: sienep
       POSTGRES_PASSWORD: sienep
+      TZ: America/Montevideo
+      PGTZ: America/Montevideo
     ports:
       - "5432:5432"
     volumes:
@@ -56,6 +58,12 @@ volumes:
 #
 # Detener Y borrar los datos (reset completo):
 #   docker compose down -v
+#
+# TIMEZONE: sienep-db corre en America/Montevideo (TZ/PGTZ), no en UTC,
+# para que CURRENT_TIMESTAMP en Postgres coincida con LocalDateTime.now()
+# de la JVM. Postgres solo aplica el timezone en el initdb inicial, así que
+# si el contenedor ya existía con otro timezone hay que recrear el volumen:
+#   docker compose down -v && docker compose up -d
 #
 # Conectarse a la BD desde la terminal (opcional):
 #   docker exec -it sienep-db psql -U sienep -d sienep
