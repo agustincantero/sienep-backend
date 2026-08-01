@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.HttpMethod;
@@ -51,5 +52,16 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND.value(), response.getBody().get("status"));
+    }
+
+    @Test
+    @DisplayName("MissingServletRequestParameterException - Responde 400 en vez de 500")
+    void handleMissingServletRequestParameter_Responde400() {
+        MissingServletRequestParameterException ex = new MissingServletRequestParameterException("idUsuario", "Integer");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleMissingServletRequestParameter(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.getBody().get("status"));
     }
 }
