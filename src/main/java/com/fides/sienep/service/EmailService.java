@@ -55,7 +55,11 @@ public class EmailService {
             log.info("[AUDIT] Email de restablecimiento enviado a {}", destinatario);
         } catch (Exception e) {
             log.error("[AUDIT] Error al enviar email a {}: {}", destinatario, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo enviar el email a " + destinatario);
+            // 503 (no 500): el fallo es del SMTP externo, no un bug del servidor —
+            // restablecerContrasenia() no captura esta excepción a propósito (a
+            // diferencia de crear(), acá sí hay una contraseña previa que preservar
+            // vía rollback si el envío falla).
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "No se pudo enviar el email a " + destinatario);
         }
     }
 
