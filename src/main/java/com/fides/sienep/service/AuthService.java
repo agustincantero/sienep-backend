@@ -66,16 +66,22 @@ public class AuthService {
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public LoginResponseDTO login(LoginRequestDTO dto, String ip) {
 
+        // Mismo criterio que olvideMiContrasenia(): el trigger de BD normaliza el
+        // email a minúsculas al guardar, así que la búsqueda tiene que normalizar
+        // igual — de lo contrario, un usuario que loguea con el email en mayúsculas
+        // nunca encuentra su cuenta aunque la contraseña sea correcta.
+        String emailNormalizado = dto.getEmail().toLowerCase();
+
         // 1. Resolver quién es
         int idUsuario;
         String rol;
 
-        Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByEmail(dto.getEmail());
+        Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByEmail(emailNormalizado);
         if (funcionarioOpt.isPresent()) {
             idUsuario = funcionarioOpt.get().getIdUsuario();
             rol = funcionarioOpt.get().getRol().getNombre();
         } else {
-            Estudiante estudiante = estudianteRepository.findByEmail(dto.getEmail())
+            Estudiante estudiante = estudianteRepository.findByEmail(emailNormalizado)
                     .orElseThrow(() -> credencialesInvalidas(ip));
             idUsuario = estudiante.getIdUsuario();
             rol = "ESTUDIANTE";
@@ -100,7 +106,7 @@ public class AuthService {
         // 3. Validar contraseña
         try {
             authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getContrasenia()));
+                    new UsernamePasswordAuthenticationToken(emailNormalizado, dto.getContrasenia()));
         } catch (BadCredentialsException e) {
             registrarIntento(idUsuario, false);
             verificarYBloquearSiCorresponde(idUsuario, usuario);

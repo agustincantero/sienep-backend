@@ -119,6 +119,23 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Login - Email en mayúsculas se normaliza a minúsculas antes de buscar")
+    void login_NormalizaEmailAMinusculas() {
+        loginDto.setEmail("JUAN.GARCIA@UTEC.EDU.UY");
+
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(jwtTokenUtil.generateToken(2, "ADMINISTRADOR")).thenReturn("token-fake");
+
+        LoginResponseDTO resultado = authService.login(loginDto, IP);
+
+        assertEquals("token-fake", resultado.getToken());
+        verify(funcionarioRepository).findByEmail("juan.garcia@utec.edu.uy");
+        verify(authManager).authenticate(argThat(auth ->
+                "juan.garcia@utec.edu.uy".equals(auth.getPrincipal())));
+    }
+
+    @Test
     @DisplayName("Login - Email no existe en ningún lado (401)")
     void login_LanzaUnauthorized_EmailNoExiste() {
         when(funcionarioRepository.findByEmail(any())).thenReturn(Optional.empty());
