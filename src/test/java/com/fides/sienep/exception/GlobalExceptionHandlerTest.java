@@ -6,6 +6,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.http.HttpMethod;
 
 import java.util.Map;
 
@@ -38,5 +40,16 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals(HttpStatus.CONFLICT.value(), response.getBody().get("status"));
+    }
+
+    @Test
+    @DisplayName("NoResourceFoundException - Responde 404 en vez de 500")
+    void handleNoResourceFound_Responde404() {
+        NoResourceFoundException ex = new NoResourceFoundException(HttpMethod.GET, "/api/ruta-inexistente", "api/ruta-inexistente");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleNoResourceFound(ex);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND.value(), response.getBody().get("status"));
     }
 }

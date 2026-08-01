@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -137,7 +138,21 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 
-    // 7. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
+    // 7. Ataja rutas que no matchean ningún endpoint (ej. typo en la URL, o un
+    // @PathVariable/@RequestParam vacío que rompe el patrón de la ruta) — sin
+    // este handler caía en el genérico de abajo y devolvía 500 en vez de 404.
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFound(NoResourceFoundException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.NOT_FOUND.value());
+        body.put("error", "Recurso no encontrado");
+        body.put("message", "No existe un endpoint para la ruta solicitada.");
+
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
+    // 8. Ataja cualquier otra excepción no controlada (ej: NullPointerException, Errores 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         // Imprime la traza en consola para el desarrollador
