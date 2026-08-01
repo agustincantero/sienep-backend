@@ -741,6 +741,24 @@ CREATE TABLE proyecto.token_restablecimiento (
 CREATE INDEX idx_token_restablecimiento_usuario ON proyecto.token_restablecimiento(id_usuario);
 
 -- =====================================================
+-- TABLA: reportes_generados
+-- =====================================================
+-- Registro de verificación de reportes PDF (RF30/RF31): guarda el hash
+-- SHA-256 de cada PDF exportado para poder confirmar después, ante la
+-- carga pública de un archivo, si ese PDF fue realmente generado por SIENEP
+-- y no fue alterado. No se guarda metadata como "generado por" o "filtros
+-- aplicados": si el hash coincide, el archivo es idéntico byte a byte al
+-- original, y esos datos ya están impresos en el propio PDF. Write-once,
+-- nunca se actualiza ni se da de baja lógicamente — mismo criterio que
+-- log_intentos/token_restablecimiento (sin updated_at, sin trigger de auditoría).
+CREATE TABLE proyecto.reportes_generados (
+                                       id_reporte   SERIAL       PRIMARY KEY,
+                                       hash_sha256  VARCHAR(64)  NOT NULL UNIQUE,
+                                       created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                       CONSTRAINT chk_hash_sha256_valido CHECK (hash_sha256 ~ '^[a-f0-9]{64}$')
+);
+
+-- =====================================================
 -- TABLA: auditoria
 -- =====================================================
 CREATE TABLE proyecto.auditoria (

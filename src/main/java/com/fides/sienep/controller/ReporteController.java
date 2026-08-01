@@ -1,11 +1,14 @@
 package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.ReporteResponseDTO;
+import com.fides.sienep.dto.ReporteValidacionResponseDTO;
 import com.fides.sienep.service.ReportePdfService;
 import com.fides.sienep.service.ReporteService;
+import com.fides.sienep.service.ReporteVerificacionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -16,9 +19,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -31,6 +36,7 @@ public class ReporteController {
 
     private final ReporteService reporteService;
     private final ReportePdfService reportePdfService;
+    private final ReporteVerificacionService reporteVerificacionService;
 
     @GetMapping
     @Operation(
@@ -77,6 +83,8 @@ public class ReporteController {
 
         byte[] pdf = reportePdfService.generarPdf(reporte);
 
+        reporteVerificacionService.registrarGeneracion(pdf);
+
         String nombreArchivo = "reporte_sienep_" +
                 LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".pdf";
 
@@ -84,5 +92,20 @@ public class ReporteController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    @PostMapping(value = "/validar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Validar autenticidad de un reporte PDF",
+            description = "Endpoint público (no requiere autenticación). Sube un PDF previamente exportado " +
+                    "desde SIENEP y confirma si es auténtico — es decir, si fue generado por el sistema y " +
+                    "no fue alterado desde entonces — comparando el hash SHA-256 del archivo subido contra " +
+                    "el hash guardado al momento de exportarlo.")
+    @ApiResponse(responseCode = "200", description = "Resultado de la validación (auténtico o no)")
+    @ApiResponse(responseCode = "400", description = "No se adjuntó un archivo válido")
+    @ApiResponse(responseCode = "429", description = "Demasiadas validaciones desde esta IP, reintentar más tarde")
+    public ResponseEntity<ReporteValidacionResponseDTO> validar(
+            @RequestParam("archivo") MultipartFile archivo, HttpServletRequest request) {
+        return ResponseEntity.ok(reporteVerificacionService.validar(archivo, request.getRemoteAddr()));
     }
 }
