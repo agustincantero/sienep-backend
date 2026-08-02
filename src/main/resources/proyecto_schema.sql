@@ -330,6 +330,8 @@ CREATE TRIGGER trg_actualizar_grupos
     BEFORE UPDATE ON proyecto.grupos
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+CREATE INDEX idx_grupos_carrera ON proyecto.grupos(id_carrera);
+
 -- =====================================================
 -- TABLA: itr_carrera
 -- =====================================================
@@ -411,6 +413,9 @@ CREATE TRIGGER trg_actualizar_instancias
     BEFORE UPDATE ON proyecto.instancias
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+CREATE INDEX idx_instancias_estudiante  ON proyecto.instancias(id_estudiante);
+CREATE INDEX idx_instancias_funcionario ON proyecto.instancias(id_funcionario);
+
 -- =====================================================
 -- TABLA: incidencias
 -- =====================================================
@@ -485,6 +490,10 @@ CREATE TRIGGER trg_actualizar_estado_recordatorio
     BEFORE INSERT OR UPDATE ON proyecto.recordatorios
                          FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_estado_recordatorio();
 
+CREATE INDEX idx_recordatorios_responsable ON proyecto.recordatorios(responsable);
+CREATE INDEX idx_recordatorios_instancia   ON proyecto.recordatorios(cod_instancia);
+CREATE INDEX idx_recordatorios_categoria   ON proyecto.recordatorios(id_categoria);
+
 -- =====================================================
 -- TABLA: estu_grupos
 -- =====================================================
@@ -506,6 +515,10 @@ CREATE TABLE proyecto.estu_grupos (
 CREATE TRIGGER trg_actualizar_estu_grupos
     BEFORE UPDATE ON proyecto.estu_grupos
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+-- La PK (id_usuario, id_grupo) ya cubre "grupos de un estudiante"; este índice
+-- cubre la dirección inversa, "estudiantes de un grupo" (filtro ?grupo=).
+CREATE INDEX idx_estu_grupos_grupo ON proyecto.estu_grupos(id_grupo);
 
 -- =====================================================
 -- TABLA: estu_informesadjs
@@ -586,6 +599,10 @@ CREATE TRIGGER trg_actualizar_estu_obs_comentarios
     BEFORE UPDATE ON proyecto.estu_obs_comentarios
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+-- La PK (id_comentario, id_usuario) no cubre "comentarios de este estudiante"
+-- (id_usuario no es la columna líder) — esta es la consulta real más usada.
+CREATE INDEX idx_estu_obs_comentarios_usuario ON proyecto.estu_obs_comentarios(id_usuario);
+
 -- =====================================================
 -- TABLA: estu_obs_confidenciales
 -- =====================================================
@@ -610,6 +627,10 @@ CREATE TABLE proyecto.estu_obs_confidenciales (
 CREATE TRIGGER trg_actualizar_estu_obs_confidenciales
     BEFORE UPDATE ON proyecto.estu_obs_confidenciales
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+-- Mismo motivo que estu_obs_comentarios: la PK (id_obs_confidencial, id_estudiante)
+-- no cubre "comentarios confidenciales de este estudiante".
+CREATE INDEX idx_estu_obs_confidenciales_estudiante ON proyecto.estu_obs_confidenciales(id_estudiante);
 
 -- =====================================================
 -- TABLA: involucrados
@@ -652,6 +673,8 @@ CREATE TRIGGER trg_actualizar_inst_comunes
     BEFORE UPDATE ON proyecto.inst_comunes
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+CREATE INDEX idx_inst_comunes_categoria ON proyecto.inst_comunes(id_categoria);
+
 
 -- =====================================================
 -- TABLA: inst_comentarios
@@ -677,6 +700,8 @@ CREATE TRIGGER trg_actualizar_ins_comentarios
     BEFORE UPDATE ON proyecto.inst_comentarios
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+CREATE INDEX idx_inst_comentarios_instancia ON proyecto.inst_comentarios(cod_instancia);
+
 -- =====================================================
 -- TABLA: inst_com_confidenciales
 -- =====================================================
@@ -701,6 +726,10 @@ CREATE TABLE proyecto.inst_com_confidenciales (
 CREATE TRIGGER trg_actualizar_inst_com_confidenciales
     BEFORE UPDATE ON proyecto.inst_com_confidenciales
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+-- La PK (id_com_confidencial, cod_instancia) no cubre "comentarios
+-- confidenciales de esta instancia", que es la consulta real.
+CREATE INDEX idx_inst_com_confidenciales_instancia ON proyecto.inst_com_confidenciales(cod_instancia);
 
 -- =====================================================
 -- TABLA: log_intentos
