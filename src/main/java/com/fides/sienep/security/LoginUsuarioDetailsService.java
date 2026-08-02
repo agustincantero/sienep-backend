@@ -29,8 +29,13 @@ public class LoginUsuarioDetailsService implements UserDetailsService {
     private final FuncionarioRepository funcionarioRepository;
     private final EstudianteRepository estudianteRepository;
 
+    // noRollbackFor: sin esto, cuando una cuenta INACTIVO tira UsernameNotFoundException
+    // acá, la transacción (compartida con AuthService.login(), que sí declara
+    // noRollbackFor = ResponseStatusException.class) ya queda marcada rollback-only
+    // en este punto — y aunque login() después arme un 401 prolijo, Spring tira
+    // UnexpectedRollbackException al comitear y ese 401 termina como un 500 genérico.
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, noRollbackFor = UsernameNotFoundException.class)
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
 

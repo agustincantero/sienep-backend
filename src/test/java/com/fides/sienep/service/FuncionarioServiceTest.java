@@ -373,6 +373,36 @@ class FuncionarioServiceTest {
     }
 
     @Test
+    @DisplayName("Editar funcionario - Rechaza tocar a un funcionario cuyo rol ACTUAL tiene permisos que el actor no tiene (403)")
+    void editar_LanzaForbidden_CuandoFuncionarioActualTienePermisoQueElActorNoTiene() {
+        // rolMock es el rol ACTUAL de funcionarioMock (la "víctima")
+        rolMock.agregarPermiso(new Permiso("EDITAR_ESTUDIANTE", "Permite editar estudiantes"));
+
+        // El actor tiene EDITAR_FUNCIONARIO y hasta los permisos del rol de DESTINO,
+        // pero no EDITAR_ESTUDIANTE — que es un permiso que la víctima YA tenía antes
+        // de esta edición. No alcanza con calificar para el rol nuevo si no calificás
+        // también para el que la víctima ya tenía (evita degradar a alguien con más
+        // privilegios reasignándolo a un rol que el actor sí puede otorgar).
+        mockAuthConPermisos("EDITAR_FUNCIONARIO");
+
+        FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
+        updateDTO.setNombre("Carlos");
+        updateDTO.setApellido("González");
+        updateDTO.setEmail("carlos.perez@utec.edu.uy");
+        updateDTO.setIdRol(1); // mismo rol, ni siquiera lo está cambiando
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.editar(1, updateDTO));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Editar funcionario - No encontrado → 404")
     void editar_LanzaExcepcion_NoEncontrado() {
         FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
@@ -398,6 +428,7 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Desactivar - Estado pasa a INACTIVO")
     void desactivar_DebePonerEstadoInactivo() {
+        mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
         when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
 
@@ -411,6 +442,7 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Reactivar funcionario - Estado pasa a ACTIVO")
     void reactivar_DebePonerEstadoActivo() {
+        mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
         funcionarioMock.setEstado(EstadoLogico.INACTIVO);
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
         when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
@@ -427,6 +459,7 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Desactivar - Ya está inactivo (409)")
     void desactivar_LanzaConflict_YaInactivo() {
+        mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
         funcionarioMock.setEstado(EstadoLogico.INACTIVO);
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
 
@@ -440,6 +473,7 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Reactivar funcionario - Ya está activo (409)")
     void reactivar_LanzaConflict_YaActivo() {
+        mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
         // El constructor "alta" de Funcionario arranca en PENDIENTE_DE_ACTIVACION, no ACTIVO
         funcionarioMock.setEstado(EstadoLogico.ACTIVO);
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
@@ -448,6 +482,39 @@ class FuncionarioServiceTest {
                 () -> funcionarioService.reactivar(1));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Desactivar - Rechaza tocar a un funcionario con un rol con permisos que el actor no tiene (403)")
+    void desactivar_LanzaForbidden_CuandoFuncionarioTienePermisoQueElActorNoTiene() {
+        rolMock.agregarPermiso(new Permiso("EDITAR_ESTUDIANTE", "Permite editar estudiantes"));
+
+        // El actor solo tiene DESACTIVAR_FUNCIONARIO, no EDITAR_ESTUDIANTE (que sí tiene el
+        // rol actual de la víctima) — no puede tocarla aunque tenga el permiso de la acción.
+        mockAuthConPermisos("DESACTIVAR_FUNCIONARIO");
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.desactivar(1));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar - Rechaza tocar a un funcionario con un rol con permisos que el actor no tiene (403)")
+    void reactivar_LanzaForbidden_CuandoFuncionarioTienePermisoQueElActorNoTiene() {
+        rolMock.agregarPermiso(new Permiso("EDITAR_ESTUDIANTE", "Permite editar estudiantes"));
+        funcionarioMock.setEstado(EstadoLogico.INACTIVO);
+
+        mockAuthConPermisos("REACTIVAR_FUNCIONARIO");
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.reactivar(1));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(funcionarioRepository, never()).save(any());
     }
 

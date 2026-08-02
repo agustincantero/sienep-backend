@@ -148,6 +148,12 @@ public class FuncionarioService {
     @Transactional
     public void desactivar(Integer id) {
         Funcionario funcionario = buscarOFallar(id);
+
+        // Mismo criterio que en aplicarCambios(): sin esto, un actor con
+        // DESACTIVAR_FUNCIONARIO pero permisos limitados podía desactivar a un
+        // funcionario con más privilegios que él mismo (ej. al ADMINISTRADOR real).
+        ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(funcionario.getRol());
+
         if (funcionario.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra inactivo");
         }
@@ -159,6 +165,11 @@ public class FuncionarioService {
     @Transactional
     public FuncionarioResponseDTO reactivar(Integer id) {
         Funcionario funcionario = buscarOFallar(id);
+
+        // Mismo criterio que en desactivar(): un actor no debería poder tocar el
+        // estado de un funcionario con más privilegios que él mismo.
+        ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(funcionario.getRol());
+
         if (funcionario.getEstado() == EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra activo");
         }
@@ -175,7 +186,16 @@ public class FuncionarioService {
     private void aplicarCambios(Funcionario funcionario, FuncionarioUpdateDTO dto) {
         Rol rol = rolRepository.findById(dto.getIdRol())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado: " + dto.getIdRol()));
+
+        // Sin esto, un actor con EDITAR_FUNCIONARIO pero permisos limitados podía
+        // editar (incluido reasignarle el rol) a un funcionario con más privilegios
+        // que él mismo — ej. degradar al ADMINISTRADOR real a un rol propio de bajo
+        // privilegio. validarActorPuedeAsignarRol ya evitaba asignar un rol de
+        // destino con permisos que el actor no tiene; acá se agrega la misma
+        // validación contra el rol que el funcionario YA tenía.
+        ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(funcionario.getRol());
         ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
+
         funcionario.setNombre(dto.getNombre());
         funcionario.setApellido(dto.getApellido());
         funcionario.setEmail(dto.getEmail());
