@@ -167,6 +167,43 @@ class ComentarioConfidencialInstanciaServiceTest {
     }
 
     @Test
+    @DisplayName("Obtener por ID - Éxito")
+    void obtenerPorId_Exito() {
+        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(comentario));
+        when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
+
+        ComentarioConfidencialInstanciaResponseDTO resultado = comentarioService.obtenerPorId(1, 1);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getIdComConfidencial());
+    }
+
+    @Test
+    @DisplayName("Obtener por ID - No encontrado (404)")
+    void obtenerPorId_LanzaNotFound() {
+        when(comentarioRepository.findById_IdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> comentarioService.obtenerPorId(1, 99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("Obtener por ID - Pertenece a otra instancia (404)")
+    void obtenerPorId_LanzaNotFound_PerteneceAOtraInstancia() {
+        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(comentario));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> comentarioService.obtenerPorId(2, 1));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
     @DisplayName("Editar comentario confidencial - Éxito")
     void editar_Exito() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
