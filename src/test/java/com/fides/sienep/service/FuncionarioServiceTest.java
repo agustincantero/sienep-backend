@@ -290,10 +290,27 @@ class FuncionarioServiceTest {
         when(funcionarioRepository.findByEstado(EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
         when(funcionarioMapper.toDtoList(funcionarios)).thenReturn(dtos);
 
-        Page<FuncionarioResponseDTO> result = funcionarioService.listar(null, pageable);
+        Page<FuncionarioResponseDTO> result = funcionarioService.listar(null, null, pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Listar - Filtro por texto usa buscarPorTextoYEstado")
+    void listar_ConFiltroTexto_UsaBuscarPorTextoYEstado() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Funcionario> pagina = new PageImpl<>(List.of(funcionarioMock), pageable, 1);
+
+        when(funcionarioRepository.buscarPorTextoYEstado("Carlos", EstadoLogico.ACTIVO, pageable))
+                .thenReturn(pagina);
+        when(funcionarioMapper.toDtoList(List.of(funcionarioMock))).thenReturn(List.of(responseDTO));
+
+        Page<FuncionarioResponseDTO> result = funcionarioService.listar("Carlos", EstadoLogico.ACTIVO, pageable);
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        verify(funcionarioRepository, never()).findByEstado(any(), any());
     }
 
     // =========================================================

@@ -148,8 +148,8 @@ public class EstudianteService {
         Page<Estudiante> resultado;
         if (texto != null) {
             resultado = estadoEfectivo != null
-                    ? estudianteRepository.buscarPorNombreYEstado(texto, estadoEfectivo, pageable)
-                    : estudianteRepository.buscarPorNombre(texto, pageable);
+                    ? estudianteRepository.buscarPorTextoYEstado(texto, estadoEfectivo, pageable)
+                    : estudianteRepository.buscarPorTexto(texto, pageable);
         } else if (idGrupo != null) {
             resultado = estadoEfectivo != null
                     ? estudianteRepository.findByGrupoAndEstado(idGrupo, estadoEfectivo, pageable)

@@ -49,7 +49,7 @@ public class EstudianteController {
      * Endpoint único para listar, buscar y filtrar estudiantes.
      *
      * Todos los parámetros son opcionales y combinables:
-     *   ?texto=         busca por nombre o apellido parcial     requiere BUSCAR_ESTUDIANTE
+     *   ?texto=         busca por nombre, apellido o documento (parcial)     requiere BUSCAR_ESTUDIANTE
      *   ?grupo=         filtra por idGrupo                      requiere BUSCAR_ESTUDIANTE
      *   ?carrera=       filtra por idCarrera                    requiere BUSCAR_ESTUDIANTE
      *   ?itr=           filtra por idItr                        requiere BUSCAR_ESTUDIANTE

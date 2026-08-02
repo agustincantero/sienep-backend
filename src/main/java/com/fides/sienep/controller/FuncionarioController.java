@@ -28,15 +28,18 @@ public class FuncionarioController {
 
     private final FuncionarioService funcionarioService;
 
-    @Operation(summary = "Listar funcionarios", description = "Sin el parámetro estado, devuelve solo los ACTIVOS.")
+    @Operation(summary = "Listar y buscar funcionarios",
+            description = "Sin parámetros, devuelve solo los ACTIVOS. Con texto: busca por nombre, apellido o documento (parcial).")
     @ApiResponse(responseCode = "200", description = "Funcionarios obtenidos correctamente")
     @GetMapping
     public ResponseEntity<Page<FuncionarioResponseDTO>> listar(
+            @Parameter(description = "Busca por nombre, apellido o documento (parcial)", required = false)
+            @RequestParam(required = false) String texto,
             @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
             @RequestParam(required = false) EstadoLogico estado,
             @ParameterObject @PageableDefault(size = 20, sort = "apellido") Pageable pageable) {
 
-        return ResponseEntity.ok(funcionarioService.listar(estado, pageable));
+        return ResponseEntity.ok(funcionarioService.listar(texto, estado, pageable));
     }
 
     @Operation(summary = "Obtener funcionario por ID")

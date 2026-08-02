@@ -113,9 +113,11 @@ public class FuncionarioService {
 
     @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
     @Transactional(readOnly = true)
-    public Page<FuncionarioResponseDTO> listar(EstadoLogico estado, Pageable pageable) {
+    public Page<FuncionarioResponseDTO> listar(String texto, EstadoLogico estado, Pageable pageable) {
         EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
-        Page<Funcionario> pagina = funcionarioRepository.findByEstado(estadoEfectivo, pageable);
+        Page<Funcionario> pagina = texto != null
+                ? funcionarioRepository.buscarPorTextoYEstado(texto, estadoEfectivo, pageable)
+                : funcionarioRepository.findByEstado(estadoEfectivo, pageable);
         List<FuncionarioResponseDTO> dtos = funcionarioMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }

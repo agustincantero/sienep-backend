@@ -342,18 +342,18 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Listar - Filtro por texto con BUSCAR_ESTUDIANTE usa buscarPorNombreYEstado (B5)")
-    void listar_ConFiltroTexto_UsaBuscarPorNombreYEstado() {
+    @DisplayName("Listar - Filtro por texto con BUSCAR_ESTUDIANTE usa buscarPorTextoYEstado (B5)")
+    void listar_ConFiltroTexto_UsaBuscarPorTextoYEstado() {
         mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "BUSCAR_ESTUDIANTE");
 
         Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
-        when(estudianteRepository.buscarPorNombreYEstado("Ana", EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+        when(estudianteRepository.buscarPorTextoYEstado("Ana", EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
                 .thenReturn(pagina);
         when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
 
         estudianteService.listar("Ana", null, null, null, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
 
-        verify(estudianteRepository).buscarPorNombreYEstado("Ana", EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+        verify(estudianteRepository).buscarPorTextoYEstado("Ana", EstadoLogico.ACTIVO, PageRequest.of(0, 10));
     }
 
     @Test

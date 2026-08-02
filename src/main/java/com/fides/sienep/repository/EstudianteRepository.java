@@ -15,30 +15,28 @@ import java.util.Optional;
 @Repository
 public interface EstudianteRepository extends JpaRepository<Estudiante, Integer> {
 
-    // Búsqueda por documento
-    // Sin filtro de estado: para uso interno (ej: validar unicidad).
-    // Con filtro de estado: para cuando solo deben aparecer activos (ej: login, búsqueda pública).
-    Optional<Estudiante> findByDocumento(String documento);
-    Optional<Estudiante> findByDocumentoAndEstado(String documento, EstadoLogico estado);
     Optional<Estudiante> findByEmail(String email);
 
-    // Búsqueda por nombre/apellido — versión con y sin filtro de estado
+    // Búsqueda por nombre, apellido o documento (parcial, sin importar mayúsculas)
+    // — versión con y sin filtro de estado.
     @Query("""
             SELECT e FROM Estudiante e
             WHERE LOWER(e.nombre) LIKE LOWER(CONCAT('%', :texto, '%'))
                OR LOWER(e.apellido) LIKE LOWER(CONCAT('%', :texto, '%'))
+               OR LOWER(e.documento) LIKE LOWER(CONCAT('%', :texto, '%'))
             """)
-    Page<Estudiante> buscarPorNombre(@Param("texto") String texto, Pageable pageable);
+    Page<Estudiante> buscarPorTexto(@Param("texto") String texto, Pageable pageable);
 
     @Query("""
             SELECT e FROM Estudiante e
             WHERE (LOWER(e.nombre) LIKE LOWER(CONCAT('%', :texto, '%'))
-               OR LOWER(e.apellido) LIKE LOWER(CONCAT('%', :texto, '%')))
+               OR LOWER(e.apellido) LIKE LOWER(CONCAT('%', :texto, '%'))
+               OR LOWER(e.documento) LIKE LOWER(CONCAT('%', :texto, '%')))
               AND e.estado = :estado
             """)
-    Page<Estudiante> buscarPorNombreYEstado(@Param("texto") String texto,
-                                            @Param("estado") EstadoLogico estado,
-                                            Pageable pageable);
+    Page<Estudiante> buscarPorTextoYEstado(@Param("texto") String texto,
+                                           @Param("estado") EstadoLogico estado,
+                                           Pageable pageable);
 
     // Listado por estado
     Page<Estudiante> findByEstado(EstadoLogico estado, Pageable pageable);
