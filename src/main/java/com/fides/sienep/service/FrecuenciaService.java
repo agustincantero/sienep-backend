@@ -8,6 +8,8 @@ import com.fides.sienep.model.Frecuencia;
 import com.fides.sienep.repository.FrecuenciaRepository;
 import com.fides.sienep.repository.RecordatorioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class FrecuenciaService {
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
+    @CacheEvict(value = "frecuencias", allEntries = true)
     public FrecuenciaResponseDTO crear(FrecuenciaRequestDTO dto) {
         validarCoherenciaFrecuencia(dto);
         Frecuencia frecuencia = new Frecuencia(
@@ -39,6 +42,7 @@ public class FrecuenciaService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
+    @Cacheable("frecuencias")
     public List<FrecuenciaResponseDTO> listar(EstadoLogico estado) {
         EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         List<Frecuencia> frecuencias = frecuenciaRepository.findByEstado(estadoEfectivo);
@@ -47,12 +51,14 @@ public class FrecuenciaService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
+    @Cacheable(value = "frecuencias", key = "#id")
     public FrecuenciaResponseDTO obtenerPorId(int id) {
         return frecuenciaMapper.toDto(buscarActivaOFallar(id));
     }
 
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
+    @CacheEvict(value = "frecuencias", allEntries = true)
     public FrecuenciaResponseDTO editar(int id, FrecuenciaRequestDTO dto) {
         validarCoherenciaFrecuencia(dto);
         Frecuencia frecuencia = buscarActivaOFallar(id);
@@ -65,6 +71,7 @@ public class FrecuenciaService {
 
     @Transactional
     @PreAuthorize("hasAuthority('DESACTIVAR_RECORDATORIO')")
+    @CacheEvict(value = "frecuencias", allEntries = true)
     public void desactivar(int id) {
         Frecuencia frecuencia = buscarActivaOFallar(id);
 
@@ -84,6 +91,7 @@ public class FrecuenciaService {
     // tiene los suyos propios), de ahí REACTIVAR_RECORDATORIO y no REACTIVAR_FRECUENCIA.
     @Transactional
     @PreAuthorize("hasAuthority('REACTIVAR_RECORDATORIO')")
+    @CacheEvict(value = "frecuencias", allEntries = true)
     public FrecuenciaResponseDTO reactivar(int id) {
         Frecuencia frecuencia = frecuenciaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(

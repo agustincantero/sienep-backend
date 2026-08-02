@@ -14,7 +14,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 // auto-configura ConcurrentMapCacheManager: un caché en memoria del proceso, igual
 // que OAuthStateStore/PasswordResetRateLimiter. Usado por los @Cacheable de
 // RolService, CategoriaInstanciaService, CategoriaRecordatorioService,
-// PermisoService, ItrService y CarreraService (catálogos que cambian poco).
+// PermisoService, ItrService, CarreraService y FrecuenciaService (catálogos
+// que cambian poco).
 // Limitación conocida y aceptada para el alcance actual (instancia única): si el
 // backend llegara a escalar horizontalmente, cada instancia tendría su propio
 // caché, así que un @CacheEvict en la instancia A no invalidaría la caché de la
