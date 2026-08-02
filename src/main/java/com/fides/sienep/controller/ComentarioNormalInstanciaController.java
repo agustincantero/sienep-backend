@@ -51,6 +51,19 @@ public class ComentarioNormalInstanciaController {
         return ResponseEntity.ok(comentarioService.listarPorInstancia(codInstancia, pageable));
     }
 
+    @GetMapping("/{idComentario}")
+    @Operation(summary = "Obtener comentario normal por ID", description = "Trae un comentario normal puntual de la instancia.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Comentario encontrado"),
+            @ApiResponse(responseCode = "404", description = "Comentario no encontrado"),
+            @ApiResponse(responseCode = "403", description = "Sin permisos")
+    })
+    public ResponseEntity<ComentarioNormalInstanciaResponseDTO> obtenerPorId(
+            @PathVariable int codInstancia,
+            @PathVariable int idComentario) {
+        return ResponseEntity.ok(comentarioService.obtenerPorId(codInstancia, idComentario));
+    }
+
     @PutMapping("/{idComentario}")
     @Operation(summary = "Editar comentario normal", description = "Edita el contenido de un comentario normal activo.")
     @ApiResponses({
