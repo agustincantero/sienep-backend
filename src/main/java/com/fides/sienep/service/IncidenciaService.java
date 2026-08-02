@@ -120,10 +120,12 @@ public class IncidenciaService {
 
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
-    public List<IncidenciaResponseDTO> listarMisIncidencias() {
+    public Page<IncidenciaResponseDTO> listarMisIncidencias(Pageable pageable) {
         Integer idEstudiante = getIdUsuarioAutenticado();
-        return incidenciaMapper.toDtoList(
-                incidenciaRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
+        Page<Incidencia> pagina = incidenciaRepository.findByEstudianteAndEstado(
+                idEstudiante, EstadoLogico.ACTIVO, pageable);
+        List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional

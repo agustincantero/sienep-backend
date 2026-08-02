@@ -16,6 +16,9 @@ import com.fides.sienep.utils.ValidadorDePermisosDeRol;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -110,9 +113,11 @@ public class FuncionarioService {
 
     @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
     @Transactional(readOnly = true)
-    public List<FuncionarioResponseDTO> listar(EstadoLogico estado) {
+    public Page<FuncionarioResponseDTO> listar(EstadoLogico estado, Pageable pageable) {
         EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
-        return funcionarioMapper.toDtoList(funcionarioRepository.findByEstado(estadoEfectivo));
+        Page<Funcionario> pagina = funcionarioRepository.findByEstado(estadoEfectivo, pageable);
+        List<FuncionarioResponseDTO> dtos = funcionarioMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")

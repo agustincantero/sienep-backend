@@ -12,11 +12,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/funcionarios")
@@ -29,11 +31,12 @@ public class FuncionarioController {
     @Operation(summary = "Listar funcionarios", description = "Sin el parámetro estado, devuelve solo los ACTIVOS.")
     @ApiResponse(responseCode = "200", description = "Funcionarios obtenidos correctamente")
     @GetMapping
-    public ResponseEntity<List<FuncionarioResponseDTO>> listar(
+    public ResponseEntity<Page<FuncionarioResponseDTO>> listar(
             @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
-            @RequestParam(required = false) EstadoLogico estado) {
+            @RequestParam(required = false) EstadoLogico estado,
+            @ParameterObject @PageableDefault(size = 20, sort = "apellido") Pageable pageable) {
 
-        return ResponseEntity.ok(funcionarioService.listar(estado));
+        return ResponseEntity.ok(funcionarioService.listar(estado, pageable));
     }
 
     @Operation(summary = "Obtener funcionario por ID")

@@ -19,8 +19,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/instancias")
 @RequiredArgsConstructor
@@ -111,7 +109,8 @@ public class InstanciaComunController {
     @ApiResponse(responseCode = "200", description = "Instancias obtenidas correctamente")
     @ApiResponse(responseCode = "403", description = "Acceso denegado")
     @GetMapping("/mis-instancias")
-    public ResponseEntity<List<InstanciaComunResponseDTO>> listarMisInstancias() {
-        return ResponseEntity.ok(instanciaComunService.listarMisInstancias());
+    public ResponseEntity<Page<InstanciaComunResponseDTO>> listarMisInstancias(
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(instanciaComunService.listarMisInstancias(pageable));
     }
 }

@@ -271,10 +271,12 @@ public class InstanciaComunService {
 
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
-    public List<InstanciaComunResponseDTO> listarMisInstancias() {
+    public Page<InstanciaComunResponseDTO> listarMisInstancias(Pageable pageable) {
         Integer idEstudiante = getIdUsuarioAutenticado();
-        return instanciaComunMapper.toDtoList(
-                instanciaComunRepository.findByEstudianteAndEstado(idEstudiante, EstadoLogico.ACTIVO));
+        Page<InstanciaComun> pagina = instanciaComunRepository.findByEstudianteAndEstado(
+                idEstudiante, EstadoLogico.ACTIVO, pageable);
+        List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
+        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @Transactional

@@ -20,6 +20,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -280,14 +284,16 @@ class FuncionarioServiceTest {
     void listar_SinEstado_DevuelveSoloActivos() {
         List<Funcionario> funcionarios = List.of(funcionarioMock);
         List<FuncionarioResponseDTO> dtos = List.of(responseDTO);
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Funcionario> pagina = new PageImpl<>(funcionarios, pageable, 1);
 
-        when(funcionarioRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(funcionarios);
+        when(funcionarioRepository.findByEstado(EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
         when(funcionarioMapper.toDtoList(funcionarios)).thenReturn(dtos);
 
-        List<FuncionarioResponseDTO> result = funcionarioService.listar(null);
+        Page<FuncionarioResponseDTO> result = funcionarioService.listar(null, pageable);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
+        assertEquals(1, result.getTotalElements());
     }
 
     // =========================================================

@@ -23,10 +23,6 @@ public interface IncidenciaRepository extends JpaRepository<Incidencia, Integer>
     Optional<Incidencia> findByCodInstanciaAndEstado(int codInstancia, EstadoLogico estado);
 
     @Query("SELECT i FROM Incidencia i WHERE i.estudiante.idUsuario = :idEstudiante AND i.estado = :estado")
-    List<Incidencia> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
-                                               @Param("estado") EstadoLogico estado);
-
-    @Query("SELECT i FROM Incidencia i WHERE i.estudiante.idUsuario = :idEstudiante AND i.estado = :estado")
     Page<Incidencia> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
                                                @Param("estado") EstadoLogico estado,
                                                Pageable pageable);

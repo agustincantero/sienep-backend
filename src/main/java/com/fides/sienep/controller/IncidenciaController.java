@@ -18,8 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/incidencias")
 @RequiredArgsConstructor
@@ -98,7 +96,8 @@ public class IncidenciaController {
     @ApiResponse(responseCode = "200", description = "Incidencias obtenidas correctamente")
     @ApiResponse(responseCode = "403", description = "Acceso denegado")
     @GetMapping("/mis-incidencias")
-    public ResponseEntity<List<IncidenciaResponseDTO>> listarMisIncidencias() {
-        return ResponseEntity.ok(incidenciaService.listarMisIncidencias());
+    public ResponseEntity<Page<IncidenciaResponseDTO>> listarMisIncidencias(
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(incidenciaService.listarMisIncidencias(pageable));
     }
 }

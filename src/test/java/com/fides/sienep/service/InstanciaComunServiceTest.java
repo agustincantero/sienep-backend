@@ -510,14 +510,17 @@ class InstanciaComunServiceTest {
     @DisplayName("Listar mis instancias - Éxito")
     void listarMisInstancias_Exito() {
         mockSecurityContext(1);
-        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(instancia));
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<InstanciaComun> pagina = new PageImpl<>(List.of(instancia), pageable, 1);
+
+        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(pagina);
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        List<InstanciaComunResponseDTO> resultado = instanciaComunService.listarMisInstancias();
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarMisInstancias(pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     // ── Buscar por ID ─────────────────────────────────────────

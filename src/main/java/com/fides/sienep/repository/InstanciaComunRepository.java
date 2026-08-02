@@ -44,14 +44,6 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             "JOIN FETCH ic.funcionario " +
             "JOIN FETCH ic.categoria " +
             "WHERE ic.estudiante.idUsuario = :idEstudiante AND ic.estado = :estado")
-    List<InstanciaComun> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
-                                                   @Param("estado") EstadoLogico estado);
-
-    @Query("SELECT ic FROM InstanciaComun ic " +
-            "JOIN FETCH ic.estudiante " +
-            "JOIN FETCH ic.funcionario " +
-            "JOIN FETCH ic.categoria " +
-            "WHERE ic.estudiante.idUsuario = :idEstudiante AND ic.estado = :estado")
     Page<InstanciaComun> findByEstudianteAndEstado(@Param("idEstudiante") int idEstudiante,
                                                    @Param("estado") EstadoLogico estado,
                                                    Pageable pageable);

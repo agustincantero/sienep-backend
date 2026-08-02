@@ -2,11 +2,12 @@ package com.fides.sienep.repository;
 
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Funcionario;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -28,8 +29,9 @@ public interface FuncionarioRepository extends JpaRepository<Funcionario, Intege
             EstadoLogico estado
     );
 
-    List<Funcionario> findByEstado(
-            EstadoLogico estado
+    Page<Funcionario> findByEstado(
+            EstadoLogico estado,
+            Pageable pageable
     );
 
     boolean existsByDocumento(

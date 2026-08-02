@@ -364,13 +364,16 @@ class IncidenciaServiceTest {
     @DisplayName("Listar mis incidencias - Éxito")
     void listarMisIncidencias_Exito() {
         mockSecurityContext(1);
-        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(incidencia));
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Incidencia> pagina = new PageImpl<>(List.of(incidencia), pageable, 1);
+
+        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(pagina);
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        List<IncidenciaResponseDTO> resultado = incidenciaService.listarMisIncidencias();
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarMisIncidencias(pageable);
 
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.getTotalElements());
     }
 }
