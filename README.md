@@ -14,6 +14,8 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
 - [Funcionalidad principal](#funcionalidad-principal)
 - [Arquitectura general](#arquitectura-general)
 - [Arquitectura de Seguridad y Autenticación](#arquitectura-de-seguridad-y-autenticación)
+    - [Recuperación de contraseña](#recuperación-de-contraseña)
+- [Archivos subidos](#archivos-subidos)
 - [Configuración y Ejecución](#configuración-y-ejecución)
     - [Preparar la base de datos (Docker)](#preparar-la-base-de-datos-docker)
     - [Ejecución desde la Terminal](#ejecución-desde-la-terminal)
@@ -38,7 +40,7 @@ La API expone los servicios correspondientes a los 7 módulos centrales del sist
 3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (creando un recordatorio inicial en la misma llamada, ver RF13). La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /api/instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /api/instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
 4. **Gestión de Recordatorios:** Creación (únicos y recurrentes), notificaciones, vinculación a instancias e integración con Google Calendar.
 5. **Gestión de Incidencias:** Registro detallado y visualización del historial de incidencias.
-6. **Reportes:** Generación y exportación de informes del sistema.
+6. **Reportes:** Generación y exportación de informes del sistema, incluyendo un endpoint público (`POST /api/reportes/validar`) para verificar si un PDF exportado es auténtico, comparando su hash SHA-256 contra el que el sistema guardó al generarlo.
 7. **Administración y Configuración:** Gestión completa de Roles y Permisos (preexistentes y personalizados), y mantenimiento de las categorías de Instancias y Recordatorios.
 
 ## Arquitectura general
@@ -82,6 +84,29 @@ A continuación se detalla la responsabilidad de las clases clave que componen e
     *   **Funcionarios:** Convierte el Rol y la lista de permisos (`RolPermiso`) asignados dinámicamente en la base de datos a instancias de `GrantedAuthority` de Spring.
     *   **Estudiantes:** Se les inyecta un rol sintético (`ROLE_ESTUDIANTE`) y permisos base (`VER_COMENTARIO_NORMAL_ESTUDIANTE`), logrando que ambos actores convivan transparentemente bajo el mismo control de acceso basado en anotaciones (`@PreAuthorize`).
 
+### Recuperación de contraseña
+
+Si el usuario olvida su contraseña, el flujo se separa en dos pasos para no aplicar el cambio sin confirmación:
+
+1. **`POST /api/auth/olvide-contrasenia`** (público): recibe un email, genera un token de un solo uso (UUID), guarda su hash SHA-256 con vencimiento de 30 minutos e invalida cualquier token anterior del mismo usuario. Envía por correo un link armado con la variable de entorno `FRONTEND_URL` (ej. `https://tu-frontend/restablecer-contrasenia?token=...`). La contraseña actual no se modifica todavía en este paso.
+2. **`POST /api/auth/restablecer-contrasenia`** (público): recibe el token y la nueva contraseña, valida que no esté vencido ni ya usado, y recién ahí la aplica.
+
+Por diseño, este flujo responde siempre igual (200) exista o no el email, para no permitir enumerar cuentas registradas, y limita a **3 solicitudes cada 15 minutos por email** (`429 Too Many Requests` si se supera), para frenar abuso hacia el correo del usuario o hacia el servidor SMTP.
+
+## Archivos subidos
+
+El sistema permite adjuntar archivos reales (no URLs externas) en dos flujos:
+
+- **Informes adjuntos de un estudiante:** `POST /api/informes-adjuntos` (multipart) sube el archivo; `GET /api/informes-adjuntos/{id}/descargar` lo devuelve, protegido por el permiso `VER_INFORME`.
+- **Foto de perfil de un estudiante:** `PUT /api/estudiantes/{id}/foto` (multipart) sube/reemplaza la foto; `GET /api/estudiantes/{id}/foto` la devuelve. El propio estudiante puede subir y ver su foto sin necesitar el permiso general de edición/visualización.
+
+En ambos casos:
+
+- Formatos aceptados: PDF, JPG/JPEG, PNG. Tamaño máximo: **5MB**.
+- El archivo se valida por su extensión declarada y también por sus "magic bytes" (la firma real de su contenido), para evitar que un archivo ejecutable o HTML renombrado con una extensión falsa sea aceptado y luego servido con un `Content-Type` incorrecto.
+- Se guardan en disco bajo la carpeta indicada por la variable de entorno `STORAGE_PATH` (por defecto `uploads`, relativa al directorio de ejecución).
+- **Importante para el Frontend:** como la autenticación es JWT por header (no por cookie), el link de descarga no es "clickeable" directo desde el navegador. Hay que hacer un `fetch` incluyendo el header `Authorization: Bearer <token>` y armar un blob con la respuesta, en vez de usar un `<a href>` o `<img src>` plano.
+
 ## Configuración y Ejecución
 
 ### Preparar la base de datos (Docker)
@@ -104,6 +129,11 @@ A continuación se muestra cómo configurar las variables para una sesión de te
 
 **Paso 1: Configurar variables**
 
+> **Nota:** además de las variables obligatorias definidas abajo, existen 3 opcionales (si no se definen, usan su valor por defecto):
+> - `FRONTEND_URL`: URL base del frontend, usada para armar el link de "olvidé mi contraseña" (default `http://localhost:3000`).
+> - `STORAGE_PATH`: carpeta base donde se guardan los archivos subidos — informes adjuntos y fotos de perfil (default `uploads`).
+> - `CORS_ALLOWED_ORIGINS`: orígenes permitidos para CORS, separados por coma y sin barra final (default `http://localhost:3000,https://sienep.app`). El backend solo acepta peticiones `fetch`/AJAX hechas desde un origen de esta lista.
+
 *Windows - Opción 1: PowerShell*
 ```powershell
 $env:JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
@@ -117,6 +147,9 @@ $env:MAIL_PASSWORD="tu_password_de_aplicacion"
 $env:GOOGLE_CLIENT_ID="tu_google_client_id"
 $env:GOOGLE_CLIENT_SECRET="tu_google_client_secret"
 $env:GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
+$env:FRONTEND_URL="http://localhost:3000"
+$env:STORAGE_PATH="uploads"
+$env:CORS_ALLOWED_ORIGINS="http://localhost:3000,https://sienep.app"
 ```
 
 *Windows - Opción 2: Símbolo del sistema (CMD)*
@@ -132,6 +165,9 @@ set MAIL_PASSWORD=tu_password_de_aplicacion
 set GOOGLE_CLIENT_ID=tu_google_client_id
 set GOOGLE_CLIENT_SECRET=tu_google_client_secret
 set GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
+set FRONTEND_URL=http://localhost:3000
+set STORAGE_PATH=uploads
+set CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
 ```
 
 *macOS & Linux (bash/zsh)*
@@ -147,6 +183,9 @@ export MAIL_PASSWORD="tu_password_de_aplicacion"
 export GOOGLE_CLIENT_ID="tu_google_client_id"
 export GOOGLE_CLIENT_SECRET="tu_google_client_secret"
 export GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
+export FRONTEND_URL="http://localhost:3000"
+export STORAGE_PATH="uploads"
+export CORS_ALLOWED_ORIGINS="http://localhost:3000,https://sienep.app"
 ```
 
 **Paso 2: Ejecutar el proyecto**
@@ -164,7 +203,7 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
 5. En el campo de **Environment variables**, agregá lo siguiente:
 ```text
-   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
+   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback;FRONTEND_URL=http://localhost:3000;STORAGE_PATH=uploads;CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
 ```
 *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 
