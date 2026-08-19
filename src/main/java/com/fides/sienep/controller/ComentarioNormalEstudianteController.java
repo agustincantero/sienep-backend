@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/comentarios-normales-estudiante")
+@RequestMapping("/comentarios-normales-estudiante")
 @RequiredArgsConstructor
 @Tag(name = "Comentarios normales de estudiante",
         description = "Gestión de comentarios observables sobre estudiantes")

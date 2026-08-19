@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/grupos")
+@RequestMapping("/grupos")
 @RequiredArgsConstructor
 @Tag(name = "Grupos", description = "Gestión de grupos académicos")
 public class GrupoController {

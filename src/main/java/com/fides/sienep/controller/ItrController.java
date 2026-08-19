@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/itrs")
+@RequestMapping("/itrs")
 @RequiredArgsConstructor
 @Tag(name = "ITR", description = "Gestión de ITRs")
 public class ItrController {

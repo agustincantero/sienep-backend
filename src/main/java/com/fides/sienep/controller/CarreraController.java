@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/carreras")
+@RequestMapping("/carreras")
 @RequiredArgsConstructor
 @Tag(name = "Carreras", description = "Gestión de carreras")
 public class CarreraController {

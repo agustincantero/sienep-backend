@@ -37,7 +37,7 @@ public class EstudianteResponseDTO {
 
     @Schema(description = "Ruta para ver la foto de perfil (null si no tiene foto cargada). " +
             "Requiere autenticación y permiso VER_ESTUDIANTE, o ser el propio estudiante.",
-            example = "/api/estudiantes/5/foto")
+            example = "/estudiantes/5/foto")
     private String urlFoto;
 
     @Schema(description = "Números de teléfono del estudiante")

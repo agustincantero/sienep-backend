@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/frecuencias")
+@RequestMapping("/frecuencias")
 @RequiredArgsConstructor
 @Tag(name = "Frecuencias", description = "Gestión de frecuencias de recordatorios")
 public class FrecuenciaController {

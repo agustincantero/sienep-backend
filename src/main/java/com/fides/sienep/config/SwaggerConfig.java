@@ -22,7 +22,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Localhost"),
-                        new Server().url("https://sienep.app").description("Cloudflare Tunnel")
+                        new Server().url("https://api.sienep.app").description("Cloudflare Tunnel")
                 ))
                 .info(new Info()
                         .title("SIENEP API")

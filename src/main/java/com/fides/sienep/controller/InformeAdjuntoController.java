@@ -21,7 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/informes-adjuntos")
+@RequestMapping("/informes-adjuntos")
 @RequiredArgsConstructor
 @Tag(name = "Informes Adjuntos", description = "Gestión de informes adjuntos de estudiantes")
 public class InformeAdjuntoController {

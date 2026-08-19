@@ -21,7 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/funcionarios")
+@RequestMapping("/funcionarios")
 @RequiredArgsConstructor
 @Tag(name = "Funcionarios", description = "Gestión de funcionarios")
 public class FuncionarioController {

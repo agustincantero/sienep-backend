@@ -19,7 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/incidencias")
+@RequestMapping("/incidencias")
 @RequiredArgsConstructor
 @Tag(name = "Incidencias", description = "Gestión de incidencias")
 public class IncidenciaController {

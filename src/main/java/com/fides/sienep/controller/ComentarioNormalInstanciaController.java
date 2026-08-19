@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/instancias/{codInstancia}/comentarios-normales")
+@RequestMapping("/instancias/{codInstancia}/comentarios-normales")
 @RequiredArgsConstructor
 @Tag(name = "Comentarios Normales de Instancia", description = "Gestión de comentarios normales de instancias")
 public class ComentarioNormalInstanciaController {

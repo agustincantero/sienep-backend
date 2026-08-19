@@ -20,7 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/instancias")
+@RequestMapping("/instancias")
 @RequiredArgsConstructor
 @Tag(name = "Instancias", description = "Gestión de instancias formales (reuniones, llamadas, seguimientos)")
 public class InstanciaComunController {

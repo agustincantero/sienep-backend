@@ -13,7 +13,7 @@ import com.fides.sienep.model.TipoAccion;
 import org.springframework.data.domain.Page;
 
 @RestController
-@RequestMapping("/api/auditorias")
+@RequestMapping("/auditorias")
 @RequiredArgsConstructor
 @Tag(name = "Auditoría", description = "Endpoints para la consulta y trazabilidad de eventos del sistema")
 public class AuditoriaController {

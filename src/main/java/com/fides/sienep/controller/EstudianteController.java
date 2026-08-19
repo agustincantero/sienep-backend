@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/estudiantes")
+@RequestMapping("/estudiantes")
 @RequiredArgsConstructor
 @Tag(name = "Estudiantes", description = "Gestión de estudiantes del sistema SIENEP")
 public class EstudianteController {

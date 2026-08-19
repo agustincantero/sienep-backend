@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/instancias/{codInstancia}/comentarios-confidenciales")
+@RequestMapping("/instancias/{codInstancia}/comentarios-confidenciales")
 @RequiredArgsConstructor
 @Tag(name = "Comentarios Confidenciales de Instancia", description = "Gestión de comentarios confidenciales de instancias")
 public class ComentarioConfidencialInstanciaController {

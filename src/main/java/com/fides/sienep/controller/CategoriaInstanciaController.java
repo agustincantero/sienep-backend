@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/categorias-instancias")
+@RequestMapping("/categorias-instancias")
 @Tag(name = "Categorías de Instancias", description = "Gestión de categorías que agrupan a las instancias")
 @RequiredArgsConstructor
 public class CategoriaInstanciaController {

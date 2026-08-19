@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/recordatorios")
+@RequestMapping("/recordatorios")
 @RequiredArgsConstructor
 @Tag(name = "Recordatorios", description = "Gestión de recordatorios")
 public class RecordatorioController {

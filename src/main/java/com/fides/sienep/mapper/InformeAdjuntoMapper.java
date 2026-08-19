@@ -12,7 +12,7 @@ public interface InformeAdjuntoMapper {
 
     @Mapping(target = "idUsuario", source = "estudiante.idUsuario")
     @Mapping(target = "urlDescarga",
-            expression = "java(\"/api/informes-adjuntos/\" + entidad.getIdInforme() + \"/descargar\")")
+            expression = "java(\"/informes-adjuntos/\" + entidad.getIdInforme() + \"/descargar\")")
     InformeAdjuntoResponseDTO toDto(InformeAdjunto entidad);
 
     List<InformeAdjuntoResponseDTO> toDtoList(List<InformeAdjunto> entidades);

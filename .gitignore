@@ -35,3 +35,7 @@ build/
 ### VS Code ###
 .vscode/
 .env
+
+### OpenAPI spec exportado (generado localmente, no versionado) ###
+docs/openapi.json
+docs/openapi.yaml

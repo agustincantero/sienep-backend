@@ -29,7 +29,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 @RestController
-@RequestMapping("/api/reportes")
+@RequestMapping("/reportes")
 @RequiredArgsConstructor
 @Tag(name = "Reportes", description = "Generación y exportación de reportes de seguimiento estudiantil — RF30/RF31")
 public class ReporteController {
