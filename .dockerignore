@@ -1,0 +1,14 @@
+target/
+uploads/
+docs/
+.git/
+.gitignore
+.idea/
+*.iml
+.vscode/
+.mvn/wrapper/maven-wrapper.jar
+.env
+*.log
+HELP.md
+README.md
+CLAUDE.md
