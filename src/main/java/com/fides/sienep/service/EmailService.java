@@ -3,35 +3,47 @@ package com.fides.sienep.service;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    private static final String REMITENTE = "no-reply@sienep.app";
 
-    private final JavaMailSender mailSender;
+    private final RestClient brevoRestClient;
+
+    // API HTTP de Brevo en vez de SMTP: Render (free tier) bloquea tráfico
+    // saliente a los puertos SMTP (25/465/587) desde el 26/09/2025, así que
+    // JavaMailSender nunca podía conectar. La API HTTP va por 443, mismo
+    // puerto que ya usa GoogleOAuthService contra la API de Google.
+    private void enviarEmailBrevo(String destinatario, String asunto, String texto) {
+        brevoRestClient.post()
+                .body(Map.of(
+                        "sender", Map.of("email", REMITENTE),
+                        "to", List.of(Map.of("email", destinatario)),
+                        "subject", asunto,
+                        "textContent", texto
+                ))
+                .retrieve()
+                .toBodilessEntity();
+    }
 
     public void enviarContraseniaTemporal(String destinatario, String nombreUsuario, String contrasenia) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@sienep.app");
-            message.setTo(destinatario);
-            message.setSubject("Acceso al sistema - Contraseña temporal");
-            message.setText(
+            enviarEmailBrevo(destinatario, "Acceso al sistema - Contraseña temporal",
                     "¡Hola, " + nombreUsuario + "!\n\n" +
                             "Tu cuenta fue creada con éxito.\n" +
                             "Tu contraseña temporal es: " + contrasenia + "\n\n" +
-                            "Por seguridad, cámbiala en tu primer ingreso."
-            );
-            mailSender.send(message);
+                            "Por seguridad, cámbiala en tu primer ingreso.");
             log.info("[AUDIT] Email de contraseña temporal enviado a {}", destinatario);
         } catch (Exception e) {
             log.error("[AUDIT] Error al enviar email a {}: {}", destinatario, e.getMessage());
@@ -41,21 +53,15 @@ public class EmailService {
 
     public void enviarContraseniaRestablecida(String destinatario, String nombreUsuario, String contrasenia) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@sienep.app");
-            message.setTo(destinatario);
-            message.setSubject("Restablecimiento de contraseña - SIENEP");
-            message.setText(
+            enviarEmailBrevo(destinatario, "Restablecimiento de contraseña - SIENEP",
                     "¡Hola, " + nombreUsuario + "!\n\n" +
                             "Se generó una nueva contraseña para tu cuenta.\n" +
                             "Tu contraseña temporal es: " + contrasenia + "\n\n" +
-                            "Por seguridad, cámbiala en tu próximo ingreso."
-            );
-            mailSender.send(message);
+                            "Por seguridad, cámbiala en tu próximo ingreso.");
             log.info("[AUDIT] Email de restablecimiento enviado a {}", destinatario);
         } catch (Exception e) {
             log.error("[AUDIT] Error al enviar email a {}: {}", destinatario, e.getMessage());
-            // 503 (no 500): el fallo es del SMTP externo, no un bug del servidor —
+            // 503 (no 500): el fallo es del servicio externo, no un bug del servidor —
             // restablecerContrasenia() no captura esta excepción a propósito (a
             // diferencia de crear(), acá sí hay una contraseña previa que preservar
             // vía rollback si el envío falla).
@@ -69,18 +75,12 @@ public class EmailService {
     // elige el usuario recién al confirmar (AuthService.restablecerContraseniaConToken).
     public void enviarLinkRestablecimiento(String destinatario, String nombreUsuario, String link) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@sienep.app");
-            message.setTo(destinatario);
-            message.setSubject("Restablecer tu contraseña - SIENEP");
-            message.setText(
+            enviarEmailBrevo(destinatario, "Restablecer tu contraseña - SIENEP",
                     "¡Hola, " + nombreUsuario + "!\n\n" +
                             "Solicitaste restablecer tu contraseña.\n" +
                             "Si fuiste vos, entrá a este link (válido por 30 minutos):\n" +
                             link + "\n\n" +
-                            "Si no fuiste vos, ignorá este mensaje: tu contraseña actual sigue funcionando."
-            );
-            mailSender.send(message);
+                            "Si no fuiste vos, ignorá este mensaje: tu contraseña actual sigue funcionando.");
             log.info("[AUDIT] Email de restablecimiento (link) enviado a {}", destinatario);
         } catch (Exception e) {
             log.error("[AUDIT] Error al enviar email de restablecimiento a {}: {}", destinatario, e.getMessage());
@@ -95,18 +95,12 @@ public class EmailService {
     public void enviarNotificacionInstancia(String destinatario, String nombreUsuario,
                                             String idNegInstancia, String tituloInstancia) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@sienep.app");
-            message.setTo(destinatario);
-            message.setSubject("Nueva instancia registrada - " + idNegInstancia);
-            message.setText(
+            enviarEmailBrevo(destinatario, "Nueva instancia registrada - " + idNegInstancia,
                     "¡Hola, " + nombreUsuario + "!\n\n" +
                             "Se registró una nueva instancia en el sistema.\n\n" +
                             "ID: " + idNegInstancia + "\n" +
                             "Título: " + tituloInstancia + "\n\n" +
-                            "Podés consultarla en el sistema SIENEP."
-            );
-            mailSender.send(message);
+                            "Podés consultarla en el sistema SIENEP.");
             log.info("[AUDIT] Notificación de instancia {} enviada a {}", idNegInstancia, destinatario);
         } catch (Exception e) {
             log.warn("[AUDIT] No se pudo enviar notificación de instancia {} a {}: {}",
@@ -121,19 +115,13 @@ public class EmailService {
                                                String idNegRecordatorio, String tituloRecordatorio,
                                                LocalDateTime fechaHora) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@sienep.app");
-            message.setTo(destinatario);
-            message.setSubject("Nuevo recordatorio asignado - " + idNegRecordatorio);
-            message.setText(
+            enviarEmailBrevo(destinatario, "Nuevo recordatorio asignado - " + idNegRecordatorio,
                     "¡Hola, " + nombreUsuario + "!\n\n" +
                             "Se te asignó un nuevo recordatorio en el sistema.\n\n" +
                             "ID: " + idNegRecordatorio + "\n" +
                             "Título: " + tituloRecordatorio + "\n" +
                             "Fecha y hora: " + fechaHora + "\n\n" +
-                            "Podés consultarlo en el sistema SIENEP."
-            );
-            mailSender.send(message);
+                            "Podés consultarlo en el sistema SIENEP.");
             log.info("[AUDIT] Notificación de recordatorio {} enviada a {}", idNegRecordatorio, destinatario);
         } catch (Exception e) {
             log.warn("[AUDIT] No se pudo enviar notificación de recordatorio {} a {}: {}",
@@ -148,19 +136,13 @@ public class EmailService {
                                           String idNegRecordatorio, String tituloRecordatorio,
                                           LocalDateTime fechaHora) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@sienep.app");
-            message.setTo(destinatario);
-            message.setSubject("Recordatorio próximo a vencer - " + idNegRecordatorio);
-            message.setText(
+            enviarEmailBrevo(destinatario, "Recordatorio próximo a vencer - " + idNegRecordatorio,
                     "¡Hola, " + nombreUsuario + "!\n\n" +
                             "Tenés un recordatorio próximo a vencer en el sistema SIENEP.\n\n" +
                             "ID: " + idNegRecordatorio + "\n" +
                             "Título: " + tituloRecordatorio + "\n" +
                             "Fecha y hora: " + fechaHora + "\n\n" +
-                            "Recordá revisarlo antes de que venza."
-            );
-            mailSender.send(message);
+                            "Recordá revisarlo antes de que venza.");
             log.info("[AUDIT] Aviso de proximidad de recordatorio {} enviado a {}", idNegRecordatorio, destinatario);
         } catch (Exception e) {
             log.warn("[AUDIT] No se pudo enviar aviso de proximidad de recordatorio {} a {}: {}",

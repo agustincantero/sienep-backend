@@ -91,7 +91,7 @@ Si el usuario olvida su contraseña, el flujo se separa en dos pasos para no apl
 1. **`POST /api/auth/olvide-contrasenia`** (público): recibe un email, genera un token de un solo uso (UUID), guarda su hash SHA-256 con vencimiento de 30 minutos e invalida cualquier token anterior del mismo usuario. Envía por correo un link armado con la variable de entorno `FRONTEND_URL` (ej. `https://tu-frontend/restablecer-contrasenia?token=...`). La contraseña actual no se modifica todavía en este paso.
 2. **`POST /api/auth/restablecer-contrasenia`** (público): recibe el token y la nueva contraseña, valida que no esté vencido ni ya usado, y recién ahí la aplica.
 
-Por diseño, este flujo responde siempre igual (200) exista o no el email, para no permitir enumerar cuentas registradas, y limita a **3 solicitudes cada 15 minutos por email** (`429 Too Many Requests` si se supera), para frenar abuso hacia el correo del usuario o hacia el servidor SMTP.
+Por diseño, este flujo responde siempre igual (200) exista o no el email, para no permitir enumerar cuentas registradas, y limita a **3 solicitudes cada 15 minutos por email** (`429 Too Many Requests` si se supera), para frenar abuso hacia el correo del usuario o hacia el proveedor de mail.
 
 ## Archivos subidos
 
@@ -140,10 +140,7 @@ $env:JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
 $env:DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 $env:DB_USER="sienep"
 $env:DB_PASSWORD="sienep"
-$env:MAIL_HOST="smtp.gmail.com"
-$env:MAIL_PORT="587"
-$env:MAIL_USERNAME="tu_correo@gmail.com"
-$env:MAIL_PASSWORD="tu_password_de_aplicacion"
+$env:BREVO_API_KEY="tu_api_key_de_brevo"
 $env:GOOGLE_CLIENT_ID="tu_google_client_id"
 $env:GOOGLE_CLIENT_SECRET="tu_google_client_secret"
 $env:GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
@@ -158,10 +155,7 @@ set JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura
 set DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto
 set DB_USER=sienep
 set DB_PASSWORD=sienep
-set MAIL_HOST=smtp.gmail.com
-set MAIL_PORT=587
-set MAIL_USERNAME=tu_correo@gmail.com
-set MAIL_PASSWORD=tu_password_de_aplicacion
+set BREVO_API_KEY=tu_api_key_de_brevo
 set GOOGLE_CLIENT_ID=tu_google_client_id
 set GOOGLE_CLIENT_SECRET=tu_google_client_secret
 set GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
@@ -176,10 +170,7 @@ export JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
 export DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 export DB_USER="sienep"
 export DB_PASSWORD="sienep"
-export MAIL_HOST="smtp.gmail.com"
-export MAIL_PORT="587"
-export MAIL_USERNAME="tu_correo@gmail.com"
-export MAIL_PASSWORD="tu_password_de_aplicacion"
+export BREVO_API_KEY="tu_api_key_de_brevo"
 export GOOGLE_CLIENT_ID="tu_google_client_id"
 export GOOGLE_CLIENT_SECRET="tu_google_client_secret"
 export GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
@@ -203,7 +194,7 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
 5. En el campo de **Environment variables**, agregá lo siguiente:
 ```text
-   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;MAIL_HOST=smtp.gmail.com;MAIL_PORT=587;MAIL_USERNAME=tu_correo@gmail.com;MAIL_PASSWORD=tu_password_de_aplicacion;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback;FRONTEND_URL=http://localhost:3000;STORAGE_PATH=uploads;CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
+   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;BREVO_API_KEY=tu_api_key_de_brevo;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback;FRONTEND_URL=http://localhost:3000;STORAGE_PATH=uploads;CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
 ```
 *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 

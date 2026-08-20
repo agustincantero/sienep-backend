@@ -37,10 +37,6 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
         <!-- B19: 5.5.13.3 arrastra CVE-2024-29857 (DoS en Bouncy Castle al parsear
              certificados EC con parámetros F2m manipulados), fixeado en 5.5.13.4;
              5.5.13.5 fixea otro CVE de Bouncy Castle (CVE-2025-8916). No son
