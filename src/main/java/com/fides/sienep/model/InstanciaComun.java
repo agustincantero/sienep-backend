@@ -18,6 +18,9 @@ public class InstanciaComun extends Instancia {
     @JoinColumn(name = "id_categoria", nullable = false)
     private CategoriaInstancia categoria;
 
+    @Column(name = "event_id_google", length = 1024)
+    private String eventIdGoogle;
+
     public InstanciaComun(String titulo, LocalDateTime fechaHora,
                           Estudiante estudiante, Funcionario funcionario,
                           String canal, CategoriaInstancia categoria) {

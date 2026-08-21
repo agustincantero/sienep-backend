@@ -656,10 +656,11 @@ CREATE TRIGGER trg_actualizar_involucrados
 -- TABLA: inst_comunes
 -- =====================================================
 CREATE TABLE proyecto.inst_comunes (
-    cod_instancia INT       NOT NULL,
-    id_categoria  INT       NOT NULL,
-    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cod_instancia   INT           NOT NULL,
+    id_categoria    INT           NOT NULL,
+    event_id_google VARCHAR(1024),
+    created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (cod_instancia),
     CONSTRAINT fk_inst_comun_instancia FOREIGN KEY (cod_instancia)
         REFERENCES proyecto.instancias(cod_instancia)
@@ -971,8 +972,6 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('EDITAR_RECORDATORIO',    'Permite editar recordatorios existentes'),
     ('DESACTIVAR_RECORDATORIO','Permite desactivar recordatorios'),
     ('REACTIVAR_RECORDATORIO', 'Permite reactivar recordatorios y frecuencias dados de baja'),
-    -- Integraciones
-    ('GCAL_SYNC_RECORDATORIOS', 'Permite sincronizar recordatorios con Google Calendar'),
     -- Incidencias
     ('CREAR_INCIDENCIA',     'Permite registrar nuevas incidencias'),
     ('VER_INCIDENCIAS',      'Permite visualizar las incidencias registradas'),
@@ -1120,42 +1119,3 @@ FROM proyecto.roles r
 WHERE r.nom_rol = 'LEGALES'
 ON CONFLICT DO NOTHING;
 
--- =====================================================
--- TABLA: funcionario_gcal
--- Guarda el refresh_token OAuth2 de cada funcionario
--- que autorizó acceso a su Google Calendar personal.
--- Es opt-in: un funcionario sin fila aquí no tiene
--- integración activa y el sistema funciona igual.
--- =====================================================
-CREATE TABLE proyecto.funcionario_gcal (
-    id_usuario    INT          PRIMARY KEY,
-    refresh_token VARCHAR(512) NOT NULL,
-    gcal_email    VARCHAR(100) NOT NULL,
-    autorizado    BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_gcal_funcionario FOREIGN KEY (id_usuario)
-        REFERENCES proyecto.funcionarios(id_usuario)
-        ON UPDATE CASCADE ON DELETE CASCADE
-);
-
-CREATE TRIGGER trg_actualizar_funcionario_gcal
-    BEFORE UPDATE ON proyecto.funcionario_gcal
-    FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
-
-CREATE TRIGGER trg_audit_funcionario_gcal
-    AFTER INSERT OR UPDATE OR DELETE ON proyecto.funcionario_gcal
-    FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
-
--- =====================================================
--- PERMISO GCAL_SYNC_RECORDATORIOS para PSICOPEDAGOGO
--- El ADMINISTRADOR ya lo tiene por el INSERT masivo.
--- Se agrega para PSICOPEDAGOGO porque es quien gestiona
--- los recordatorios en el flujo normal del sistema.
--- =====================================================
-INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
-SELECT r.id_rol, p.id_permiso
-FROM proyecto.roles r
-    JOIN proyecto.permisos p ON p.nom_permiso = 'GCAL_SYNC_RECORDATORIOS'
-WHERE r.nom_rol = 'PSICOPEDAGOGO'
-ON CONFLICT DO NOTHING;

@@ -24,7 +24,7 @@ public class EmailService {
     // API HTTP de Brevo en vez de SMTP: Render (free tier) bloquea tráfico
     // saliente a los puertos SMTP (25/465/587) desde el 26/09/2025, así que
     // JavaMailSender nunca podía conectar. La API HTTP va por 443, mismo
-    // puerto que ya usa GoogleOAuthService contra la API de Google.
+    // puerto que ya usa GoogleCalendarService contra la API de Google.
     private void enviarEmailBrevo(String destinatario, String asunto, String texto) {
         brevoRestClient.post()
                 .body(Map.of(

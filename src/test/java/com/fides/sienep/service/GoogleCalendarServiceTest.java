@@ -1,90 +1,167 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.model.Instancia;
-import com.fides.sienep.model.Recordatorio;
-import com.fides.sienep.model.TipoRecordatorio;
-import com.fides.sienep.utils.RecurrenceRuleBuilder;
+import com.fides.sienep.event.AccionCalendar;
+import com.fides.sienep.event.CalendarInstanciaEvent;
+import com.fides.sienep.event.CalendarRecordatorioEvent;
+import com.google.api.services.calendar.model.Event;
+import com.google.api.services.calendar.model.EventAttendee;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 // IMPORTANTE — alcance de este test class:
-// GoogleCalendarService.construirServicio() arma un cliente real del SDK de Google
-// (Calendar.Builder) y crearEvento()/eliminarEvento() terminan en un .execute() que
-// hace una llamada HTTP real a googleapis.com. Nada de eso está inyectado como
-// dependencia mockeable — es imposible de interceptar con Mockito puro sin refactorizar
-// a una interfaz wrapper (o sumar WireMock, que el proyecto no usa en ningún lado).
+// obtenerCliente() arma ServiceAccountCredentials.fromStream(...) (un factory
+// estático de la librería de Google) y, con enabled=true, sincronizar() termina
+// en un service.events().insert/update/delete(...).execute() real contra
+// googleapis.com. Se evaluó mockear ServiceAccountCredentials con
+// Mockito.mockStatic() (Mockito 5.23.0 trae el inline mock maker por defecto,
+// a diferencia de cuando se escribió el test original de este service) — pero
+// aunque eso resuelve la parte de credenciales, el Calendar.Builder/.events()/
+// .insert()/.execute() se instancia con "new" adentro de obtenerCliente(), no
+// inyectado, así que igual terminaría en una llamada de red real. Sin
+// refactorizar a una interfaz wrapper (o sumar WireMock, que el proyecto no usa
+// en ningún lado), el happy path con enabled=true no es testeable con Mockito
+// puro — mismo gap documentado que en la versión anterior de este test class.
 //
-// Lo único genuinamente testeable sin tocar la red es la ruta de fallo ANTES de llegar
-// al SDK: cuando GoogleOAuthService.obtenerAccessToken() falla (token vencido, refresh
-// token revocado, etc.), crearEvento()/eliminarEvento() deben devolver limpio (null o
-// void) y loguear warn, nunca propagar la excepción — es el comportamiento non-blocking
-// que sostiene todo RF22. El happy path (evento creado con éxito) no tiene test
-// unitario acá; para cubrirlo de verdad haría falta un test de integración con
-// WireMock simulando la API de Calendar.
-@ExtendWith(MockitoExtension.class)
+// Lo que SÍ es 100% testeable sin tocar el SDK ni la red:
+//   1) el modo simulado (enabled=false) nunca intenta parsear credenciales ni
+//      construir un cliente real — clave para RF22 en dev/test sin gastar cuota.
+//   2) construirEvento(...) (package-private) arma el Event correcto: título
+//      genérico, attendees, fechas, rrule — es lógica pura, sin red.
 class GoogleCalendarServiceTest {
 
-    @Mock private GoogleOAuthService googleOAuthService;
-    @Mock private RecurrenceRuleBuilder recurrenceRuleBuilder;
-
-    @InjectMocks
     private GoogleCalendarService googleCalendarService;
-
-    private Recordatorio recordatorio;
 
     @BeforeEach
     void setUp() {
-        Instancia instancia = mock(Instancia.class);
-        lenient().when(instancia.getIdNegInstancia()).thenReturn("INST-2026-000001");
+        googleCalendarService = new GoogleCalendarService();
+        ReflectionTestUtils.setField(googleCalendarService, "calendarId", "calendario-test");
+        ReflectionTestUtils.setField(googleCalendarService, "impersonateAccount", "sienep@utec.edu.uy");
+        ReflectionTestUtils.setField(googleCalendarService, "applicationName", "SIENEP-test");
+    }
 
-        recordatorio = new Recordatorio();
-        recordatorio.setCodRecordatorio(1);
-        recordatorio.setIdNegRecordatorio("REC-2026-000001");
-        recordatorio.setTitulo("Llamar a Ana");
-        recordatorio.setTipo(TipoRecordatorio.LLAMADA);
-        recordatorio.setFechaHora(LocalDateTime.now().plusDays(1));
-        recordatorio.setInstancia(instancia);
+    // ── Modo simulado (enabled=false) ───────────────────────────────────────
+
+    @Test
+    @DisplayName("procesar(Recordatorio) - Modo simulado, accion CREAR devuelve id SIMULADO-")
+    void procesarRecordatorio_ModoSimulado_Crear_DevuelveIdSimulado() {
+        ReflectionTestUtils.setField(googleCalendarService, "enabled", false);
+        CalendarRecordatorioEvent evento = CalendarRecordatorioEvent.builder()
+                .idRecordatorio(1)
+                .idNegRecordatorio("REC-2026-000001")
+                .accion(AccionCalendar.CREAR)
+                .fechaHora(LocalDateTime.now().plusDays(1))
+                .emailFuncionario("juan.garcia@utec.edu.uy")
+                .nombreFuncionario("Juan")
+                .build();
+
+        String resultado = googleCalendarService.procesar(evento);
+
+        assertNotNull(resultado);
+        assertTrue(resultado.startsWith("SIMULADO-"));
     }
 
     @Test
-    @DisplayName("Crear evento - Falla al obtener access_token, devuelve null en vez de lanzar")
-    void crearEvento_FallaAlObtenerAccessToken_DevuelveNull() {
-        when(googleOAuthService.obtenerAccessToken("refresh-token-invalido"))
-                .thenThrow(new RuntimeException("Token revocado por el usuario"));
+    @DisplayName("procesar(Recordatorio) - Modo simulado, accion ELIMINAR devuelve null")
+    void procesarRecordatorio_ModoSimulado_Eliminar_DevuelveNull() {
+        ReflectionTestUtils.setField(googleCalendarService, "enabled", false);
+        CalendarRecordatorioEvent evento = CalendarRecordatorioEvent.builder()
+                .idRecordatorio(1)
+                .idNegRecordatorio("REC-2026-000001")
+                .oldEventId("evento-existente-id")
+                .accion(AccionCalendar.ELIMINAR)
+                .build();
 
-        String resultado = assertDoesNotThrow(
-                () -> googleCalendarService.crearEvento(recordatorio, "refresh-token-invalido"));
+        String resultado = googleCalendarService.procesar(evento);
 
         assertNull(resultado);
     }
 
     @Test
-    @DisplayName("Actualizar evento - Falla al obtener access_token, no lanza excepción")
-    void actualizarEvento_FallaAlObtenerAccessToken_NoLanza() {
-        when(googleOAuthService.obtenerAccessToken("refresh-token-invalido"))
-                .thenThrow(new RuntimeException("Token revocado por el usuario"));
+    @DisplayName("procesar(Instancia) - Modo simulado, accion ACTUALIZAR devuelve id SIMULADO-")
+    void procesarInstancia_ModoSimulado_Actualizar_DevuelveIdSimulado() {
+        ReflectionTestUtils.setField(googleCalendarService, "enabled", false);
+        CalendarInstanciaEvent evento = CalendarInstanciaEvent.builder()
+                .codInstancia(1)
+                .idNegInstancia("INST-2026-000001")
+                .oldEventId("evento-viejo-id")
+                .accion(AccionCalendar.ACTUALIZAR)
+                .fechaHora(LocalDateTime.now().plusDays(1))
+                .emailFuncionario("juan.garcia@utec.edu.uy")
+                .nombreFuncionario("Juan")
+                .emailAlumno("ana@utec.edu.uy")
+                .nombreAlumno("Ana")
+                .build();
 
-        assertDoesNotThrow(
-                () -> googleCalendarService.actualizarEvento(recordatorio, "evento-id", "refresh-token-invalido"));
+        String resultado = googleCalendarService.procesar(evento);
+
+        assertNotNull(resultado);
+        assertTrue(resultado.startsWith("SIMULADO-"));
+    }
+
+    // ── construirEvento(...) — sin red, sin SDK real más allá de los POJOs de modelo ──
+
+    @Test
+    @DisplayName("construirEvento - Título siempre genérico, nunca expone datos libres del caso")
+    void construirEvento_TituloGenerico() {
+        Event evento = googleCalendarService.construirEvento(
+                LocalDateTime.now().plusDays(1), List.of(), null);
+
+        assertEquals("Cita SIENEP — ver detalle en el sistema", evento.getSummary());
     }
 
     @Test
-    @DisplayName("Eliminar evento - Falla al obtener access_token, no lanza excepción")
-    void eliminarEvento_FallaAlObtenerAccessToken_NoLanza() {
-        when(googleOAuthService.obtenerAccessToken("refresh-token-invalido"))
-                .thenThrow(new RuntimeException("Token revocado por el usuario"));
+    @DisplayName("construirEvento - Con un solo attendee (recordatorio: solo funcionario)")
+    void construirEvento_UnAttendee() {
+        EventAttendee funcionario = new EventAttendee().setEmail("juan.garcia@utec.edu.uy").setDisplayName("Juan");
 
-        assertDoesNotThrow(
-                () -> googleCalendarService.eliminarEvento("evento-fake-id", "refresh-token-invalido"));
+        Event evento = googleCalendarService.construirEvento(
+                LocalDateTime.now().plusDays(1), List.of(funcionario), null);
+
+        assertEquals(1, evento.getAttendees().size());
+        assertEquals("juan.garcia@utec.edu.uy", evento.getAttendees().get(0).getEmail());
+    }
+
+    @Test
+    @DisplayName("construirEvento - Con dos attendees (instancia: funcionario + alumno)")
+    void construirEvento_DosAttendees() {
+        EventAttendee funcionario = new EventAttendee().setEmail("juan.garcia@utec.edu.uy").setDisplayName("Juan");
+        EventAttendee alumno = new EventAttendee().setEmail("ana@utec.edu.uy").setDisplayName("Ana");
+
+        Event evento = googleCalendarService.construirEvento(
+                LocalDateTime.now().plusDays(1), List.of(funcionario, alumno), null);
+
+        assertEquals(2, evento.getAttendees().size());
+        assertTrue(evento.getAttendees().stream().anyMatch(a -> a.getEmail().equals("ana@utec.edu.uy")));
+    }
+
+    @Test
+    @DisplayName("construirEvento - Con rrule, setea la recurrencia; sin rrule, no")
+    void construirEvento_Rrule() {
+        Event conRrule = googleCalendarService.construirEvento(
+                LocalDateTime.now().plusDays(1), List.of(), "RRULE:FREQ=WEEKLY;BYDAY=MO");
+        Event sinRrule = googleCalendarService.construirEvento(
+                LocalDateTime.now().plusDays(1), List.of(), null);
+
+        assertEquals(List.of("RRULE:FREQ=WEEKLY;BYDAY=MO"), conRrule.getRecurrence());
+        assertNull(sinRrule.getRecurrence());
+    }
+
+    @Test
+    @DisplayName("construirEvento - Duración de 1 hora, fecha de fin = inicio + 1h")
+    void construirEvento_DuracionUnaHora() {
+        LocalDateTime inicio = LocalDateTime.of(2026, 3, 10, 14, 0);
+
+        Event evento = googleCalendarService.construirEvento(inicio, List.of(), null);
+
+        long inicioMs = evento.getStart().getDateTime().getValue();
+        long finMs = evento.getEnd().getDateTime().getValue();
+        assertEquals(60 * 60 * 1000L, finMs - inicioMs);
     }
 }

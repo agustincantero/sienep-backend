@@ -24,8 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 // el error de una sola persona.
 //
 // Limitación conocida y aceptada para el alcance del proyecto (mismo criterio que
-// OAuthStateStore/PasswordResetRateLimiter): el store es en memoria del proceso y
-// no se comparte entre instancias si el backend llegara a escalar horizontalmente.
+// PasswordResetRateLimiter/ReporteValidacionRateLimiter): el store es en memoria
+// del proceso y no se comparte entre instancias si el backend llegara a escalar
+// horizontalmente.
 @Slf4j
 @Component
 public class LoginIpRateLimiter {
@@ -68,7 +69,7 @@ public class LoginIpRateLimiter {
     }
 
     // Housekeeping: purga IPs sin fallos recientes para no acumular memoria
-    // indefinidamente (mismo criterio que OAuthStateStore.limpiarExpirados()).
+    // indefinidamente (mismo criterio que ReporteValidacionRateLimiter.limpiarExpirados()).
     @Scheduled(cron = "0 0 * * * *")
     public void limpiarExpirados() {
         LocalDateTime limiteVentana = LocalDateTime.now().minusMinutes(VENTANA_MINUTOS);

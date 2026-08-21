@@ -7,6 +7,8 @@ import com.fides.sienep.dto.InstanciaDesdeRecordatorioDTO;
 import com.fides.sienep.dto.RecordatorioInicialDTO;
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.event.AccionCalendar;
+import com.fides.sienep.event.CalendarInstanciaEvent;
 import com.fides.sienep.mapper.InstanciaComunMapper;
 import com.fides.sienep.model.CategoriaInstancia;
 import com.fides.sienep.model.EstadoLogico;
@@ -24,6 +26,7 @@ import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -53,6 +56,7 @@ public class InstanciaComunService {
     private final EmailService emailService;
     private final RecordatorioService recordatorioService;
     private final RecordatorioRepository recordatorioRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -123,6 +127,20 @@ public class InstanciaComunService {
             log.warn("[AUDIT] Fallo al notificar instancia {} al funcionario {}: {}",
                     response.getIdNegInstancia(), funcionario.getIdUsuario(), e.getMessage());
         }
+
+        // Sync con Google Calendar (async, post-commit) — a diferencia de
+        // CalendarRecordatorioEvent, acá SÍ se invita al alumno: la instancia
+        // representa una cita/reunión real, no agenda interna.
+        eventPublisher.publishEvent(CalendarInstanciaEvent.builder()
+                .codInstancia(response.getCodInstancia())
+                .idNegInstancia(response.getIdNegInstancia())
+                .accion(AccionCalendar.CREAR)
+                .fechaHora(instancia.getFechaHora())
+                .emailFuncionario(funcionario.getEmail())
+                .nombreFuncionario(funcionario.getNombre())
+                .emailAlumno(estudiante.getEmail())
+                .nombreAlumno(estudiante.getNombre())
+                .build());
 
         // RF13 — recordatorio inicial opcional, con sync a Google Calendar heredado de RF22.
         // A diferencia del email y de Google Calendar (servicios externos, "best effort" con
@@ -295,20 +313,58 @@ public class InstanciaComunService {
                     "La categoría con id " + dto.getIdCategoria() + " no está activa");
         }
 
+        // Se captura antes de sobrescribir: hace falta para decidir ACTUALIZAR vs
+        // CREAR el evento de Google Calendar.
+        String eventIdAnterior = instancia.getEventIdGoogle();
+
         instancia.setTitulo(dto.getTitulo());
         instancia.setFechaHora(dto.getFechaHora());
         instancia.setCanal(dto.getCanal());
         instancia.setCategoria(categoria);
 
-        return instanciaComunMapper.toDto(instanciaComunRepository.save(instancia));
+        InstanciaComun actualizada = instanciaComunRepository.save(instancia);
+
+        eventPublisher.publishEvent(CalendarInstanciaEvent.builder()
+                .codInstancia(actualizada.getCodInstancia())
+                .idNegInstancia(actualizada.getIdNegInstancia())
+                .oldEventId(eventIdAnterior)
+                .accion(eventIdAnterior != null ? AccionCalendar.ACTUALIZAR : AccionCalendar.CREAR)
+                .fechaHora(actualizada.getFechaHora())
+                .emailFuncionario(actualizada.getFuncionario().getEmail())
+                .nombreFuncionario(actualizada.getFuncionario().getNombre())
+                .emailAlumno(actualizada.getEstudiante().getEmail())
+                .nombreAlumno(actualizada.getEstudiante().getNombre())
+                .build());
+
+        return instanciaComunMapper.toDto(actualizada);
     }
 
     @Transactional
     @PreAuthorize("hasAuthority('DESACTIVAR_INSTANCIA')")
     public void desactivar(int codInstancia) {
         InstanciaComun instancia = buscarActivaOFallar(codInstancia);
+
+        if (instancia.getEventIdGoogle() != null) {
+            eventPublisher.publishEvent(CalendarInstanciaEvent.builder()
+                    .codInstancia(instancia.getCodInstancia())
+                    .idNegInstancia(instancia.getIdNegInstancia())
+                    .oldEventId(instancia.getEventIdGoogle())
+                    .accion(AccionCalendar.ELIMINAR)
+                    .build());
+        }
+
         instancia.setEstado(EstadoLogico.INACTIVO);
         instanciaComunRepository.save(instancia);
+    }
+
+    // Escritura de vuelta del eventId tras la sync async (CalendarSyncListener,
+    // AFTER_COMMIT) — corre en una transacción nueva, la original ya cerró.
+    @Transactional
+    public void actualizarEventIdGoogle(int codInstancia, String eventId) {
+        instanciaComunRepository.findById(codInstancia).ifPresent(instancia -> {
+            instancia.setEventIdGoogle(eventId);
+            instanciaComunRepository.save(instancia);
+        });
     }
 
     @Transactional
