@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
@@ -213,6 +214,7 @@ public class EstudianteService {
         }
 
         estudiante.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
+        estudiante.setCredencialesVigentesDesde(LocalDateTime.now());
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(estudiante.getEstado())) {
             estudiante.setEstado(EstadoLogico.ACTIVO);
         }
@@ -229,6 +231,7 @@ public class EstudianteService {
 
         String contraseniaPlana = passwordGeneratorService.generar();
         estudiante.setContrasenia(passwordEncoder.encode(contraseniaPlana));
+        estudiante.setCredencialesVigentesDesde(LocalDateTime.now());
         estudianteRepository.save(estudiante);
 
         emailService.enviarContraseniaRestablecida(estudiante.getEmail(), estudiante.getNombre(), contraseniaPlana);

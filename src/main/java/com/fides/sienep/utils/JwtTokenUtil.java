@@ -1,5 +1,6 @@
 package com.fides.sienep.utils;
 
+import com.fides.sienep.security.SienepUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,11 +53,31 @@ public class JwtTokenUtil {
     public Boolean validateToken(String token, UserDetails userDetails) {
         try {
             String username = extractUsername(token);
-            return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+            if (!username.equals(userDetails.getUsername()) || isTokenExpired(token)) {
+                return false;
+            }
+            // Un cambio de contraseña no invalida por sí solo los tokens ya emitidos
+            // (JWT es stateless, no hay revocación) — sin este chequeo, restablecer la
+            // contraseña porque se sospecha de una sesión comprometida no cierra esa
+            // sesión: el token viejo sigue funcionando hasta que expira solo.
+            if (userDetails instanceof SienepUserDetails sienepUserDetails
+                    && sienepUserDetails.getCredencialesVigentesDesde() != null
+                    && extractIssuedAt(token).before(toDate(sienepUserDetails.getCredencialesVigentesDesde()))) {
+                return false;
+            }
+            return true;
         } catch (JwtException | IllegalArgumentException e) {
             log.warn("Token no válido: {}", e.getMessage());
             return false;
         }
+    }
+
+    private Date extractIssuedAt(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
+    }
+
+    private Date toDate(LocalDateTime fecha) {
+        return Date.from(fecha.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     private Boolean isTokenExpired(String token) {

@@ -55,6 +55,13 @@ public abstract class Usuario {
     @Column(name = "bloqueado", nullable = false)
     private boolean bloqueado = false;
 
+    // Se actualiza cada vez que cambia la contraseña (alta, reset por admin, reset por
+    // token, cambio propio). JwtTokenUtil.validateToken() rechaza cualquier JWT emitido
+    // (claim "iat") antes de este momento, aunque no haya vencido — sin esto, cambiar la
+    // contraseña no invalida las sesiones que ya estaban abiertas con la vieja.
+    @Column(name = "credenciales_vigentes_desde")
+    protected LocalDateTime credencialesVigentesDesde;
+
 
     public Usuario(String nombre, String apellido, String documento, PaisDocumento paisDocumento, String contrasenia, String email) {
         this.nombre = nombre;

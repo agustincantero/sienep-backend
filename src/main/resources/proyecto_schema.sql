@@ -84,6 +84,7 @@ CREATE TABLE proyecto.usuarios (
     contrasenia    VARCHAR(255)             NOT NULL,
     estado         proyecto.estado_logico   NOT NULL DEFAULT 'PENDIENTE_DE_ACTIVACION',
     bloqueado      BOOLEAN                  NOT NULL DEFAULT FALSE,
+    credenciales_vigentes_desde TIMESTAMP,
     created_at     TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

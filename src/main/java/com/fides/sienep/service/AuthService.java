@@ -240,6 +240,7 @@ public class AuthService {
 
         usuario.setContrasenia(passwordEncoder.encode(contraseniaNueva));
         usuario.setBloqueado(false);
+        usuario.setCredencialesVigentesDesde(LocalDateTime.now());
         usuarioRepository.save(usuario);
 
         token.setUsado(true);

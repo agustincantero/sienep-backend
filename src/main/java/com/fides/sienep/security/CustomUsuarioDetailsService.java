@@ -6,7 +6,6 @@ import com.fides.sienep.repository.FuncionarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -70,10 +69,8 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
             }
         }
 
-        return User.withUsername(String.valueOf(funcionario.getIdUsuario()))
-                .password(funcionario.getContrasenia())
-                .authorities(authorities)
-                .build();
+        return new SienepUserDetails(String.valueOf(funcionario.getIdUsuario()),
+                funcionario.getContrasenia(), authorities, funcionario.getCredencialesVigentesDesde());
     }
 
     private UserDetails buildEstudianteDetails(Estudiante estudiante) {
@@ -85,9 +82,7 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
         authorities.add(new SimpleGrantedAuthority("ROLE_ESTUDIANTE"));
         authorities.add(new SimpleGrantedAuthority("VER_COMENTARIO_NORMAL_ESTUDIANTE"));
 
-        return User.withUsername(String.valueOf(estudiante.getIdUsuario()))
-                .password(estudiante.getContrasenia())
-                .authorities(authorities)
-                .build();
+        return new SienepUserDetails(String.valueOf(estudiante.getIdUsuario()),
+                estudiante.getContrasenia(), authorities, estudiante.getCredencialesVigentesDesde());
     }
 }

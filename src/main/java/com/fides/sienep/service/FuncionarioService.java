@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -145,6 +146,7 @@ public class FuncionarioService {
 
         String contraseniaPlana = passwordGeneratorService.generar();
         funcionario.setContrasenia(passwordEncoder.encode(contraseniaPlana));
+        funcionario.setCredencialesVigentesDesde(LocalDateTime.now());
         funcionarioRepository.save(funcionario);
 
         emailService.enviarContraseniaRestablecida(funcionario.getEmail(), funcionario.getNombre(), contraseniaPlana);
@@ -228,6 +230,7 @@ public class FuncionarioService {
         }
 
         funcionario.setContrasenia(passwordEncoder.encode(dto.getContrasenia()));
+        funcionario.setCredencialesVigentesDesde(LocalDateTime.now());
 
         if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(funcionario.getEstado())) {
             funcionario.setEstado(EstadoLogico.ACTIVO);
