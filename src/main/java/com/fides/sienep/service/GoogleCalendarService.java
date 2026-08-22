@@ -133,8 +133,11 @@ public class GoogleCalendarService {
             return eventoCreado.getId();
 
         } catch (Exception e) {
-            log.warn("[GCAL] No se pudo sincronizar con Google Calendar ({}, {}): {}",
-                    accion, referenciaLog, e.getMessage());
+            // Se loguea la clase de la excepción además del mensaje: un fallo sistemático
+            // (delegación revocada, cuota agotada) no debería quedar indistinguible de un
+            // timeout de red puntual en este único log de una línea.
+            log.warn("[GCAL] No se pudo sincronizar con Google Calendar ({}, {}): {}: {}",
+                    accion, referenciaLog, e.getClass().getSimpleName(), e.getMessage());
             return null;
         }
     }
@@ -152,8 +155,11 @@ public class GoogleCalendarService {
                            List<EventAttendee> attendees, String rrule) {
         Event evento = new Event();
         // El ID de negocio va también en el título (no solo en la descripción) para que se
-        // vea de entrada en listas de eventos, donde Calendar suele truncar el resto.
-        evento.setSummary(titulo + " — " + idNeg);
+        // vea de entrada en listas de eventos, donde Calendar suele truncar el resto. titulo
+        // es texto libre de hasta 150 caracteres sin más validación que @NotBlank/@Size —
+        // se le sacan caracteres de control (saltos de línea, RTL-override, zero-width, etc.)
+        // antes de que termine en el asunto del mail de invitación.
+        evento.setSummary(sinCaracteresDeControl(titulo) + " — " + idNeg);
         evento.setDescription(descripcion);
         evento.setAttendees(attendees);
 
@@ -208,5 +214,12 @@ public class GoogleCalendarService {
 
     private DateTime toGoogleDateTime(ZonedDateTime zdt) {
         return new DateTime(zdt.toInstant().toEpochMilli());
+    }
+
+    // \p{Cntrl} cubre saltos de línea/tabs/etc.; se suman explícitamente los formatting
+    // characters de Unicode (RTL/LTR override, zero-width) que Cntrl no incluye — ninguno
+    // tiene un uso legítimo en un título de una línea.
+    private static String sinCaracteresDeControl(String texto) {
+        return texto.replaceAll("[\\p{Cntrl}\\u200B-\\u200F\\u202A-\\u202E]", "");
     }
 }

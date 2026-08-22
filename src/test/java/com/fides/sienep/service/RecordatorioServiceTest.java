@@ -699,7 +699,7 @@ class RecordatorioServiceTest {
 
 
     @Test
-    @DisplayName("Reactivar recordatorio - Éxito")
+    @DisplayName("Reactivar recordatorio - Éxito, publica CalendarRecordatorioEvent con accion CREAR")
     void reactivar_Exito() {
         recordatorio.setEstado(EstadoLogico.INACTIVO);
         when(recordatorioRepository.findByCodRecordatorio(1)).thenReturn(Optional.of(recordatorio));
@@ -711,6 +711,11 @@ class RecordatorioServiceTest {
         assertNotNull(resultado);
         assertEquals(EstadoLogico.ACTIVO, recordatorio.getEstado());
         verify(recordatorioRepository).save(recordatorio);
+
+        ArgumentCaptor<CalendarRecordatorioEvent> captor = ArgumentCaptor.forClass(CalendarRecordatorioEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.CREAR, captor.getValue().getAccion());
+        assertNull(captor.getValue().getOldEventId());
     }
 
     @Test

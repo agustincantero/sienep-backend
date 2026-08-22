@@ -119,6 +119,20 @@ class GoogleCalendarServiceTest {
     }
 
     @Test
+    @DisplayName("construirEvento - Saca caracteres de control/RTL-override del título antes de mandarlo")
+    void construirEvento_SacaCaracteresDeControlDelTitulo() {
+        // \n (salto de línea), ‮ (RTL override) y ​ (zero-width space) no tienen
+        // uso legítimo en un título de una línea.
+        String tituloConControl = "Seguimiento\ncon Juan‮​";
+
+        Event evento = googleCalendarService.construirEvento(
+                "INST-2026-000001", tituloConControl, "descripcion",
+                LocalDateTime.now().plusDays(1), List.of(), null);
+
+        assertEquals("Seguimientocon Juan — INST-2026-000001", evento.getSummary());
+    }
+
+    @Test
     @DisplayName("construirEvento - Con un solo attendee (recordatorio: solo funcionario)")
     void construirEvento_UnAttendee() {
         EventAttendee funcionario = new EventAttendee().setEmail("juan.garcia@utec.edu.uy").setDisplayName("Juan");

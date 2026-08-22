@@ -788,7 +788,7 @@ class InstanciaComunServiceTest {
     // ── Reactivar (H8) ────────────────────────────────────────
 
     @Test
-    @DisplayName("Reactivar - Éxito")
+    @DisplayName("Reactivar - Éxito, publica CalendarInstanciaEvent con accion CREAR")
     void reactivar_Exito() {
         instancia.setEstado(EstadoLogico.INACTIVO);
         when(instanciaComunRepository.findById(1)).thenReturn(Optional.of(instancia));
@@ -800,6 +800,11 @@ class InstanciaComunServiceTest {
         assertNotNull(resultado);
         assertEquals(EstadoLogico.ACTIVO, instancia.getEstado());
         verify(instanciaComunRepository).save(instancia);
+
+        ArgumentCaptor<CalendarInstanciaEvent> captor = ArgumentCaptor.forClass(CalendarInstanciaEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.CREAR, captor.getValue().getAccion());
+        assertNull(captor.getValue().getOldEventId());
     }
 
     @Test

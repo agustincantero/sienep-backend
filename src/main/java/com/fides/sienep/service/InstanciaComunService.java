@@ -409,6 +409,23 @@ public class InstanciaComunService {
 
         instancia.setEstado(EstadoLogico.ACTIVO);
         InstanciaComun guardada = instanciaComunRepository.save(instancia);
+
+        // RF13 — desactivar() ya limpió eventIdGoogle al eliminar el evento; sin esto,
+        // la instancia queda reactivada en el sistema pero sin evento en Calendar
+        // hasta que alguien la edite (que puede no pasar nunca).
+        eventPublisher.publishEvent(CalendarInstanciaEvent.builder()
+                .codInstancia(guardada.getCodInstancia())
+                .idNegInstancia(guardada.getIdNegInstancia())
+                .accion(AccionCalendar.CREAR)
+                .titulo(guardada.getTitulo())
+                .descripcion(descripcionCalendar(guardada.getIdNegInstancia(), guardada.getCategoria(), guardada.getCanal()))
+                .fechaHora(guardada.getFechaHora())
+                .emailFuncionario(guardada.getFuncionario().getEmail())
+                .nombreFuncionario(guardada.getFuncionario().getNombre())
+                .emailAlumno(guardada.getEstudiante().getEmail())
+                .nombreAlumno(guardada.getEstudiante().getNombre())
+                .build());
+
         return instanciaComunMapper.toDto(guardada);
     }
 

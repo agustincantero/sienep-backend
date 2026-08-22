@@ -399,6 +399,24 @@ public class RecordatorioService {
         }
 
         recordatorio.setEstado(EstadoLogico.ACTIVO);
-        return recordatorioMapper.toDto(recordatorioRepository.save(recordatorio));
+        Recordatorio reactivado = recordatorioRepository.save(recordatorio);
+
+        // RF22 — desactivar() ya limpió eventIdGoogle al eliminar el evento; sin esto,
+        // el recordatorio queda reactivado en el sistema pero sin evento en Calendar
+        // hasta que alguien lo edite (que puede no pasar nunca).
+        String rrule = recurrenceRuleBuilder.construir(reactivado);
+        eventPublisher.publishEvent(CalendarRecordatorioEvent.builder()
+                .idRecordatorio(reactivado.getCodRecordatorio())
+                .idNegRecordatorio(reactivado.getIdNegRecordatorio())
+                .accion(AccionCalendar.CREAR)
+                .titulo(reactivado.getTitulo())
+                .descripcion(descripcionCalendar(reactivado.getIdNegRecordatorio(), reactivado.getCategoria(), reactivado.getTipo()))
+                .fechaHora(reactivado.getFechaHora())
+                .rrule(rrule)
+                .emailFuncionario(reactivado.getResponsable().getEmail())
+                .nombreFuncionario(reactivado.getResponsable().getNombre())
+                .build());
+
+        return recordatorioMapper.toDto(reactivado);
     }
 }
