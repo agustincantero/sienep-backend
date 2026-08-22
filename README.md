@@ -37,7 +37,7 @@ La API expone los servicios correspondientes a los 7 módulos centrales del sist
 
 1. **Autenticación y Acceso:** Inicio y cierre de sesión, y gestión segura de credenciales.
 2. **Gestión de Estudiantes:** Altas, bajas lógicas, modificaciones, búsquedas y capacidad para adjuntar informes médicos.
-3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (creando un recordatorio inicial en la misma llamada, ver RF13). La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /api/instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /api/instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
+3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (RF13), con la opción de crear un recordatorio inicial en la misma llamada. La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /api/instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /api/instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
 4. **Gestión de Recordatorios:** Creación (únicos y recurrentes), notificaciones, vinculación a instancias e integración con Google Calendar.
 5. **Gestión de Incidencias:** Registro detallado y visualización del historial de incidencias.
 6. **Reportes:** Generación y exportación de informes del sistema, incluyendo un endpoint público (`POST /api/reportes/validar`) para verificar si un PDF exportado es auténtico, comparando su hash SHA-256 contra el que el sistema guardó al generarlo.
@@ -238,7 +238,7 @@ Con `GOOGLE_CALENDAR_ENABLED=false` (default), la sync queda en **modo simulado*
 La sync es asíncrona y corre recién después de confirmada la transacción de negocio (`RecordatorioService`/`InstanciaComunService` publican un evento; `CalendarSyncListener` lo procesa post-commit):
 - Al crear/editar un `Recordatorio` (`POST`/`PUT /recordatorios`), se crea/actualiza el evento invitando al **responsable** (agenda interna, sin el alumno).
 - Al crear/editar una instancia (`POST`/`PUT /instancias`), se crea/actualiza el evento invitando al **funcionario y al alumno**.
-- El título del evento es siempre genérico (`"Cita SIENEP — ver detalle en el sistema"`), para no filtrar información sensible del caso a través de Calendar o del mail de invitación.
+- El evento usa el título real de la instancia/recordatorio y una descripción con categoría + tipo/canal + ID de negocio (`INST-2026-...`/`REC-2026-...`) — el mismo ID también va al final del título, para poder ubicar el caso en el sistema desde la invitación o desde un listado de Calendar.
 - **Tolerancia a fallos:** si los servidores de Google se caen, la API no lanza error — el recordatorio/instancia se guarda igual en la base de datos local, y se deja un registro de advertencia (`[WARN]`) en la consola del backend.
 
 ## Documentación de la API (Swagger)

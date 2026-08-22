@@ -17,6 +17,8 @@ public class CalendarInstanciaEvent {
     private final String idNegInstancia;
     private final String oldEventId;
     private final AccionCalendar accion;
+    private final String titulo;
+    private final String descripcion;
     private final LocalDateTime fechaHora;
     private final String emailFuncionario;
     private final String nombreFuncionario;

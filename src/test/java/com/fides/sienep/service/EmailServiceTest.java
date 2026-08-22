@@ -47,7 +47,7 @@ class EmailServiceTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json("""
                         {
-                          "sender": {"email": "no-reply@sienep.app"},
+                          "sender": {"name": "Notificaciones SIENEP", "email": "notificaciones@sienep.app"},
                           "to": [{"email": "juan@utec.edu.uy"}],
                           "subject": "Acceso al sistema - Contraseña temporal"
                         }
@@ -98,7 +98,7 @@ class EmailServiceTest {
         mockServer.expect(requestTo(BREVO_URL)).andRespond(withServerError());
 
         assertDoesNotThrow(() -> emailService.enviarNotificacionInstancia(
-                "juan@utec.edu.uy", "Juan", "INST-2026-000001", "Seguimiento"));
+                "juan@utec.edu.uy", "Juan", "INST-2026-000001", "Seguimiento", LocalDateTime.now().plusDays(1)));
     }
 
     @Test

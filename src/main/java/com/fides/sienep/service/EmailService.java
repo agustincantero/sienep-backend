@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -17,7 +18,11 @@ import java.util.Map;
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
-    private static final String REMITENTE = "no-reply@sienep.app";
+    private static final String REMITENTE_EMAIL = "notificaciones@sienep.app";
+    private static final String REMITENTE_NOMBRE = "Notificaciones SIENEP";
+    // Mismo patrón que ReportePdfService, para que la fecha se vea igual en todo el
+    // sistema — sin esto sale el ISO crudo de LocalDateTime.toString() (ej. "2026-08-25T15:00").
+    private static final DateTimeFormatter FORMATTER_FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final RestClient brevoRestClient;
 
@@ -28,7 +33,7 @@ public class EmailService {
     private void enviarEmailBrevo(String destinatario, String asunto, String texto) {
         brevoRestClient.post()
                 .body(Map.of(
-                        "sender", Map.of("email", REMITENTE),
+                        "sender", Map.of("name", REMITENTE_NOMBRE, "email", REMITENTE_EMAIL),
                         "to", List.of(Map.of("email", destinatario)),
                         "subject", asunto,
                         "textContent", texto
@@ -93,13 +98,15 @@ public class EmailService {
     // la operación principal: la instancia ya fue persistida correctamente.
     // Por eso este método registra el error como warn y no relanza la excepción.
     public void enviarNotificacionInstancia(String destinatario, String nombreUsuario,
-                                            String idNegInstancia, String tituloInstancia) {
+                                            String idNegInstancia, String tituloInstancia,
+                                            LocalDateTime fechaHora) {
         try {
             enviarEmailBrevo(destinatario, "Nueva instancia registrada - " + idNegInstancia,
                     "¡Hola, " + nombreUsuario + "!\n\n" +
                             "Se registró una nueva instancia en el sistema.\n\n" +
                             "ID: " + idNegInstancia + "\n" +
-                            "Título: " + tituloInstancia + "\n\n" +
+                            "Título: " + tituloInstancia + "\n" +
+                            "Fecha y hora: " + fechaHora.format(FORMATTER_FECHA_HORA) + "\n\n" +
                             "Podés consultarla en el sistema SIENEP.");
             log.info("[AUDIT] Notificación de instancia {} enviada a {}", idNegInstancia, destinatario);
         } catch (Exception e) {
@@ -120,7 +127,7 @@ public class EmailService {
                             "Se te asignó un nuevo recordatorio en el sistema.\n\n" +
                             "ID: " + idNegRecordatorio + "\n" +
                             "Título: " + tituloRecordatorio + "\n" +
-                            "Fecha y hora: " + fechaHora + "\n\n" +
+                            "Fecha y hora: " + fechaHora.format(FORMATTER_FECHA_HORA) + "\n\n" +
                             "Podés consultarlo en el sistema SIENEP.");
             log.info("[AUDIT] Notificación de recordatorio {} enviada a {}", idNegRecordatorio, destinatario);
         } catch (Exception e) {
@@ -132,6 +139,12 @@ public class EmailService {
     // RF23 — aviso de proximidad, disparado por RecordatorioNotificacionScheduler (cron propio).
     // Distinto del método anterior: ese confirma que el recordatorio fue creado;
     // este avisa que está por vencer (dentro de las próximas 24hs).
+    //
+    // No es redundante con RF22 (sync a Google Calendar) pese a perseguir el mismo fin: este
+    // es un aviso first-party por correo/WhatsApp que SIENEP dispara directamente, mientras
+    // que cualquier aviso de Calendar es un efecto lateral de Google (depende de que la sync
+    // haya funcionado y de que el responsable tenga ese calendario agregado). RF22 y RF23 son
+    // requerimientos separados en la especificación, no uno sustituto del otro.
     public void enviarRecordatorioProximo(String destinatario, String nombreUsuario,
                                           String idNegRecordatorio, String tituloRecordatorio,
                                           LocalDateTime fechaHora) {
@@ -141,7 +154,7 @@ public class EmailService {
                             "Tenés un recordatorio próximo a vencer en el sistema SIENEP.\n\n" +
                             "ID: " + idNegRecordatorio + "\n" +
                             "Título: " + tituloRecordatorio + "\n" +
-                            "Fecha y hora: " + fechaHora + "\n\n" +
+                            "Fecha y hora: " + fechaHora.format(FORMATTER_FECHA_HORA) + "\n\n" +
                             "Recordá revisarlo antes de que venza.");
             log.info("[AUDIT] Aviso de proximidad de recordatorio {} enviado a {}", idNegRecordatorio, destinatario);
         } catch (Exception e) {

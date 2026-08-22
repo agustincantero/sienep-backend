@@ -63,6 +63,14 @@ public class InstanciaComunService {
         return Integer.parseInt(auth.getName());
     }
 
+    private boolean tienePermiso(String permiso) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        for (var authority : auth.getAuthorities()) {
+            if (authority.getAuthority().equals(permiso)) return true;
+        }
+        return false;
+    }
+
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
     public InstanciaComunResponseDTO crear(InstanciaComunRequestDTO dto) {
@@ -121,20 +129,23 @@ public class InstanciaComunService {
                     funcionario.getEmail(),
                     funcionario.getNombre(),
                     response.getIdNegInstancia(),
-                    response.getTitulo()
+                    response.getTitulo(),
+                    instancia.getFechaHora()
             );
         } catch (Exception e) {
             log.warn("[AUDIT] Fallo al notificar instancia {} al funcionario {}: {}",
                     response.getIdNegInstancia(), funcionario.getIdUsuario(), e.getMessage());
         }
 
-        // Sync con Google Calendar (async, post-commit) — a diferencia de
-        // CalendarRecordatorioEvent, acá SÍ se invita al alumno: la instancia
+        // RF13 — Integración de Instancias con Google Calendar (async, post-commit). A
+        // diferencia de CalendarRecordatorioEvent, acá SÍ se invita al alumno: la instancia
         // representa una cita/reunión real, no agenda interna.
         eventPublisher.publishEvent(CalendarInstanciaEvent.builder()
                 .codInstancia(response.getCodInstancia())
                 .idNegInstancia(response.getIdNegInstancia())
                 .accion(AccionCalendar.CREAR)
+                .titulo(instancia.getTitulo())
+                .descripcion(descripcionCalendar(response.getIdNegInstancia(), categoria, instancia.getCanal()))
                 .fechaHora(instancia.getFechaHora())
                 .emailFuncionario(funcionario.getEmail())
                 .nombreFuncionario(funcionario.getNombre())
@@ -142,26 +153,37 @@ public class InstanciaComunService {
                 .nombreAlumno(estudiante.getNombre())
                 .build());
 
-        // RF13 — recordatorio inicial opcional, con sync a Google Calendar heredado de RF22.
-        // A diferencia del email y de Google Calendar (servicios externos, "best effort" con
-        // try/catch propio adentro de RecordatorioService), acá NO atrapamos la excepción:
-        // si el funcionario pidió explícitamente un recordatorio y los datos son inválidos
-        // (categoría inexistente, frecuencia inactiva, etc.), es mejor que falle todo el POST
-        // con un 404/422 claro que crear una instancia "a medias" sin el recordatorio pedido.
-        // Al estar dentro del mismo @Transactional, si recordatorioService.crear() lanza
-        // ResponseStatusException, se hace rollback también de la instancia recién guardada.
+        // Recordatorio inicial opcional (sin ficha propia en la especificación), con sync a
+        // Google Calendar heredado de RF22.
+        // Best-effort, mismo criterio que el mail de arriba: la instancia es el registro real
+        // del caso, el recordatorio inicial es una comodidad — si falla (categoría inexistente,
+        // sin permiso CREAR_RECORDATORIO, etc.) no tiene sentido perder también los datos
+        // válidos de la instancia. Por eso se llama a crearInterno() y no a crear(): crear()
+        // pasa por el proxy de @Transactional de Spring, que marca la transacción ambiente
+        // como rollback-only apenas lanza una excepción, sin importar que se atrape acá — la
+        // instancia se revertiría igual al hacer commit. tienePermiso() replica a mano el
+        // @PreAuthorize que crearInterno() no tiene (al no pasar por el proxy de crear()).
         if (dto.getRecordatorioInicial() != null) {
-            RecordatorioRequestDTO recordatorioDto = construirRecordatorioDesdeInstancia(
-                    dto.getRecordatorioInicial(), response.getCodInstancia(), funcionario.getIdUsuario());
+            try {
+                if (!tienePermiso("CREAR_RECORDATORIO")) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "No tiene permiso para crear el recordatorio inicial");
+                }
+                RecordatorioRequestDTO recordatorioDto = construirRecordatorioDesdeInstancia(
+                        dto.getRecordatorioInicial(), response.getCodInstancia(), funcionario.getIdUsuario());
 
-            RecordatorioResponseDTO recordatorioCreado = recordatorioService.crear(recordatorioDto);
-            response.setRecordatorioCreado(recordatorioCreado);
+                RecordatorioResponseDTO recordatorioCreado = recordatorioService.crearInterno(recordatorioDto);
+                response.setRecordatorioCreado(recordatorioCreado);
+            } catch (Exception e) {
+                log.warn("[AUDIT] Fallo al crear el recordatorio inicial de la instancia {}: {}",
+                        response.getIdNegInstancia(), e.getMessage());
+            }
         }
 
         return response;
     }
 
-    // RF13 — arma el RecordatorioRequestDTO "completo" a partir del RecordatorioInicialDTO
+    // Arma el RecordatorioRequestDTO "completo" a partir del RecordatorioInicialDTO
     // (que no trae codInstancia ni, a veces, idResponsable).
     private RecordatorioRequestDTO construirRecordatorioDesdeInstancia(
             RecordatorioInicialDTO origen, int codInstancia, int idFuncionarioCreador) {
@@ -180,7 +202,7 @@ public class InstanciaComunService {
         // Defensa en profundidad: este DTO se construye a mano y nunca pasa por @Valid,
         // así que el @Min(1) del RecordatorioInicialDTO no protege este camino.
         // nroOcurrencias=0 junto con una frecuencia produciría una recurrencia sin límite
-        // en Google Calendar (regresión vía RF13).
+        // en Google Calendar (regresión en el recordatorio inicial).
         Integer nroOcurrencias = origen.getNroOcurrencias();
         if (nroOcurrencias != null && nroOcurrencias < 1) {
             throw new ResponseStatusException(
@@ -193,7 +215,7 @@ public class InstanciaComunService {
 
     // RF27 — genera una instancia de seguimiento a partir de un recordatorio cumplido.
     // Vive acá y no en RecordatorioService a propósito: InstanciaComunService ya depende
-    // de RecordatorioService (desde RF13), así que agregar la dependencia inversa crearía
+    // de RecordatorioService (desde el recordatorio inicial en crear()), así que agregar la dependencia inversa crearía
     // un ciclo. RecordatorioService.marcarCumplido() no sabe nada de instancias.
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
@@ -329,6 +351,8 @@ public class InstanciaComunService {
                 .idNegInstancia(actualizada.getIdNegInstancia())
                 .oldEventId(eventIdAnterior)
                 .accion(eventIdAnterior != null ? AccionCalendar.ACTUALIZAR : AccionCalendar.CREAR)
+                .titulo(actualizada.getTitulo())
+                .descripcion(descripcionCalendar(actualizada.getIdNegInstancia(), categoria, actualizada.getCanal()))
                 .fechaHora(actualizada.getFechaHora())
                 .emailFuncionario(actualizada.getFuncionario().getEmail())
                 .nombreFuncionario(actualizada.getFuncionario().getNombre())
@@ -351,6 +375,10 @@ public class InstanciaComunService {
                     .oldEventId(instancia.getEventIdGoogle())
                     .accion(AccionCalendar.ELIMINAR)
                     .build());
+            // Si no se limpia acá, una reactivar() + editar() posterior vería este
+            // eventId viejo como no nulo e intentaría ACTUALIZAR un evento que ya no
+            // existe en Calendar (fue borrado arriba) en vez de CREAR uno nuevo.
+            instancia.setEventIdGoogle(null);
         }
 
         instancia.setEstado(EstadoLogico.INACTIVO);
@@ -387,6 +415,13 @@ public class InstanciaComunService {
     // ----------------------------------------------------------------
     // Helpers privados
     // ----------------------------------------------------------------
+
+    // Descripción del evento de Google Calendar: ID de negocio (para poder ubicar la
+    // instancia en el sistema desde la invitación) + categoría + canal.
+    private String descripcionCalendar(String idNegInstancia, CategoriaInstancia categoria, String canal) {
+        String base = "ID: " + idNegInstancia + " — Categoría: " + categoria.getNomCategoria();
+        return canal != null && !canal.isBlank() ? base + " — Canal: " + canal : base;
+    }
 
     private InstanciaComun buscarActivaOFallar(int codInstancia) {
         return instanciaComunRepository.findByCodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO)

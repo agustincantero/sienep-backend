@@ -42,6 +42,19 @@ public class RecordatorioService {
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
     public RecordatorioResponseDTO crear(RecordatorioRequestDTO dto) {
+        return crearInterno(dto);
+    }
+
+    // Misma lógica que crear(), pero sin @Transactional ni @PreAuthorize propios: existe
+    // para que InstanciaComunService.crear() (recordatorio inicial opcional) la llame dentro de
+    // SU PROPIA transacción en vez de a través del proxy de crear(). Si llamara a crear() y
+    // este lanzara una excepción, el interceptor de @Transactional de Spring marca la
+    // transacción ambiente como rollback-only ANTES de que ningún catch de más arriba pueda
+    // hacer nada — aunque se atrape la excepción, la instancia ya guardada se revertiría
+    // igual al hacer commit. Este método, al no tener su propio @Transactional, no cruza
+    // ese límite de proxy y una excepción acá puede atraparse sin efecto sobre la
+    // transacción del llamador.
+    RecordatorioResponseDTO crearInterno(RecordatorioRequestDTO dto) {
         Instancia instancia = instanciaRepository.findById(dto.getCodInstancia())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -116,6 +129,8 @@ public class RecordatorioService {
                 .idRecordatorio(guardado.getCodRecordatorio())
                 .idNegRecordatorio(guardado.getIdNegRecordatorio())
                 .accion(AccionCalendar.CREAR)
+                .titulo(guardado.getTitulo())
+                .descripcion(descripcionCalendar(guardado.getIdNegRecordatorio(), categoria, guardado.getTipo()))
                 .fechaHora(guardado.getFechaHora())
                 .rrule(rrule)
                 .emailFuncionario(responsable.getEmail())
@@ -277,6 +292,8 @@ public class RecordatorioService {
                 .idNegRecordatorio(actualizado.getIdNegRecordatorio())
                 .oldEventId(eventIdAnterior)
                 .accion(eventIdAnterior != null ? AccionCalendar.ACTUALIZAR : AccionCalendar.CREAR)
+                .titulo(actualizado.getTitulo())
+                .descripcion(descripcionCalendar(actualizado.getIdNegRecordatorio(), actualizado.getCategoria(), actualizado.getTipo()))
                 .fechaHora(actualizado.getFechaHora())
                 .rrule(rrule)
                 .emailFuncionario(actualizado.getResponsable().getEmail())
@@ -299,6 +316,10 @@ public class RecordatorioService {
                     .oldEventId(recordatorio.getEventIdGoogle())
                     .accion(AccionCalendar.ELIMINAR)
                     .build());
+            // Si no se limpia acá, una reactivar() + editar() posterior vería este
+            // eventId viejo como no nulo e intentaría ACTUALIZAR un evento que ya no
+            // existe en Calendar (fue borrado arriba) en vez de CREAR uno nuevo.
+            recordatorio.setEventIdGoogle(null);
         }
 
         recordatorio.setEstado(EstadoLogico.INACTIVO);
@@ -313,6 +334,12 @@ public class RecordatorioService {
             recordatorio.setEventIdGoogle(eventId);
             recordatorioRepository.save(recordatorio);
         });
+    }
+
+    // Descripción del evento de Google Calendar: ID de negocio (para poder ubicar el
+    // recordatorio en el sistema desde la invitación) + categoría + tipo.
+    private String descripcionCalendar(String idNegRecordatorio, CategoriaRecordatorio categoria, TipoRecordatorio tipo) {
+        return "ID: " + idNegRecordatorio + " — Categoría: " + categoria.getNomCategoria() + " — Tipo: " + tipo;
     }
 
     private Recordatorio buscarActivoOFallar(int id) {

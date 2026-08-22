@@ -46,18 +46,17 @@ public class GoogleCalendarService {
 
     private static final String ZONA_HORARIA = "America/Montevideo";
 
-    // Genérico a propósito, para ambos tipos de evento: el calendario ya no es
-    // el personal de nadie, es compartido — el título/descripción libres del
-    // recordatorio o la instancia podrían filtrar datos sensibles del alumno
-    // (o del caso) a cualquiera con acceso a ese calendario o a la invitación
-    // por mail. El detalle real se consulta en el sistema, no en Calendar.
-    private static final String TITULO_GENERICO = "Cita SIENEP — ver detalle en el sistema";
-
     private static final Set<String> SCOPES = Set.of("https://www.googleapis.com/auth/calendar.events");
 
     @Value("${google.calendar.enabled}")
     private boolean enabled;
 
+    // JSON completo de la service account, pegado tal cual como valor de la variable de
+    // entorno — NUNCA un archivo en el repo ni en el classpath. Se eligió así en vez de
+    // classpath:/file: (que sí usa "el otro equipo") porque Render arma el build a partir
+    // del repo y no tiene forma nativa de materializar un archivo desde una env var antes
+    // de empaquetar el jar; una variable de entorno funciona igual en local y en Render sin
+    // ningún paso extra.
     @Value("${google.calendar.credentials:}")
     private String credentialsJson;
 
@@ -80,8 +79,9 @@ public class GoogleCalendarService {
         List<EventAttendee> attendees = new ArrayList<>();
         agregarAttendee(attendees, evento.getEmailFuncionario(), evento.getNombreFuncionario());
         String referencia = "recordatorio " + evento.getIdNegRecordatorio();
-        return sincronizar(evento.getAccion(), evento.getOldEventId(), evento.getFechaHora(),
-                attendees, evento.getRrule(), referencia);
+        return sincronizar(evento.getAccion(), evento.getOldEventId(), evento.getIdNegRecordatorio(),
+                evento.getTitulo(), evento.getDescripcion(), evento.getFechaHora(), attendees,
+                evento.getRrule(), referencia);
     }
 
     public String procesar(CalendarInstanciaEvent evento) {
@@ -89,14 +89,16 @@ public class GoogleCalendarService {
         agregarAttendee(attendees, evento.getEmailFuncionario(), evento.getNombreFuncionario());
         agregarAttendee(attendees, evento.getEmailAlumno(), evento.getNombreAlumno());
         String referencia = "instancia " + evento.getIdNegInstancia();
-        return sincronizar(evento.getAccion(), evento.getOldEventId(), evento.getFechaHora(),
-                attendees, null, referencia);
+        return sincronizar(evento.getAccion(), evento.getOldEventId(), evento.getIdNegInstancia(),
+                evento.getTitulo(), evento.getDescripcion(), evento.getFechaHora(), attendees,
+                null, referencia);
     }
 
     // ── Núcleo común a ambos tipos de evento ────────────────────────────────
 
-    private String sincronizar(AccionCalendar accion, String oldEventId, LocalDateTime fechaHora,
-                                List<EventAttendee> attendees, String rrule, String referenciaLog) {
+    private String sincronizar(AccionCalendar accion, String oldEventId, String idNeg, String titulo,
+                                String descripcion, LocalDateTime fechaHora, List<EventAttendee> attendees,
+                                String rrule, String referenciaLog) {
         if (!enabled) {
             if (accion == AccionCalendar.ELIMINAR) {
                 log.info("[GCAL] Modo simulado (enabled=false): se omite eliminar el evento {} de {}",
@@ -118,7 +120,7 @@ public class GoogleCalendarService {
                 return null;
             }
 
-            Event evento = construirEvento(fechaHora, attendees, rrule);
+            Event evento = construirEvento(idNeg, titulo, descripcion, fechaHora, attendees, rrule);
 
             if (accion == AccionCalendar.ACTUALIZAR && oldEventId != null) {
                 service.events().update(calendarId, oldEventId, evento).setSendUpdates("all").execute();
@@ -146,9 +148,13 @@ public class GoogleCalendarService {
 
     // Package-private (no private): testeable directo desde GoogleCalendarServiceTest
     // sin reflection — es la parte de armar el Event que no depende del SDK/red.
-    Event construirEvento(LocalDateTime fechaHora, List<EventAttendee> attendees, String rrule) {
+    Event construirEvento(String idNeg, String titulo, String descripcion, LocalDateTime fechaHora,
+                           List<EventAttendee> attendees, String rrule) {
         Event evento = new Event();
-        evento.setSummary(TITULO_GENERICO);
+        // El ID de negocio va también en el título (no solo en la descripción) para que se
+        // vea de entrada en listas de eventos, donde Calendar suele truncar el resto.
+        evento.setSummary(titulo + " — " + idNeg);
+        evento.setDescription(descripcion);
         evento.setAttendees(attendees);
 
         ZonedDateTime inicio = fechaHora.atZone(ZoneId.of(ZONA_HORARIA));
@@ -169,6 +175,7 @@ public class GoogleCalendarService {
                 .setUseDefault(false)
                 .setOverrides(List.of(
                         new EventReminder().setMethod("email").setMinutes(24 * 60),
+                        new EventReminder().setMethod("email").setMinutes(60),
                         new EventReminder().setMethod("popup").setMinutes(30)
                 )));
 

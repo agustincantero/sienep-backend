@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.*;
 // Lo que SÍ es 100% testeable sin tocar el SDK ni la red:
 //   1) el modo simulado (enabled=false) nunca intenta parsear credenciales ni
 //      construir un cliente real — clave para RF22 en dev/test sin gastar cuota.
-//   2) construirEvento(...) (package-private) arma el Event correcto: título
-//      genérico, attendees, fechas, rrule — es lógica pura, sin red.
+//   2) construirEvento(...) (package-private) arma el Event correcto: título,
+//      descripción, attendees, fechas, rrule — es lógica pura, sin red.
 class GoogleCalendarServiceTest {
 
     private GoogleCalendarService googleCalendarService;
@@ -108,12 +108,14 @@ class GoogleCalendarServiceTest {
     // ── construirEvento(...) — sin red, sin SDK real más allá de los POJOs de modelo ──
 
     @Test
-    @DisplayName("construirEvento - Título siempre genérico, nunca expone datos libres del caso")
-    void construirEvento_TituloGenerico() {
+    @DisplayName("construirEvento - Usa el título y la descripción reales recibidos, con el ID en el título")
+    void construirEvento_TituloYDescripcionReales() {
         Event evento = googleCalendarService.construirEvento(
+                "INST-2026-000001", "Seguimiento con Juan", "Categoría: Académica — Canal: Presencial",
                 LocalDateTime.now().plusDays(1), List.of(), null);
 
-        assertEquals("Cita SIENEP — ver detalle en el sistema", evento.getSummary());
+        assertEquals("Seguimiento con Juan — INST-2026-000001", evento.getSummary());
+        assertEquals("Categoría: Académica — Canal: Presencial", evento.getDescription());
     }
 
     @Test
@@ -122,7 +124,7 @@ class GoogleCalendarServiceTest {
         EventAttendee funcionario = new EventAttendee().setEmail("juan.garcia@utec.edu.uy").setDisplayName("Juan");
 
         Event evento = googleCalendarService.construirEvento(
-                LocalDateTime.now().plusDays(1), List.of(funcionario), null);
+                "REC-2026-000001", "titulo", "descripcion", LocalDateTime.now().plusDays(1), List.of(funcionario), null);
 
         assertEquals(1, evento.getAttendees().size());
         assertEquals("juan.garcia@utec.edu.uy", evento.getAttendees().get(0).getEmail());
@@ -135,7 +137,7 @@ class GoogleCalendarServiceTest {
         EventAttendee alumno = new EventAttendee().setEmail("ana@utec.edu.uy").setDisplayName("Ana");
 
         Event evento = googleCalendarService.construirEvento(
-                LocalDateTime.now().plusDays(1), List.of(funcionario, alumno), null);
+                "INST-2026-000001", "titulo", "descripcion", LocalDateTime.now().plusDays(1), List.of(funcionario, alumno), null);
 
         assertEquals(2, evento.getAttendees().size());
         assertTrue(evento.getAttendees().stream().anyMatch(a -> a.getEmail().equals("ana@utec.edu.uy")));
@@ -145,9 +147,9 @@ class GoogleCalendarServiceTest {
     @DisplayName("construirEvento - Con rrule, setea la recurrencia; sin rrule, no")
     void construirEvento_Rrule() {
         Event conRrule = googleCalendarService.construirEvento(
-                LocalDateTime.now().plusDays(1), List.of(), "RRULE:FREQ=WEEKLY;BYDAY=MO");
+                "REC-2026-000001", "titulo", "descripcion", LocalDateTime.now().plusDays(1), List.of(), "RRULE:FREQ=WEEKLY;BYDAY=MO");
         Event sinRrule = googleCalendarService.construirEvento(
-                LocalDateTime.now().plusDays(1), List.of(), null);
+                "REC-2026-000001", "titulo", "descripcion", LocalDateTime.now().plusDays(1), List.of(), null);
 
         assertEquals(List.of("RRULE:FREQ=WEEKLY;BYDAY=MO"), conRrule.getRecurrence());
         assertNull(sinRrule.getRecurrence());
@@ -158,7 +160,7 @@ class GoogleCalendarServiceTest {
     void construirEvento_DuracionUnaHora() {
         LocalDateTime inicio = LocalDateTime.of(2026, 3, 10, 14, 0);
 
-        Event evento = googleCalendarService.construirEvento(inicio, List.of(), null);
+        Event evento = googleCalendarService.construirEvento("INST-2026-000001", "titulo", "descripcion", inicio, List.of(), null);
 
         long inicioMs = evento.getStart().getDateTime().getValue();
         long finMs = evento.getEnd().getDateTime().getValue();

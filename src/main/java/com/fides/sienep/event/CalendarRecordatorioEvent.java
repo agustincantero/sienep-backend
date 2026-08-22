@@ -19,6 +19,8 @@ public class CalendarRecordatorioEvent {
     private final String idNegRecordatorio;
     private final String oldEventId;
     private final AccionCalendar accion;
+    private final String titulo;
+    private final String descripcion;
     private final LocalDateTime fechaHora;
     private final String rrule;
     private final String emailFuncionario;
