@@ -2,12 +2,16 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.event.AccionCalendar;
+import com.fides.sienep.event.CalendarRecordatorioEvent;
 import com.fides.sienep.mapper.RecordatorioMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
 import com.fides.sienep.utils.RecordatorioIdGenerator;
+import com.fides.sienep.utils.RecurrenceRuleBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -32,13 +35,26 @@ public class RecordatorioService {
     private final FrecuenciaRepository frecuenciaRepository;
     private final RecordatorioMapper recordatorioMapper;
     private final RecordatorioIdGenerator recordatorioIdGenerator;
-    private final FuncionarioGcalRepository funcionarioGcalRepository;
-    private final GoogleCalendarService     googleCalendarService;
-    private final EmailService              emailService;
+    private final RecurrenceRuleBuilder recurrenceRuleBuilder;
+    private final ApplicationEventPublisher eventPublisher;
+    private final EmailService emailService;
 
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
     public RecordatorioResponseDTO crear(RecordatorioRequestDTO dto) {
+        return crearInterno(dto);
+    }
+
+    // Misma lógica que crear(), pero sin @Transactional ni @PreAuthorize propios: existe
+    // para que InstanciaComunService.crear() (recordatorio inicial opcional) la llame dentro de
+    // SU PROPIA transacción en vez de a través del proxy de crear(). Si llamara a crear() y
+    // este lanzara una excepción, el interceptor de @Transactional de Spring marca la
+    // transacción ambiente como rollback-only ANTES de que ningún catch de más arriba pueda
+    // hacer nada — aunque se atrape la excepción, la instancia ya guardada se revertiría
+    // igual al hacer commit. Este método, al no tener su propio @Transactional, no cruza
+    // ese límite de proxy y una excepción acá puede atraparse sin efecto sobre la
+    // transacción del llamador.
+    RecordatorioResponseDTO crearInterno(RecordatorioRequestDTO dto) {
         Instancia instancia = instanciaRepository.findById(dto.getCodInstancia())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -102,29 +118,24 @@ public class RecordatorioService {
 
         Recordatorio guardado = recordatorioRepository.save(recordatorio);
 
-        // ── RF22: sincronizar con Google Calendar si el responsable tiene integración activa ──
-        // No es bloqueante: si Google falla, el recordatorio ya fue persistido correctamente.
-        String eventIdGoogle = null;
-        try {
-            Optional<FuncionarioGcal> gcalOpt = funcionarioGcalRepository
-                    .findByFuncionarioIdUsuario(responsable.getIdUsuario());
-            if (gcalOpt.isPresent() && gcalOpt.get().isAutorizado()) {
-                eventIdGoogle = googleCalendarService.crearEvento(guardado, gcalOpt.get().getRefreshToken());
-            }
-        } catch (Exception e) {
-            log.warn("[GCAL] Fallo al sincronizar recordatorio {} con Google Calendar: {}",
-                    guardado.getIdNegRecordatorio(), e.getMessage());
-        }
-
-        if (eventIdGoogle != null) {
-            try {
-                guardado.setEventIdGoogle(eventIdGoogle);
-                recordatorioRepository.save(guardado);
-            } catch (Exception e) {
-                log.error("[GCAL-DESINCRONIZADO] Se creó el evento {} en Google Calendar para el recordatorio {}, pero falló su persistencia local: {}",
-                        eventIdGoogle, guardado.getIdNegRecordatorio(), e.getMessage());
-            }
-        }
+        // ── RF22: sincronizar con Google Calendar (async, post-commit) ──
+        // A diferencia del modelo anterior (OAuth por funcionario), ya no depende de que
+        // el responsable haya autorizado nada: la sync es incondicional, vía Service
+        // Account. El rrule se calcula acá (síncrono, con la sesión de Hibernate todavía
+        // abierta) porque CalendarSyncListener corre después del commit, cuando ya no
+        // se puede tocar guardado.getFrecuencia() sin arriesgar un LazyInitializationException.
+        String rrule = recurrenceRuleBuilder.construir(guardado);
+        eventPublisher.publishEvent(CalendarRecordatorioEvent.builder()
+                .idRecordatorio(guardado.getCodRecordatorio())
+                .idNegRecordatorio(guardado.getIdNegRecordatorio())
+                .accion(AccionCalendar.CREAR)
+                .titulo(guardado.getTitulo())
+                .descripcion(descripcionCalendar(guardado.getIdNegRecordatorio(), categoria, guardado.getTipo()))
+                .fechaHora(guardado.getFechaHora())
+                .rrule(rrule)
+                .emailFuncionario(responsable.getEmail())
+                .nombreFuncionario(responsable.getNombre())
+                .build());
 
         // ── RF23: notificar por email al responsable del recordatorio ──
         // No es bloqueante: enviarNotificacionRecordatorio() ya atrapa sus propias excepciones,
@@ -229,9 +240,8 @@ public class RecordatorioService {
                     "El funcionario con id " + dto.getIdResponsable() + " no está activo");
         }
 
-        // Se capturan antes de sobrescribir: hacen falta para decidir cómo sincronizar
-        // con Google Calendar y si corresponde volver a notificar (RF22/RF23).
-        Funcionario responsableAnterior = recordatorio.getResponsable();
+        // Se captura antes de sobrescribir: hace falta para decidir si corresponde
+        // volver a notificar (RF23) y para el ACTUALIZAR/CREAR de Google Calendar (RF22).
         String eventIdAnterior = recordatorio.getEventIdGoogle();
         boolean cambioFecha = !recordatorio.getFechaHora().equals(dto.getFechaHora());
 
@@ -270,86 +280,66 @@ public class RecordatorioService {
         Recordatorio actualizado = recordatorioRepository.save(recordatorio);
 
         // RF22 — mantener sincronizado el evento de Google Calendar tras la edición.
-        // No es bloqueante, mismo criterio que en crear()/desactivar().
-        sincronizarEdicionConGoogleCalendar(actualizado, responsableAnterior, eventIdAnterior);
+        // Con Service Account todos los eventos viven en un único calendario compartido,
+        // así que a diferencia del modelo anterior (OAuth por funcionario, un calendario
+        // personal por responsable) un cambio de responsable ya NO requiere borrar el
+        // evento viejo y crear uno nuevo: alcanza con ACTUALIZAR el mismo evento con la
+        // lista de asistentes nueva. Si nunca se había sincronizado (eventIdAnterior nulo),
+        // se crea.
+        String rrule = recurrenceRuleBuilder.construir(actualizado);
+        eventPublisher.publishEvent(CalendarRecordatorioEvent.builder()
+                .idRecordatorio(actualizado.getCodRecordatorio())
+                .idNegRecordatorio(actualizado.getIdNegRecordatorio())
+                .oldEventId(eventIdAnterior)
+                .accion(eventIdAnterior != null ? AccionCalendar.ACTUALIZAR : AccionCalendar.CREAR)
+                .titulo(actualizado.getTitulo())
+                .descripcion(descripcionCalendar(actualizado.getIdNegRecordatorio(), actualizado.getCategoria(), actualizado.getTipo()))
+                .fechaHora(actualizado.getFechaHora())
+                .rrule(rrule)
+                .emailFuncionario(actualizado.getResponsable().getEmail())
+                .nombreFuncionario(actualizado.getResponsable().getNombre())
+                .build());
 
         return recordatorioMapper.toDto(actualizado);
     }
-
-    private void sincronizarEdicionConGoogleCalendar(Recordatorio recordatorio,
-                                                      Funcionario responsableAnterior,
-                                                      String eventIdAnterior) {
-        String nuevoEventIdGoogle = null;
-        try {
-            boolean cambioResponsable = responsableAnterior.getIdUsuario() != recordatorio.getResponsable().getIdUsuario();
-            String eventIdParaActualizar = eventIdAnterior;
-
-            // El evento vive en el calendario del responsable ANTERIOR: si cambió, no se
-            // puede "actualizar" con el token del responsable nuevo, hay que borrarlo ahí
-            // y (más abajo) crear uno nuevo en el calendario del responsable actual.
-            if (cambioResponsable && eventIdAnterior != null) {
-                Optional<FuncionarioGcal> gcalAnteriorOpt = funcionarioGcalRepository
-                        .findByFuncionarioIdUsuario(responsableAnterior.getIdUsuario());
-                if (gcalAnteriorOpt.isPresent() && gcalAnteriorOpt.get().isAutorizado()) {
-                    googleCalendarService.eliminarEvento(eventIdAnterior, gcalAnteriorOpt.get().getRefreshToken());
-                }
-                recordatorio.setEventIdGoogle(null);
-                eventIdParaActualizar = null;
-            }
-
-            Optional<FuncionarioGcal> gcalActualOpt = funcionarioGcalRepository
-                    .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario());
-
-            if (gcalActualOpt.isEmpty() || !gcalActualOpt.get().isAutorizado()) {
-                return;
-            }
-
-            String refreshToken = gcalActualOpt.get().getRefreshToken();
-            if (eventIdParaActualizar != null) {
-                googleCalendarService.actualizarEvento(recordatorio, eventIdParaActualizar, refreshToken);
-            } else {
-                // No tenía evento (nunca se sincronizó, o cambió de responsable): se crea uno nuevo.
-                nuevoEventIdGoogle = googleCalendarService.crearEvento(recordatorio, refreshToken);
-            }
-        } catch (Exception e) {
-            log.warn("[GCAL] Fallo al sincronizar la edición del recordatorio {} con Google Calendar: {}",
-                    recordatorio.getIdNegRecordatorio(), e.getMessage());
-        }
-
-        if (nuevoEventIdGoogle != null) {
-            try {
-                recordatorio.setEventIdGoogle(nuevoEventIdGoogle);
-                recordatorioRepository.save(recordatorio);
-            } catch (Exception e) {
-                log.error("[GCAL-DESINCRONIZADO] Se creó el nuevo evento {} en Google Calendar para la edición del recordatorio {}, pero falló su persistencia local: {}",
-                        nuevoEventIdGoogle, recordatorio.getIdNegRecordatorio(), e.getMessage());
-            }
-        }
-    }
-
 
     @Transactional
     @PreAuthorize("hasAuthority('DESACTIVAR_RECORDATORIO')")
     public void desactivar(int id) {
         Recordatorio recordatorio = buscarActivoOFallar(id);
 
-        // ── RF22: eliminar evento de Google Calendar si existe ────────────────
-        // Igualmente no bloqueante.
+        // ── RF22: eliminar evento de Google Calendar si existe (async, post-commit) ──
         if (recordatorio.getEventIdGoogle() != null) {
-            try {
-                Optional<FuncionarioGcal> gcalOpt = funcionarioGcalRepository
-                        .findByFuncionarioIdUsuario(recordatorio.getResponsable().getIdUsuario());
-                if (gcalOpt.isPresent() && gcalOpt.get().isAutorizado()) {
-                    googleCalendarService.eliminarEvento(recordatorio.getEventIdGoogle(), gcalOpt.get().getRefreshToken());
-                }
-            } catch (Exception e) {
-                log.warn("[GCAL] No se pudo eliminar el evento {} de Google Calendar: {}",
-                        recordatorio.getEventIdGoogle(), e.getMessage());
-            }
+            eventPublisher.publishEvent(CalendarRecordatorioEvent.builder()
+                    .idRecordatorio(recordatorio.getCodRecordatorio())
+                    .idNegRecordatorio(recordatorio.getIdNegRecordatorio())
+                    .oldEventId(recordatorio.getEventIdGoogle())
+                    .accion(AccionCalendar.ELIMINAR)
+                    .build());
+            // Si no se limpia acá, una reactivar() + editar() posterior vería este
+            // eventId viejo como no nulo e intentaría ACTUALIZAR un evento que ya no
+            // existe en Calendar (fue borrado arriba) en vez de CREAR uno nuevo.
+            recordatorio.setEventIdGoogle(null);
         }
 
         recordatorio.setEstado(EstadoLogico.INACTIVO);
         recordatorioRepository.save(recordatorio);
+    }
+
+    // Escritura de vuelta del eventId tras la sync async (CalendarSyncListener,
+    // AFTER_COMMIT) — corre en una transacción nueva, la original ya cerró.
+    @Transactional
+    public void actualizarEventIdGoogle(int id, String eventId) {
+        recordatorioRepository.findByCodRecordatorio(id).ifPresent(recordatorio -> {
+            recordatorio.setEventIdGoogle(eventId);
+            recordatorioRepository.save(recordatorio);
+        });
+    }
+
+    // Descripción del evento de Google Calendar: ID de negocio (para poder ubicar el
+    // recordatorio en el sistema desde la invitación) + categoría + tipo.
+    private String descripcionCalendar(String idNegRecordatorio, CategoriaRecordatorio categoria, TipoRecordatorio tipo) {
+        return "ID: " + idNegRecordatorio + " — Categoría: " + categoria.getNomCategoria() + " — Tipo: " + tipo;
     }
 
     private Recordatorio buscarActivoOFallar(int id) {

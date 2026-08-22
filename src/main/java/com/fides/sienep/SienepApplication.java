@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
@@ -12,7 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableTransactionManagement(order = 0)
 // Sin un CacheManager explícito en el classpath (Redis, etc.), Spring Boot
 // auto-configura ConcurrentMapCacheManager: un caché en memoria del proceso, igual
-// que OAuthStateStore/PasswordResetRateLimiter. Usado por los @Cacheable de
+// que PasswordResetRateLimiter/LoginIpRateLimiter. Usado por los @Cacheable de
 // RolService, CategoriaInstanciaService, CategoriaRecordatorioService,
 // PermisoService, ItrService, CarreraService y FrecuenciaService (catálogos
 // que cambian poco).
@@ -23,6 +24,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 // Si eso pasa, migrar a un CacheManager compartido (Redis) antes de escalar.
 @EnableCaching
 @EnableScheduling
+// Habilita @Async, usado por CalendarSyncListener para que la sync con Google
+// Calendar corra en otro thread, después del commit — nunca en el mismo
+// request que crea/edita un recordatorio o una instancia.
+@EnableAsync
 public class SienepApplication {
 
     public static void main(String[] args) {

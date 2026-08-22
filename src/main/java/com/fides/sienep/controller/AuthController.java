@@ -14,13 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import com.fides.sienep.service.GoogleOAuthService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import java.net.URI;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/auth")
@@ -29,7 +23,6 @@ import org.springframework.http.HttpStatus;
 public class AuthController {
 
     private final AuthService authService;
-    private final GoogleOAuthService googleOAuthService;
 
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión",
@@ -77,47 +70,5 @@ public class AuthController {
     public ResponseEntity<Void> restablecerContrasenia(@RequestBody @Valid RestablecerContraseniaConTokenDTO dto) {
         authService.restablecerContraseniaConToken(dto.getToken(), dto.getContraseniaNueva());
         return ResponseEntity.ok().build();
-    }
-
-    // ── Iniciar flow OAuth2 ───────────────────────────────────────────────────
-// El funcionario autenticado hace GET a este endpoint.
-// El backend genera la URL de Google y redirige al navegador allá.
-// Google pedirá que el usuario acepte los permisos de Calendar.
-
-    @Operation(summary = "Iniciar conexión con Google Calendar",
-            description = "Redirige al funcionario autenticado al flow de autorización de Google")
-    @ApiResponse(responseCode = "302", description = "Redirección a Google")
-    @ApiResponse(responseCode = "401", description = "No autenticado")
-    @GetMapping("/google/init")
-    @PreAuthorize("hasAuthority('GCAL_SYNC_RECORDATORIOS')")
-    public ResponseEntity<Void> iniciarOAuth() {
-        int idUsuario = Integer.parseInt(
-                SecurityContextHolder.getContext().getAuthentication().getName());
-        String url = googleOAuthService.generarUrlAutorizacion(idUsuario);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create(url));
-        return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
-    }
-
-// ── Callback OAuth2 ───────────────────────────────────────────────────────
-// Google redirige aquí después de que el usuario acepta (o rechaza).
-// No requiere JWT porque el navegador del usuario llega aquí directamente
-// desde Google — no hay forma de que traiga el token de SIENEP.
-// La seguridad está en el parámetro `state`: es un token aleatorio y de un solo
-// uso (ver OAuthStateStore), generado en /google/init y consumido acá. El
-// idUsuario nunca viaja en texto plano ni es adivinable desde este endpoint.
-
-    @Operation(summary = "Callback OAuth2 de Google Calendar",
-            description = "Endpoint al que Google redirige tras la autorización del usuario")
-    @ApiResponse(responseCode = "200", description = "Cuenta de Google conectada correctamente")
-    @ApiResponse(responseCode = "400", description = "Código de autorización inválido")
-    @ApiResponse(responseCode = "502", description = "Error al comunicarse con Google")
-    @GetMapping("/google/callback")
-    public ResponseEntity<String> callbackOAuth(
-            @RequestParam String code,
-            @RequestParam String state) {
-        googleOAuthService.procesarCallback(code, state);
-        return ResponseEntity.ok("¡Tu cuenta de Google Calendar fue conectada correctamente! " +
-                "Los próximos recordatorios aparecerán en tu calendario.");
     }
 }

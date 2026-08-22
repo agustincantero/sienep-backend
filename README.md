@@ -37,7 +37,7 @@ La API expone los servicios correspondientes a los 7 módulos centrales del sist
 
 1. **Autenticación y Acceso:** Inicio y cierre de sesión, y gestión segura de credenciales.
 2. **Gestión de Estudiantes:** Altas, bajas lógicas, modificaciones, búsquedas y capacidad para adjuntar informes médicos.
-3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (creando un recordatorio inicial en la misma llamada, ver RF13). La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /api/instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /api/instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
+3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (RF13), con la opción de crear un recordatorio inicial en la misma llamada. La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /api/instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /api/instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
 4. **Gestión de Recordatorios:** Creación (únicos y recurrentes), notificaciones, vinculación a instancias e integración con Google Calendar.
 5. **Gestión de Incidencias:** Registro detallado y visualización del historial de incidencias.
 6. **Reportes:** Generación y exportación de informes del sistema, incluyendo un endpoint público (`POST /api/reportes/validar`) para verificar si un PDF exportado es auténtico, comparando su hash SHA-256 contra el que el sistema guardó al generarlo.
@@ -64,7 +64,7 @@ Este proyecto sigue una arquitectura en capas estándar de Spring Boot orientada
 Para asegurar la escalabilidad, el desacoplamiento y la mantenibilidad del código, el equipo aplicó los siguientes patrones de diseño de software:
 
 - **Data Transfer Object (DTO):** Patrón estructural aplicado a lo largo de toda la API que actúa como barrera entre el modelo de datos (Entidades JPA) y la capa de presentación (JSON). Garantiza que la API consuma y exponga únicamente la información estrictamente necesaria, blindando la base de datos de modificaciones directas.
-- **Facade (Fachada) - `GoogleOAuthService`:** En lugar de exponer la complejidad del SDK oficial de Google (`NetHttpTransport`, `GsonFactory`, y múltiples requests) hacia las capas superiores, esta clase encapsula todo este subsistema engorroso. Lo oculta detrás de métodos de negocio extremadamente limpios, liberando completamente al `AuthController` de conocer los detalles de la infraestructura externa.
+- **Facade (Fachada) - `GoogleCalendarService`:** En lugar de exponer la complejidad del SDK oficial de Google (`ServiceAccountCredentials`, `Calendar.Builder`, y múltiples requests) hacia las capas superiores, esta clase encapsula todo este subsistema engorroso detrás de un único método `procesar(...)` por tipo de evento. Libera a `RecordatorioService`/`InstanciaComunService` de conocer los detalles de la infraestructura externa — solo publican un evento de dominio, sin saber nada del SDK de Google.
 - **Builder (Constructor):** Patrón creacional implementado a través de la anotación `@Builder` de Lombok, especialmente en la capa de DTOs y en conjunto con `MapStruct`. Se eligió este patrón para evitar la proliferación de constructores gigantes y asegurar la inmutabilidad en el mapeo de objetos, permitiendo ensamblar instancias complejas paso a paso de forma legible.
 - **Singleton (Instancia Única):** Patrón creacional adoptado en toda la capa de lógica y acceso a datos (`@Service`, `@Repository`, `@RestController`). En lugar de instanciar manualmente objetos pesados (que agotarían la memoria), el equipo delegó la gestión del patrón Singleton al Contenedor de Inversión de Control (IoC) de Spring Boot. Spring garantiza que exista una única instancia global de estos componentes en memoria, inyectándolos dinámicamente donde se necesiten.
 
@@ -133,6 +133,8 @@ A continuación se muestra cómo configurar las variables para una sesión de te
 > - `FRONTEND_URL`: URL base del frontend, usada para armar el link de "olvidé mi contraseña" (default `http://localhost:3000`).
 > - `STORAGE_PATH`: carpeta base donde se guardan los archivos subidos — informes adjuntos y fotos de perfil (default `uploads`).
 > - `CORS_ALLOWED_ORIGINS`: orígenes permitidos para CORS, separados por coma y sin barra final (default `http://localhost:3000,https://sienep.app`). El backend solo acepta peticiones `fetch`/AJAX hechas desde un origen de esta lista.
+>
+> **Sobre Google Calendar:** con `GOOGLE_CALENDAR_ENABLED=false` (el default si no la definís) la sync queda en modo simulado, no hace falta cargar credenciales reales. Si la ponés en `true`, además necesitás `GOOGLE_CALENDAR_CREDENTIALS` con el JSON completo de la service account — no entra cómodo en una sola línea de terminal, ver `.env.example` o cargarla en un archivo `.env` (ya está en `.gitignore`).
 
 *Windows - Opción 1: PowerShell*
 ```powershell
@@ -141,9 +143,10 @@ $env:DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 $env:DB_USER="sienep"
 $env:DB_PASSWORD="sienep"
 $env:BREVO_API_KEY="tu_api_key_de_brevo"
-$env:GOOGLE_CLIENT_ID="tu_google_client_id"
-$env:GOOGLE_CLIENT_SECRET="tu_google_client_secret"
-$env:GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
+$env:GOOGLE_CALENDAR_ENABLED="false"
+$env:GOOGLE_CALENDAR_CREDENTIALS="<json-completo-de-la-service-account-en-una-sola-linea>"
+$env:GOOGLE_CALENDAR_CALENDAR_ID="tu-calendario-id"
+$env:GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT="cuenta@tu-workspace.com"
 $env:FRONTEND_URL="http://localhost:3000"
 $env:STORAGE_PATH="uploads"
 $env:CORS_ALLOWED_ORIGINS="http://localhost:3000,https://sienep.app"
@@ -156,9 +159,10 @@ set DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto
 set DB_USER=sienep
 set DB_PASSWORD=sienep
 set BREVO_API_KEY=tu_api_key_de_brevo
-set GOOGLE_CLIENT_ID=tu_google_client_id
-set GOOGLE_CLIENT_SECRET=tu_google_client_secret
-set GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
+set GOOGLE_CALENDAR_ENABLED=false
+set GOOGLE_CALENDAR_CREDENTIALS=<json-completo-de-la-service-account-en-una-sola-linea>
+set GOOGLE_CALENDAR_CALENDAR_ID=tu-calendario-id
+set GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT=cuenta@tu-workspace.com
 set FRONTEND_URL=http://localhost:3000
 set STORAGE_PATH=uploads
 set CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
@@ -171,9 +175,10 @@ export DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 export DB_USER="sienep"
 export DB_PASSWORD="sienep"
 export BREVO_API_KEY="tu_api_key_de_brevo"
-export GOOGLE_CLIENT_ID="tu_google_client_id"
-export GOOGLE_CLIENT_SECRET="tu_google_client_secret"
-export GOOGLE_REDIRECT_URI="http://localhost:8080/api/auth/google/callback"
+export GOOGLE_CALENDAR_ENABLED="false"
+export GOOGLE_CALENDAR_CREDENTIALS="<json-completo-de-la-service-account-en-una-sola-linea>"
+export GOOGLE_CALENDAR_CALENDAR_ID="tu-calendario-id"
+export GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT="cuenta@tu-workspace.com"
 export FRONTEND_URL="http://localhost:3000"
 export STORAGE_PATH="uploads"
 export CORS_ALLOWED_ORIGINS="http://localhost:3000,https://sienep.app"
@@ -194,7 +199,7 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
 5. En el campo de **Environment variables**, agregá lo siguiente:
 ```text
-   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;BREVO_API_KEY=tu_api_key_de_brevo;GOOGLE_CLIENT_ID=tu_google_client_id;GOOGLE_CLIENT_SECRET=tu_google_client_secret;GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback;FRONTEND_URL=http://localhost:3000;STORAGE_PATH=uploads;CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
+   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;BREVO_API_KEY=tu_api_key_de_brevo;GOOGLE_CALENDAR_ENABLED=false;GOOGLE_CALENDAR_CREDENTIALS=<json-completo-de-la-service-account-en-una-sola-linea>;GOOGLE_CALENDAR_CALENDAR_ID=tu-calendario-id;GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT=cuenta@tu-workspace.com;FRONTEND_URL=http://localhost:3000;STORAGE_PATH=uploads;CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
 ```
 *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 
@@ -220,21 +225,21 @@ Para visualizar este reporte interactivo y comprobar la alta cobertura de la ló
 
 ## Integración con Google Calendar
 
-El sistema permite que los funcionarios sincronicen sus cuentas para ver los recordatorios directamente en Google Calendar.
+El sistema sincroniza recordatorios e instancias con Google Calendar usando una **Service Account con domain-wide delegation**: una única cuenta de servicio impersona a una cuenta de la organización y escribe en un único calendario compartido, invitando por email al funcionario responsable (y al alumno, cuando corresponde). No depende de que cada funcionario autorice nada individualmente.
 
-### Cómo probar la vinculación vía API (Postman)
-Para vincular tu cuenta localmente sin necesidad de una interfaz gráfica, seguí estos pasos:
-1. Asegurate de tener la variable `GOOGLE_REDIRECT_URI` configurada como `http://localhost:8080/api/auth/google/callback` y que esa URL esté autorizada en Google Cloud Console.
-2. Iniciá sesión (`POST /api/auth/login`) con un usuario que tenga el permiso `GCAL_SYNC_RECORDATORIOS` y copiá el Token JWT devuelto.
-3. En Postman, realizá una petición `GET` a `http://localhost:8080/api/auth/google/init` enviando el token en la pestaña Authorization (`Bearer Token`). **Importante:** En la configuración de Postman, desactivá la opción "Automatically follow redirects".
-4. Al enviar la petición, el backend devolverá un `302 Found`. Copiá la URL gigante que viene en el header `Location` de la respuesta.
-5. Pegá esa URL en tu navegador web habitual, iniciá sesión con tu cuenta de Google y otorgá los permisos de Calendar.
-6. Google te devolverá a la API, la cual procesará y guardará tu token correctamente.
+### Configuración
+1. En Google Cloud Console, creá una Service Account (**IAM y administración → Cuentas de servicio**) y generá una clave JSON.
+2. Habilitá domain-wide delegation para esa cuenta y autorizá el scope `https://www.googleapis.com/auth/calendar.events` en el admin console de Google Workspace, para el Client ID de la service account. **Importante:** `GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT` tiene que ser una cuenta dentro del **mismo Workspace** que hizo esa autorización (ej. una cuenta propia del equipo) — no funciona con una cuenta de un dominio externo (como `@utec.edu.uy`), aunque los **asistentes invitados** a cada evento sí pueden ser de cualquier dominio.
+3. Cargá las variables de entorno (ver `.env.example`): `GOOGLE_CALENDAR_ENABLED=true`, `GOOGLE_CALENDAR_CREDENTIALS` (el JSON completo de la service account, pegado tal cual — nunca un archivo en el repo), `GOOGLE_CALENDAR_CALENDAR_ID` y `GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT`.
 
-### Sincronización Automática
-Una vez vinculado el calendario, la creación de eventos funciona sola:
-- Al crear un `Recordatorio` (`POST /api/recordatorios`), si le asignás como `idResponsable` el ID de tu usuario, el evento aparecerá mágicamente en tu Google Calendar.
-- **Tolerancia a fallos:** Si los servidores de Google se caen, la API no lanza error. El recordatorio se guarda igual en la base de datos local y se deja un registro de advertencia (`[WARN]`) en la consola del backend.
+Con `GOOGLE_CALENDAR_ENABLED=false` (default), la sync queda en **modo simulado**: loguea la operación y devuelve un id `SIMULADO-...` en vez de llamar a la API real — no hace falta cargar credenciales para desarrollar o correr los tests.
+
+### Sincronización
+La sync es asíncrona y corre recién después de confirmada la transacción de negocio (`RecordatorioService`/`InstanciaComunService` publican un evento; `CalendarSyncListener` lo procesa post-commit):
+- Al crear/editar un `Recordatorio` (`POST`/`PUT /recordatorios`), se crea/actualiza el evento invitando al **responsable** (agenda interna, sin el alumno).
+- Al crear/editar una instancia (`POST`/`PUT /instancias`), se crea/actualiza el evento invitando al **funcionario y al alumno**.
+- El evento usa el título real de la instancia/recordatorio y una descripción con categoría + tipo/canal + ID de negocio (`INST-2026-...`/`REC-2026-...`) — el mismo ID también va al final del título, para poder ubicar el caso en el sistema desde la invitación o desde un listado de Calendar.
+- **Tolerancia a fallos:** si los servidores de Google se caen, la API no lanza error — el recordatorio/instancia se guarda igual en la base de datos local, y se deja un registro de advertencia (`[WARN]`) en la consola del backend.
 
 ## Documentación de la API (Swagger)
 

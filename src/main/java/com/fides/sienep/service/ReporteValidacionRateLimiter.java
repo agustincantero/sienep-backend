@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 // bruta. Por eso el umbral es más generoso.
 //
 // Limitación conocida y aceptada para el alcance del proyecto (mismo criterio que
-// LoginIpRateLimiter/PasswordResetRateLimiter/OAuthStateStore): el store es en
-// memoria del proceso y no se comparte entre instancias si el backend llegara a
-// escalar horizontalmente.
+// LoginIpRateLimiter/PasswordResetRateLimiter): el store es en memoria del
+// proceso y no se comparte entre instancias si el backend llegara a escalar
+// horizontalmente.
 @Slf4j
 @Component
 public class ReporteValidacionRateLimiter {
@@ -63,7 +63,7 @@ public class ReporteValidacionRateLimiter {
     }
 
     // Housekeeping: purga IPs sin intentos recientes para no acumular memoria
-    // indefinidamente (mismo criterio que OAuthStateStore.limpiarExpirados()).
+    // indefinidamente (mismo criterio que LoginIpRateLimiter.limpiarExpirados()).
     @Scheduled(cron = "0 0 * * * *")
     public void limpiarExpirados() {
         LocalDateTime limiteVentana = LocalDateTime.now().minusMinutes(VENTANA_MINUTOS);

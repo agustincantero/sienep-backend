@@ -2,17 +2,22 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.event.AccionCalendar;
+import com.fides.sienep.event.CalendarRecordatorioEvent;
 import com.fides.sienep.mapper.RecordatorioMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
 import com.fides.sienep.utils.RecordatorioIdGenerator;
+import com.fides.sienep.utils.RecurrenceRuleBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -39,9 +44,9 @@ class RecordatorioServiceTest {
     @Mock private FrecuenciaRepository frecuenciaRepository;
     @Mock private RecordatorioMapper recordatorioMapper;
     @Mock private RecordatorioIdGenerator recordatorioIdGenerator;
+    @Mock private RecurrenceRuleBuilder recurrenceRuleBuilder;
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private EmailService emailService;
-    @Mock private FuncionarioGcalRepository funcionarioGcalRepository;
-    @Mock private GoogleCalendarService googleCalendarService;
 
     @InjectMocks
     private RecordatorioService recordatorioService;
@@ -155,25 +160,25 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Crear recordatorio - Evento creado en Google pero falla el guardado local del eventIdGoogle, no propaga")
-    void crear_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
-        FuncionarioGcal gcal = new FuncionarioGcal(responsable, "refresh-token", "juan@gmail.com");
-
+    @DisplayName("Crear recordatorio - Publica CalendarRecordatorioEvent con accion CREAR (RF22)")
+    void crear_PublicaEventoCalendar() {
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
         when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioIdGenerator.generarIdNeg()).thenReturn("REC-2026-000001");
-        when(recordatorioRepository.save(any(Recordatorio.class)))
-                .thenReturn(recordatorio)
-                .thenThrow(new RuntimeException("DB caída"));
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
-        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcal));
-        when(googleCalendarService.crearEvento(any(), eq("refresh-token"))).thenReturn("evento-nuevo-id");
+        when(recurrenceRuleBuilder.construir(recordatorio)).thenReturn(null);
 
-        RecordatorioResponseDTO resultado = assertDoesNotThrow(() -> recordatorioService.crear(requestDTO));
+        recordatorioService.crear(requestDTO);
 
-        assertNotNull(resultado);
-        verify(recordatorioRepository, times(2)).save(any(Recordatorio.class));
+        ArgumentCaptor<CalendarRecordatorioEvent> captor = ArgumentCaptor.forClass(CalendarRecordatorioEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        CalendarRecordatorioEvent evento = captor.getValue();
+        assertEquals(AccionCalendar.CREAR, evento.getAccion());
+        assertNull(evento.getOldEventId());
+        assertEquals("juan.garcia@utec.edu.uy", evento.getEmailFuncionario());
+        assertEquals("Juan", evento.getNombreFuncionario());
     }
 
     @Test
@@ -523,10 +528,9 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Editar recordatorio - Actualiza el evento existente cuando el responsable no cambió (RF22)")
-    void editar_ActualizaEventoGoogle_CuandoResponsableNoCambia() {
+    @DisplayName("Editar recordatorio - Publica ACTUALIZAR con oldEventId cuando ya tenía evento (RF22)")
+    void editar_PublicaActualizar_CuandoYaTeniaEvento() {
         recordatorio.setEventIdGoogle("evento-existente-id");
-        FuncionarioGcal gcal = new FuncionarioGcal(responsable, "refresh-token", "juan@gmail.com");
 
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
@@ -535,19 +539,23 @@ class RecordatorioServiceTest {
         when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
-        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcal));
+        when(recurrenceRuleBuilder.construir(recordatorio)).thenReturn(null);
 
         recordatorioService.editar(1, requestDTO);
 
-        verify(googleCalendarService).actualizarEvento(recordatorio, "evento-existente-id", "refresh-token");
-        verify(googleCalendarService, never()).crearEvento(any(), any());
-        verify(googleCalendarService, never()).eliminarEvento(any(), any());
+        ArgumentCaptor<CalendarRecordatorioEvent> captor = ArgumentCaptor.forClass(CalendarRecordatorioEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.ACTUALIZAR, captor.getValue().getAccion());
+        assertEquals("evento-existente-id", captor.getValue().getOldEventId());
     }
 
     @Test
-    @DisplayName("Editar recordatorio - Cambia responsable: borra el evento viejo y crea uno nuevo (RF22)")
-    void editar_CambiaResponsable_BorraYCreaEvento() {
-        recordatorio.setEventIdGoogle("evento-viejo-id");
+    @DisplayName("Editar recordatorio - Cambia responsable: sigue siendo ACTUALIZAR sobre el mismo evento (RF22)")
+    void editar_CambiaResponsable_SigueSiendoActualizar() {
+        // Con Service Account todos los eventos viven en un único calendario
+        // compartido — a diferencia del modelo OAuth anterior, cambiar el
+        // responsable ya no implica borrar+crear en calendarios distintos.
+        recordatorio.setEventIdGoogle("evento-existente-id");
 
         Funcionario responsableNuevo = new Funcionario();
         responsableNuevo.setIdUsuario(3);
@@ -557,9 +565,6 @@ class RecordatorioServiceTest {
         responsableNuevo.setEstado(EstadoLogico.ACTIVO);
         requestDTO.setIdResponsable(3);
 
-        FuncionarioGcal gcalViejo = new FuncionarioGcal(responsable, "refresh-token-viejo", "juan@gmail.com");
-        FuncionarioGcal gcalNuevo = new FuncionarioGcal(responsableNuevo, "refresh-token-nuevo", "maria@gmail.com");
-
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
@@ -567,58 +572,23 @@ class RecordatorioServiceTest {
         when(funcionarioRepository.findById(3)).thenReturn(Optional.of(responsableNuevo));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
-        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcalViejo));
-        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(3)).thenReturn(Optional.of(gcalNuevo));
-        when(googleCalendarService.crearEvento(any(), eq("refresh-token-nuevo"))).thenReturn("evento-nuevo-id");
+        when(recurrenceRuleBuilder.construir(recordatorio)).thenReturn(null);
 
         recordatorioService.editar(1, requestDTO);
 
-        verify(googleCalendarService).eliminarEvento("evento-viejo-id", "refresh-token-viejo");
-        verify(googleCalendarService).crearEvento(recordatorio, "refresh-token-nuevo");
-        verify(googleCalendarService, never()).actualizarEvento(any(), any(), any());
-        assertEquals("evento-nuevo-id", recordatorio.getEventIdGoogle());
+        ArgumentCaptor<CalendarRecordatorioEvent> captor = ArgumentCaptor.forClass(CalendarRecordatorioEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        CalendarRecordatorioEvent evento = captor.getValue();
+        assertEquals(AccionCalendar.ACTUALIZAR, evento.getAccion());
+        assertEquals("evento-existente-id", evento.getOldEventId());
+        assertEquals("maria.lopez@utec.edu.uy", evento.getEmailFuncionario());
     }
 
     @Test
-    @DisplayName("Editar recordatorio - Evento nuevo creado en Google pero falla el guardado local, no propaga")
-    void editar_CambiaResponsable_FallaGuardadoLocalEventIdGoogle_NoPropaga() {
-        recordatorio.setEventIdGoogle("evento-viejo-id");
-
-        Funcionario responsableNuevo = new Funcionario();
-        responsableNuevo.setIdUsuario(3);
-        responsableNuevo.setNombre("María");
-        responsableNuevo.setApellido("López");
-        responsableNuevo.setEmail("maria.lopez@utec.edu.uy");
-        responsableNuevo.setEstado(EstadoLogico.ACTIVO);
-        requestDTO.setIdResponsable(3);
-
-        FuncionarioGcal gcalViejo = new FuncionarioGcal(responsable, "refresh-token-viejo", "juan@gmail.com");
-        FuncionarioGcal gcalNuevo = new FuncionarioGcal(responsableNuevo, "refresh-token-nuevo", "maria@gmail.com");
-
-        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.of(recordatorio));
-        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
-        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(3)).thenReturn(Optional.of(responsableNuevo));
-        when(recordatorioRepository.save(any(Recordatorio.class)))
-                .thenReturn(recordatorio)
-                .thenThrow(new RuntimeException("DB caída"));
-        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
-        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(2)).thenReturn(Optional.of(gcalViejo));
-        when(funcionarioGcalRepository.findByFuncionarioIdUsuario(3)).thenReturn(Optional.of(gcalNuevo));
-        when(googleCalendarService.crearEvento(any(), eq("refresh-token-nuevo"))).thenReturn("evento-nuevo-id");
-
-        RecordatorioResponseDTO resultado = assertDoesNotThrow(
-                () -> recordatorioService.editar(1, requestDTO));
-
-        assertNotNull(resultado);
-        verify(googleCalendarService).crearEvento(recordatorio, "refresh-token-nuevo");
-        verify(recordatorioRepository, times(2)).save(any(Recordatorio.class));
-    }
-
-    @Test
-    @DisplayName("Editar recordatorio - Responsable sin Google Calendar vinculado: no sincroniza")
-    void editar_NoSincroniza_CuandoResponsableSinGcal() {
+    @DisplayName("Editar recordatorio - Publica CREAR cuando nunca se había sincronizado (RF22)")
+    void editar_PublicaCrear_CuandoNuncaTuvoEvento() {
+        // Ya no depende de que el responsable haya autorizado nada (Service
+        // Account): la publicación es incondicional.
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
@@ -626,11 +596,14 @@ class RecordatorioServiceTest {
         when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
-        // funcionarioGcalRepository sin stub → Optional.empty() por defecto
+        when(recurrenceRuleBuilder.construir(recordatorio)).thenReturn(null);
 
         recordatorioService.editar(1, requestDTO);
 
-        verifyNoInteractions(googleCalendarService);
+        ArgumentCaptor<CalendarRecordatorioEvent> captor = ArgumentCaptor.forClass(CalendarRecordatorioEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.CREAR, captor.getValue().getAccion());
+        assertNull(captor.getValue().getOldEventId());
     }
 
     @Test
@@ -643,6 +616,22 @@ class RecordatorioServiceTest {
 
         assertEquals(EstadoLogico.INACTIVO, recordatorio.getEstado());
         verify(recordatorioRepository).save(recordatorio);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    @DisplayName("Desactivar - Con evento de Google existente, publica ELIMINAR (RF22)")
+    void desactivar_ConEventoGoogle_PublicaEliminar() {
+        recordatorio.setEventIdGoogle("evento-existente-id");
+        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(recordatorio));
+
+        recordatorioService.desactivar(1);
+
+        ArgumentCaptor<CalendarRecordatorioEvent> captor = ArgumentCaptor.forClass(CalendarRecordatorioEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.ELIMINAR, captor.getValue().getAccion());
+        assertEquals("evento-existente-id", captor.getValue().getOldEventId());
     }
 
     @Test
@@ -655,6 +644,29 @@ class RecordatorioServiceTest {
                 () -> recordatorioService.desactivar(99));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // ── actualizarEventIdGoogle — escritura de vuelta desde CalendarSyncListener ──
+
+    @Test
+    @DisplayName("actualizarEventIdGoogle - Persiste el eventId cuando el recordatorio existe")
+    void actualizarEventIdGoogle_Exito() {
+        when(recordatorioRepository.findByCodRecordatorio(1)).thenReturn(Optional.of(recordatorio));
+
+        recordatorioService.actualizarEventIdGoogle(1, "evento-nuevo-id");
+
+        assertEquals("evento-nuevo-id", recordatorio.getEventIdGoogle());
+        verify(recordatorioRepository).save(recordatorio);
+    }
+
+    @Test
+    @DisplayName("actualizarEventIdGoogle - Recordatorio inexistente, no lanza ni guarda")
+    void actualizarEventIdGoogle_RecordatorioInexistente_NoLanza() {
+        when(recordatorioRepository.findByCodRecordatorio(99)).thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() -> recordatorioService.actualizarEventIdGoogle(99, "evento-nuevo-id"));
+
+        verify(recordatorioRepository, never()).save(any());
     }
 
     @Test

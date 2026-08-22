@@ -28,11 +28,12 @@ public class InstanciaComunController {
     private final InstanciaComunService instanciaComunService;
 
     @Operation(summary = "Crear una instancia",
-            description = "Crea una instancia asociada a un estudiante. Opcionalmente, se puede incluir " +
-                    "el campo 'recordatorioInicial' para crear en la misma operación un Recordatorio " +
-                    "vinculado a la instancia recién creada (RF13). Si el funcionario responsable de ese " +
-                    "recordatorio tiene la integración con Google Calendar activa (RF22), el evento se " +
-                    "sincroniza automáticamente en su calendario personal.")
+            description = "Crea una instancia asociada a un estudiante (RF13, sincronizada con Google Calendar). " +
+                    "Opcionalmente, se puede incluir el campo 'recordatorioInicial' para crear en la misma " +
+                    "operación un Recordatorio vinculado a la instancia recién creada — best-effort: si falla " +
+                    "(categoría inválida, sin permiso, etc.) la instancia se crea igual, sin el recordatorio. " +
+                    "Con Google Calendar activo (RF22), el recordatorio se sincroniza automáticamente en el " +
+                    "calendario compartido de la organización.")
     @ApiResponse(responseCode = "201", description = "Instancia creada correctamente (y recordatorio, si se solicitó)")
     @ApiResponse(responseCode = "400", description = "Datos inválidos")
     @ApiResponse(responseCode = "404", description = "Estudiante, funcionario, categoría, frecuencia o responsable de recordatorio no encontrado")

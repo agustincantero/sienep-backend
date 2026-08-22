@@ -21,8 +21,9 @@ import java.util.concurrent.ConcurrentHashMap;
 // (y nunca para emails inexistentes) sería en sí mismo un oráculo de enumeración.
 //
 // Limitación conocida y aceptada para el alcance del proyecto (mismo criterio que
-// OAuthStateStore): el store es en memoria del proceso y no se comparte entre
-// instancias si el backend llegara a escalar horizontalmente.
+// LoginIpRateLimiter/ReporteValidacionRateLimiter): el store es en memoria del
+// proceso y no se comparte entre instancias si el backend llegara a escalar
+// horizontalmente.
 @Slf4j
 @Component
 public class PasswordResetRateLimiter {
@@ -60,7 +61,7 @@ public class PasswordResetRateLimiter {
     }
 
     // Housekeeping: purga emails sin intentos recientes para no acumular memoria
-    // indefinidamente (mismo criterio que OAuthStateStore.limpiarExpirados()).
+    // indefinidamente (mismo criterio que LoginIpRateLimiter.limpiarExpirados()).
     @Scheduled(cron = "0 0 * * * *")
     public void limpiarExpirados() {
         LocalDateTime limiteVentana = LocalDateTime.now().minusMinutes(VENTANA_MINUTOS);

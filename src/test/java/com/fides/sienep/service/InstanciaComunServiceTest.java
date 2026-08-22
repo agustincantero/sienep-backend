@@ -7,6 +7,8 @@ import com.fides.sienep.dto.InstanciaDesdeRecordatorioDTO;
 import com.fides.sienep.dto.RecordatorioInicialDTO;
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
+import com.fides.sienep.event.AccionCalendar;
+import com.fides.sienep.event.CalendarInstanciaEvent;
 import com.fides.sienep.mapper.InstanciaComunMapper;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
@@ -20,17 +22,21 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,6 +58,7 @@ class InstanciaComunServiceTest {
     @Mock private EmailService emailService;
     @Mock private RecordatorioService recordatorioService;
     @Mock private RecordatorioRepository recordatorioRepository;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private InstanciaComunService instanciaComunService;
@@ -69,6 +76,7 @@ class InstanciaComunServiceTest {
         estudiante.setIdUsuario(1);
         estudiante.setNombre("Ana");
         estudiante.setApellido("Pérez");
+        estudiante.setEmail("ana.perez@utec.edu.uy");
         estudiante.setEstado(EstadoLogico.ACTIVO);
 
         funcionario = new Funcionario();
@@ -114,6 +122,9 @@ class InstanciaComunServiceTest {
         Authentication auth = mock(Authentication.class);
         SecurityContext securityContext = mock(SecurityContext.class);
         lenient().when(auth.getName()).thenReturn(String.valueOf(idUsuario));
+        // CREAR_RECORDATORIO: tienePermiso() lo necesita para el recordatorio inicial.
+        Collection<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("CREAR_RECORDATORIO"));
+        lenient().doReturn(authorities).when(auth).getAuthorities();
         lenient().when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
     }
@@ -155,7 +166,8 @@ class InstanciaComunServiceTest {
                 eq("juan.garcia@utec.edu.uy"),
                 eq("Juan"),
                 eq("INST-2026-000001"),
-                eq("Reunión de seguimiento")
+                eq("Reunión de seguimiento"),
+                any()
         );
     }
 
@@ -170,7 +182,7 @@ class InstanciaComunServiceTest {
         when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
         doThrow(new RuntimeException("SMTP no disponible"))
-                .when(emailService).enviarNotificacionInstancia(any(), any(), any(), any());
+                .when(emailService).enviarNotificacionInstancia(any(), any(), any(), any(), any());
 
         InstanciaComunResponseDTO resultado = assertDoesNotThrow(
                 () -> instanciaComunService.crear(requestDTO));
@@ -180,7 +192,29 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Crear instancia común - Con recordatorioInicial delega en RecordatorioService y devuelve ambos (RF13)")
+    @DisplayName("Crear instancia común - Publica CalendarInstanciaEvent con funcionario y alumno (RF22)")
+    void crear_PublicaEventoCalendarConAmbosAttendees() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        instanciaComunService.crear(requestDTO);
+
+        ArgumentCaptor<CalendarInstanciaEvent> captor = ArgumentCaptor.forClass(CalendarInstanciaEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        CalendarInstanciaEvent evento = captor.getValue();
+        assertEquals(AccionCalendar.CREAR, evento.getAccion());
+        assertNull(evento.getOldEventId());
+        assertEquals("juan.garcia@utec.edu.uy", evento.getEmailFuncionario());
+        assertEquals("ana.perez@utec.edu.uy", evento.getEmailAlumno());
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Con recordatorioInicial delega en RecordatorioService y devuelve ambos")
     void crear_ConRecordatorioInicial_DelegaEnRecordatorioService() {
         RecordatorioInicialDTO recordatorioInicial = new RecordatorioInicialDTO();
         recordatorioInicial.setTitulo("Recordatorio de seguimiento");
@@ -201,7 +235,7 @@ class InstanciaComunServiceTest {
         when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
         when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
-        when(recordatorioService.crear(any(RecordatorioRequestDTO.class))).thenReturn(recordatorioResponseDTO);
+        when(recordatorioService.crearInterno(any(RecordatorioRequestDTO.class))).thenReturn(recordatorioResponseDTO);
 
         InstanciaComunResponseDTO resultado = instanciaComunService.crear(requestDTO);
 
@@ -209,7 +243,7 @@ class InstanciaComunServiceTest {
         assertEquals("REC-2026-000001", resultado.getRecordatorioCreado().getIdNegRecordatorio());
 
         ArgumentCaptor<RecordatorioRequestDTO> captor = ArgumentCaptor.forClass(RecordatorioRequestDTO.class);
-        verify(recordatorioService).crear(captor.capture());
+        verify(recordatorioService).crearInterno(captor.capture());
 
         RecordatorioRequestDTO enviado = captor.getValue();
         assertEquals(1, enviado.getCodInstancia());
@@ -219,8 +253,8 @@ class InstanciaComunServiceTest {
     }
 
     @Test
-    @DisplayName("Crear instancia común - recordatorioInicial con nroOcurrencias=0 lanza 422 (regresión RF13)")
-    void crear_ConRecordatorioInicialNroOcurrenciasCero_LanzaUnprocessable() {
+    @DisplayName("Crear instancia común - recordatorioInicial con nroOcurrencias=0 no impide crear la instancia")
+    void crear_ConRecordatorioInicialNroOcurrenciasCero_InstanciaSeCreaIgual() {
         RecordatorioInicialDTO recordatorioInicial = new RecordatorioInicialDTO();
         recordatorioInicial.setTitulo("Recordatorio de seguimiento");
         recordatorioInicial.setTipo(TipoRecordatorio.LLAMADA);
@@ -237,15 +271,45 @@ class InstanciaComunServiceTest {
         when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        InstanciaComunResponseDTO resultado = assertDoesNotThrow(
                 () -> instanciaComunService.crear(requestDTO));
 
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
-        verify(recordatorioService, never()).crear(any());
+        assertNotNull(resultado);
+        assertNull(resultado.getRecordatorioCreado());
+        verify(recordatorioService, never()).crearInterno(any());
+        verify(instanciaComunRepository).save(any(InstanciaComun.class));
     }
 
     @Test
-    @DisplayName("Crear instancia común - Sin recordatorioInicial no llama a RecordatorioService (RF13)")
+    @DisplayName("Crear instancia común - Fallo del recordatorio inicial no revierte la instancia")
+    void crear_ConRecordatorioInicial_FalloNoRevierteInstancia() {
+        RecordatorioInicialDTO recordatorioInicial = new RecordatorioInicialDTO();
+        recordatorioInicial.setTitulo("Recordatorio de seguimiento");
+        recordatorioInicial.setTipo(TipoRecordatorio.LLAMADA);
+        recordatorioInicial.setFechaHora(LocalDateTime.now().plusDays(1));
+        recordatorioInicial.setIdCategoria(1);
+        requestDTO.setRecordatorioInicial(recordatorioInicial);
+
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+        when(recordatorioService.crearInterno(any(RecordatorioRequestDTO.class)))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró una frecuencia"));
+
+        InstanciaComunResponseDTO resultado = assertDoesNotThrow(
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertNotNull(resultado);
+        assertNull(resultado.getRecordatorioCreado());
+        verify(instanciaComunRepository).save(any(InstanciaComun.class));
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Sin recordatorioInicial no llama a RecordatorioService")
     void crear_SinRecordatorioInicial_NoLlamaARecordatorioService() {
         mockSecurityContext(2);
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
@@ -258,7 +322,7 @@ class InstanciaComunServiceTest {
         InstanciaComunResponseDTO resultado = instanciaComunService.crear(requestDTO);
 
         assertNull(resultado.getRecordatorioCreado());
-        verify(recordatorioService, never()).crear(any());
+        verify(recordatorioService, never()).crearInterno(any());
     }
 
     @Test
@@ -573,6 +637,51 @@ class InstanciaComunServiceTest {
     }
 
     @Test
+    @DisplayName("Editar instancia común - Publica ACTUALIZAR con oldEventId cuando ya tenía evento (RF22)")
+    void editar_PublicaActualizar_CuandoYaTeniaEvento() {
+        instancia.setEventIdGoogle("evento-existente-id");
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now());
+        updateDTO.setIdCategoria(1);
+
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        instanciaComunService.editar(1, updateDTO);
+
+        ArgumentCaptor<CalendarInstanciaEvent> captor = ArgumentCaptor.forClass(CalendarInstanciaEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.ACTUALIZAR, captor.getValue().getAccion());
+        assertEquals("evento-existente-id", captor.getValue().getOldEventId());
+    }
+
+    @Test
+    @DisplayName("Editar instancia común - Publica CREAR cuando nunca tuvo evento (RF22)")
+    void editar_PublicaCrear_CuandoNuncaTuvoEvento() {
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now());
+        updateDTO.setIdCategoria(1);
+
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        instanciaComunService.editar(1, updateDTO);
+
+        ArgumentCaptor<CalendarInstanciaEvent> captor = ArgumentCaptor.forClass(CalendarInstanciaEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.CREAR, captor.getValue().getAccion());
+        assertNull(captor.getValue().getOldEventId());
+    }
+
+    @Test
     @DisplayName("Editar instancia común - Categoría no encontrada (404)")
     void editar_LanzaNotFound_CategoriaNoExiste() {
         InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
@@ -623,6 +732,45 @@ class InstanciaComunServiceTest {
 
         assertEquals(EstadoLogico.INACTIVO, instancia.getEstado());
         verify(instanciaComunRepository).save(instancia);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    @DisplayName("Desactivar - Con evento de Google existente, publica ELIMINAR (RF22)")
+    void desactivar_ConEventoGoogle_PublicaEliminar() {
+        instancia.setEventIdGoogle("evento-existente-id");
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+
+        instanciaComunService.desactivar(1);
+
+        ArgumentCaptor<CalendarInstanciaEvent> captor = ArgumentCaptor.forClass(CalendarInstanciaEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(AccionCalendar.ELIMINAR, captor.getValue().getAccion());
+        assertEquals("evento-existente-id", captor.getValue().getOldEventId());
+    }
+
+    // ── actualizarEventIdGoogle — escritura de vuelta desde CalendarSyncListener ──
+
+    @Test
+    @DisplayName("actualizarEventIdGoogle - Persiste el eventId cuando la instancia existe")
+    void actualizarEventIdGoogle_Exito() {
+        when(instanciaComunRepository.findById(1)).thenReturn(Optional.of(instancia));
+
+        instanciaComunService.actualizarEventIdGoogle(1, "evento-nuevo-id");
+
+        assertEquals("evento-nuevo-id", instancia.getEventIdGoogle());
+        verify(instanciaComunRepository).save(instancia);
+    }
+
+    @Test
+    @DisplayName("actualizarEventIdGoogle - Instancia inexistente, no lanza ni guarda")
+    void actualizarEventIdGoogle_InstanciaInexistente_NoLanza() {
+        when(instanciaComunRepository.findById(99)).thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() -> instanciaComunService.actualizarEventIdGoogle(99, "evento-nuevo-id"));
+
+        verify(instanciaComunRepository, never()).save(any());
     }
 
     @Test
