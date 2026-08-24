@@ -8,7 +8,9 @@ import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.Incidencia;
 import com.fides.sienep.model.InstanciaComun;
 import com.fides.sienep.model.Recordatorio;
+import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.repository.EstudianteRepository;
+import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
 import com.fides.sienep.repository.IncidenciaRepository;
 import com.fides.sienep.repository.InstanciaComunRepository;
@@ -38,6 +40,7 @@ import java.util.Optional;
 public class ReporteService {
 
     private final EstudianteRepository estudianteRepository;
+    private final FuncionarioRepository funcionarioRepository;
     private final GrupoRepository grupoRepository;
     private final InstanciaComunRepository instanciaComunRepository;
     private final IncidenciaRepository incidenciaRepository;
@@ -250,7 +253,13 @@ public class ReporteService {
 
     private String getNombreUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getName();
+        int idUsuario = Integer.parseInt(auth.getName());
+
+        Funcionario funcionario = funcionarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
+
+        return funcionario.getDocumento() + " - " + funcionario.getNombre() + " " + funcionario.getApellido();
     }
 
     private <T> void agregarAGrupo(Map<Integer, List<T>> grupo, Integer idEstudiante, T elemento) {

@@ -4,11 +4,13 @@ import com.fides.sienep.dto.ReporteResponseDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.EstadoRecordatorio;
 import com.fides.sienep.model.Estudiante;
+import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.model.Incidencia;
 import com.fides.sienep.model.InstanciaComun;
 import com.fides.sienep.model.PaisDocumento;
 import com.fides.sienep.model.Recordatorio;
 import com.fides.sienep.repository.EstudianteRepository;
+import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
 import com.fides.sienep.repository.IncidenciaRepository;
 import com.fides.sienep.repository.InstanciaComunRepository;
@@ -48,6 +50,9 @@ class ReporteServiceTest {
     private EstudianteRepository estudianteRepository;
 
     @Mock
+    private FuncionarioRepository funcionarioRepository;
+
+    @Mock
     private GrupoRepository grupoRepository;
 
     @Mock
@@ -82,6 +87,12 @@ class ReporteServiceTest {
         lenient().when(auth.getName()).thenReturn("1");
         lenient().doReturn(new ArrayList<>()).when(auth).getAuthorities();
         SecurityContextHolder.getContext().setAuthentication(auth);
+
+        Funcionario funcionarioAutenticadoMock = new Funcionario();
+        funcionarioAutenticadoMock.setNombre("Mariana");
+        funcionarioAutenticadoMock.setApellido("Fernández");
+        funcionarioAutenticadoMock.setDocumento("11222333");
+        lenient().when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioAutenticadoMock));
     }
 
     @AfterEach
@@ -138,7 +149,20 @@ class ReporteServiceTest {
         assertEquals(0, resultado.getTotalRecordatorios());
         assertNull(resultado.getAdvertencia());
         assertNotNull(resultado.getFechaGeneracion());
-        assertNotNull(resultado.getGeneradoPor());
+        assertEquals("11222333 - Mariana Fernández", resultado.getGeneradoPor());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Funcionario autenticado no encontrado devuelve 404")
+    void generarReporte_FuncionarioAutenticadoNoEncontrado_Lanza404() {
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of());
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> reporteService.generarReporte(null, null, null, null, null, null));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
