@@ -1,7 +1,9 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.model.LogIntento;
@@ -54,6 +56,7 @@ class AuthServiceTest {
     @Mock private AuditoriaService auditoriaService;
     @Mock private PasswordResetRateLimiter passwordResetRateLimiter;
     @Mock private LoginIpRateLimiter loginIpRateLimiter;
+    @Mock private GoogleIdTokenVerifierService googleIdTokenVerifierService;
 
     @InjectMocks
     private AuthService authService;
@@ -76,6 +79,7 @@ class AuthServiceTest {
         funcionario.setEmail("juan.garcia@utec.edu.uy");
         funcionario.setRol(rol);
         funcionario.setBloqueado(false);
+        funcionario.setEstado(EstadoLogico.ACTIVO);
 
         loginDto = new LoginRequestDTO();
         loginDto.setEmail("juan.garcia@utec.edu.uy");
@@ -213,6 +217,111 @@ class AuthServiceTest {
                 () -> authService.login(loginDto, IP));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+    }
+
+    // ── Login con Google ─────────────────────────────────────────
+
+    private GoogleLoginRequestDTO googleDto() {
+        GoogleLoginRequestDTO dto = new GoogleLoginRequestDTO();
+        dto.setIdToken("id-token-fake");
+        return dto;
+    }
+
+    @Test
+    @DisplayName("Login con Google - Éxito para funcionario, genera token y audita")
+    void loginConGoogle_Exito_Funcionario() {
+        when(googleIdTokenVerifierService.emailVerificado("id-token-fake"))
+                .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(jwtTokenUtil.generateToken(2, "ADMINISTRADOR")).thenReturn("token-fake");
+
+        LoginResponseDTO resultado = authService.loginConGoogle(googleDto(), IP);
+
+        assertEquals("token-fake", resultado.getToken());
+        verify(logIntentoRepository).save(argThat((LogIntento l) -> l.getIdUsuario() == 2 && l.isFueExitoso()));
+        verify(auditoriaService).registrarEventoManual(eq("SISTEMA"), any(), eq(2), eq(IP));
+        verifyNoInteractions(authManager);
+    }
+
+    @Test
+    @DisplayName("Login con Google - Éxito para estudiante, usa rol ESTUDIANTE")
+    void loginConGoogle_Exito_Estudiante() {
+        Estudiante estudiante = new Estudiante();
+        estudiante.setIdUsuario(1);
+        estudiante.setEmail("ana.perez@estudiantes.utec.edu.uy");
+        estudiante.setBloqueado(false);
+        estudiante.setEstado(EstadoLogico.ACTIVO);
+
+        when(googleIdTokenVerifierService.emailVerificado("id-token-fake"))
+                .thenReturn(Optional.of("ana.perez@estudiantes.utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("ana.perez@estudiantes.utec.edu.uy")).thenReturn(Optional.empty());
+        when(estudianteRepository.findByEmail("ana.perez@estudiantes.utec.edu.uy")).thenReturn(Optional.of(estudiante));
+        when(usuarioRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(jwtTokenUtil.generateToken(1, "ESTUDIANTE")).thenReturn("token-estudiante");
+
+        LoginResponseDTO resultado = authService.loginConGoogle(googleDto(), IP);
+
+        assertEquals("token-estudiante", resultado.getToken());
+        verify(jwtTokenUtil).generateToken(1, "ESTUDIANTE");
+    }
+
+    @Test
+    @DisplayName("Login con Google - ID token inválido o no verificado por Google (401), no consulta cuentas")
+    void loginConGoogle_TokenInvalido_LanzaUnauthorized() {
+        when(googleIdTokenVerifierService.emailVerificado("id-token-fake")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConGoogle(googleDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(funcionarioRepository, estudianteRepository, jwtTokenUtil);
+    }
+
+    @Test
+    @DisplayName("Login con Google - Email verificado no pertenece a ninguna cuenta (401), no da de alta nada")
+    void loginConGoogle_EmailSinCuenta_LanzaUnauthorized() {
+        when(googleIdTokenVerifierService.emailVerificado("id-token-fake"))
+                .thenReturn(Optional.of("desconocido@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("desconocido@utec.edu.uy")).thenReturn(Optional.empty());
+        when(estudianteRepository.findByEmail("desconocido@utec.edu.uy")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConGoogle(googleDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(jwtTokenUtil);
+    }
+
+    @Test
+    @DisplayName("Login con Google - Cuenta inactiva (401)")
+    void loginConGoogle_CuentaInactiva_LanzaUnauthorized() {
+        funcionario.setEstado(EstadoLogico.INACTIVO);
+        when(googleIdTokenVerifierService.emailVerificado("id-token-fake"))
+                .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConGoogle(googleDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(jwtTokenUtil);
+    }
+
+    @Test
+    @DisplayName("Login con Google - Usuario bloqueado (401)")
+    void loginConGoogle_UsuarioBloqueado_LanzaUnauthorized() {
+        funcionario.setBloqueado(true);
+        when(googleIdTokenVerifierService.emailVerificado("id-token-fake"))
+                .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConGoogle(googleDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(jwtTokenUtil);
     }
 
     // ── Logout ────────────────────────────────────────────────

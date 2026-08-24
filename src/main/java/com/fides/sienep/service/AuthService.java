@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
 import com.fides.sienep.model.*;
@@ -52,6 +53,7 @@ public class AuthService {
     private final AuditoriaService                auditoriaService;
     private final PasswordResetRateLimiter        passwordResetRateLimiter;
     private final LoginIpRateLimiter              loginIpRateLimiter;
+    private final GoogleIdTokenVerifierService    googleIdTokenVerifierService;
 
     // Campo separado (no final): Lombok no copia @Value a los parámetros del
     // constructor generado por @RequiredArgsConstructor sin un lombok.config,
@@ -118,6 +120,66 @@ public class AuthService {
         registrarIntento(idUsuario, true);
         String token = jwtTokenUtil.generateToken(idUsuario, rol);
         log.info("[AUDIT] Login exitoso: id={} rol={}", idUsuario, rol);
+        auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGIN, idUsuario, ip);
+
+        return new LoginResponseDTO(token);
+    }
+
+    // =========================================================
+    // LOGIN CON GOOGLE (OAuth 2.0)
+    // =========================================================
+
+    // Solo autentica: no da de alta cuentas nuevas. El email que Google ya
+    // verificó tiene que coincidir con un Funcionario/Estudiante existente en
+    // SIENEP (el alta la sigue haciendo un administrador, como hoy) — Google
+    // reemplaza la contraseña como factor de login, no el proceso de alta.
+    @Transactional(noRollbackFor = ResponseStatusException.class)
+    public LoginResponseDTO loginConGoogle(GoogleLoginRequestDTO dto, String ip) {
+        String email = googleIdTokenVerifierService.emailVerificado(dto.getIdToken())
+                .orElseThrow(() -> credencialesInvalidas(ip));
+
+        // 1. Resolver quién es y si la cuenta está activa — mismo criterio que
+        // LoginUsuarioDetailsService.loadUserByUsername(), reimplementado acá
+        // porque este flujo no pasa por authManager.authenticate() (no hay
+        // contraseña que validar, Google ya probó la identidad).
+        int idUsuario;
+        String rol;
+        boolean activa;
+
+        Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByEmail(email);
+        if (funcionarioOpt.isPresent()) {
+            Funcionario funcionario = funcionarioOpt.get();
+            idUsuario = funcionario.getIdUsuario();
+            rol = funcionario.getRol().getNombre();
+            activa = funcionario.getEstado() == EstadoLogico.ACTIVO
+                    || funcionario.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
+        } else {
+            Estudiante estudiante = estudianteRepository.findByEmail(email)
+                    .orElseThrow(() -> credencialesInvalidas(ip));
+            idUsuario = estudiante.getIdUsuario();
+            rol = "ESTUDIANTE";
+            activa = estudiante.getEstado() == EstadoLogico.ACTIVO
+                    || estudiante.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
+        }
+
+        if (!activa) {
+            log.warn("Login con Google denegado — cuenta inactiva id={}", idUsuario);
+            throw credencialesInvalidas(ip);
+        }
+
+        // 2. Verificar si está bloqueado (mismo chequeo que login())
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> credencialesInvalidas(ip));
+
+        if (usuario.isBloqueado()) {
+            log.warn("Login con Google denegado — usuario bloqueado id={}", idUsuario);
+            throw credencialesInvalidas(ip);
+        }
+
+        // 3. Éxito
+        registrarIntento(idUsuario, true);
+        String token = jwtTokenUtil.generateToken(idUsuario, rol);
+        log.info("[AUDIT] Login con Google exitoso: id={} rol={}", idUsuario, rol);
         auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGIN, idUsuario, ip);
 
         return new LoginResponseDTO(token);
