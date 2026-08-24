@@ -1,5 +1,6 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
 import com.fides.sienep.dto.OlvideContraseniaDTO;
@@ -34,6 +35,23 @@ public class AuthController {
     })
     public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto, HttpServletRequest request) {
         LoginResponseDTO response = authService.login(dto, request.getRemoteAddr());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Iniciar sesión con Google",
+            description = "Autentica con un ID token de Google (OAuth 2.0, obtenido en el frontend vía " +
+                    "Google Identity Services) y devuelve un token JWT válido por 5 horas. No da de alta " +
+                    "cuentas nuevas: el email que Google verificó tiene que pertenecer a un funcionario o " +
+                    "estudiante ya existente en SIENEP.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Login exitoso"),
+            @ApiResponse(responseCode = "401", description = "ID token inválido o no existe una cuenta con ese email"),
+            @ApiResponse(responseCode = "403", description = "Cuenta bloqueada")
+    })
+    public ResponseEntity<LoginResponseDTO> loginConGoogle(
+            @RequestBody @Valid GoogleLoginRequestDTO dto, HttpServletRequest request) {
+        LoginResponseDTO response = authService.loginConGoogle(dto, request.getRemoteAddr());
         return ResponseEntity.ok(response);
     }
 

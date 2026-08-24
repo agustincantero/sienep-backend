@@ -173,6 +173,16 @@
             <artifactId>google-auth-library-oauth2-http</artifactId>
             <version>1.23.0</version>
         </dependency>
+        <!-- Google Sign-In (login OAuth 2.0) — GoogleIdTokenVerifier. Ya llegaba
+             transitivamente vía google-api-services-calendar (que depende de
+             google-api-client), pero como GoogleIdTokenVerifierService lo usa
+             directamente, se declara explícito para no depender de un transitivo
+             que podría dejar de existir si cambia la dependencia de Calendar. -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.7.2</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
