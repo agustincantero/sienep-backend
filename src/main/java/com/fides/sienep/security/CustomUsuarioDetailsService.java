@@ -79,8 +79,12 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
         }
 
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority("ROLE_ESTUDIANTE"));
-        authorities.add(new SimpleGrantedAuthority("VER_COMENTARIO_NORMAL_ESTUDIANTE"));
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + estudiante.getRol().getNombre()));
+        for (RolPermiso rp : estudiante.getRol().getRolPermisos()) {
+            if (rp.getEstado() == EstadoLogico.ACTIVO) {
+                authorities.add(new SimpleGrantedAuthority(rp.getPermiso().getNombre()));
+            }
+        }
 
         return new SienepUserDetails(String.valueOf(estudiante.getIdUsuario()),
                 estudiante.getContrasenia(), authorities, estudiante.getCredencialesVigentesDesde());

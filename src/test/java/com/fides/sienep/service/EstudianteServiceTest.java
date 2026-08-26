@@ -11,11 +11,13 @@ import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.PaisDocumento;
+import com.fides.sienep.model.Rol;
 import com.fides.sienep.model.Telefono;
 import com.fides.sienep.model.Grupo;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
+import com.fides.sienep.repository.RolRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -60,6 +62,9 @@ class EstudianteServiceTest {
 
     @Mock
     private GrupoRepository grupoRepository;
+
+    @Mock
+    private RolRepository rolRepository;
 
     @Mock
     private FuncionarioRepository funcionarioRepository;
@@ -413,6 +418,7 @@ class EstudianteServiceTest {
         when(estudianteRepository.existsByEmail(anyString())).thenReturn(false);
         when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+        when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(new Rol("ESTUDIANTE")));
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
         when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
 
@@ -432,6 +438,7 @@ class EstudianteServiceTest {
         when(estudianteRepository.existsByEmail(anyString())).thenReturn(false);
         when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+        when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(new Rol("ESTUDIANTE")));
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
         when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
         doThrow(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "SMTP no disponible"))

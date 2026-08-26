@@ -23,6 +23,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import com.fides.sienep.mapper.RolMapper;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Servicio encargado de la gestión completa de los Roles.
@@ -47,9 +48,15 @@ public class RolService {
     private final RolMapper mapper;
 
     // --- Validaciones Internas ---
+    // ADMINISTRADOR es el rol base del sistema; ESTUDIANTE es el rol que
+    // CustomUsuarioDetailsService/LoginUsuarioDetailsService asumen que existe con ese
+    // nombre exacto para armar las authorities de cualquier estudiante autenticado —
+    // renombrarlo o tocarle los permisos desde acá afecta a todos los estudiantes a la vez.
+    private static final Set<String> ROLES_PROTEGIDOS = Set.of("ADMINISTRADOR", "ESTUDIANTE");
+
     private void validarRolProtegido(Rol rol) {
-        if ("ADMINISTRADOR".equalsIgnoreCase(rol.getNombre())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acción denegada: No se puede modificar ni desactivar el rol base ADMINISTRADOR.");
+        if (ROLES_PROTEGIDOS.contains(rol.getNombre().toUpperCase())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acción denegada: No se puede modificar ni desactivar el rol base " + rol.getNombre() + ".");
         }
     }
 

@@ -12,6 +12,7 @@ import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
+import com.fides.sienep.repository.RolRepository;
 import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.utils.ValidadorDeCedulasUy;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,7 @@ public class EstudianteService {
     private final FuncionarioRepository funcionarioRepository;
     private final EstudianteRepository estudianteRepository;
     private final GrupoRepository grupoRepository;
+    private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
     private final EstudianteMapper estudianteMapper;
     private final EmailService emailService;
@@ -90,6 +92,11 @@ public class EstudianteService {
 
         asignarTelefonos(estudiante, dto.getTelefonos());
         asignarGrupos(estudiante, dto.getIdGrupos());
+
+        Rol rolEstudiante = rolRepository.findByNombre("ESTUDIANTE")
+                .orElseThrow(() -> new IllegalStateException(
+                        "Rol ESTUDIANTE no configurado en la base de datos"));
+        estudiante.setRol(rolEstudiante);
 
         Estudiante guardado = estudianteRepository.save(estudiante);
 

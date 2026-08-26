@@ -70,10 +70,13 @@ public class LoginUsuarioDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("Estudiante inactivo: " + email);
         }
 
-        // Rol sintético para estudiantes
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority("ROLE_ESTUDIANTE"));
-        authorities.add(new SimpleGrantedAuthority("VER_COMENTARIO_NORMAL_ESTUDIANTE"));
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + estudiante.getRol().getNombre()));
+        for (RolPermiso rp : estudiante.getRol().getRolPermisos()) {
+            if (rp.getEstado() == EstadoLogico.ACTIVO) {
+                authorities.add(new SimpleGrantedAuthority(rp.getPermiso().getNombre()));
+            }
+        }
 
         return User.withUsername(email)
                 .password(estudiante.getContrasenia())

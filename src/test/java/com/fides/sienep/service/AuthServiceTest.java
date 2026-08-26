@@ -109,6 +109,7 @@ class AuthServiceTest {
         estudiante.setIdUsuario(1);
         estudiante.setEmail("ana.perez@estudiantes.utec.edu.uy");
         estudiante.setBloqueado(false);
+        estudiante.setRol(new Rol("ESTUDIANTE"));
         loginDto.setEmail("ana.perez@estudiantes.utec.edu.uy");
 
         when(funcionarioRepository.findByEmail("ana.perez@estudiantes.utec.edu.uy")).thenReturn(Optional.empty());
@@ -252,6 +253,7 @@ class AuthServiceTest {
         estudiante.setEmail("ana.perez@estudiantes.utec.edu.uy");
         estudiante.setBloqueado(false);
         estudiante.setEstado(EstadoLogico.ACTIVO);
+        estudiante.setRol(new Rol("ESTUDIANTE"));
 
         when(googleIdTokenVerifierService.emailVerificado("id-token-fake"))
                 .thenReturn(Optional.of("ana.perez@estudiantes.utec.edu.uy"));

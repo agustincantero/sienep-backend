@@ -77,6 +77,9 @@ class ComentarioConfidencialInstanciaIT {
                 null, null, null, null,
                 LocalDate.of(2000, 1, 1), null, null, null, null);
         estudiante.setEstado(EstadoLogico.ACTIVO);
+        estudiante.setRol(rolRepository.findByNombre("ESTUDIANTE")
+                .orElseThrow(() -> new IllegalStateException(
+                        "Rol ESTUDIANTE no encontrado — ¿se corrió proyecto_schema.sql?")));
         estudiante = estudianteRepository.save(estudiante);
 
         Funcionario autor = new Funcionario(

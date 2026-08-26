@@ -86,7 +86,7 @@ public class AuthService {
             Estudiante estudiante = estudianteRepository.findByEmail(emailNormalizado)
                     .orElseThrow(() -> credencialesInvalidas(ip));
             idUsuario = estudiante.getIdUsuario();
-            rol = "ESTUDIANTE";
+            rol = estudiante.getRol().getNombre();
         }
 
         // 2. Verificar si está bloqueado
@@ -157,7 +157,7 @@ public class AuthService {
             Estudiante estudiante = estudianteRepository.findByEmail(email)
                     .orElseThrow(() -> credencialesInvalidas(ip));
             idUsuario = estudiante.getIdUsuario();
-            rol = "ESTUDIANTE";
+            rol = estudiante.getRol().getNombre();
             activa = estudiante.getEstado() == EstadoLogico.ACTIVO
                     || estudiante.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
         }

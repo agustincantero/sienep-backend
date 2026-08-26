@@ -243,6 +243,7 @@ CREATE TRIGGER trg_actualizar_cat_recordatorios
 -- =====================================================
 CREATE TABLE proyecto.estudiantes (
     id_usuario     INT       PRIMARY KEY,
+    id_rol         INT       NOT NULL,
     ciudad         VARCHAR(50),
     departamento   VARCHAR(20),
     calle          VARCHAR(160),
@@ -279,6 +280,9 @@ CREATE TABLE proyecto.estudiantes (
     ),
     CONSTRAINT fk_estudiante_usuario FOREIGN KEY (id_usuario)
         REFERENCES proyecto.usuarios(id_usuario)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_estudiante_roles FOREIGN KEY (id_rol)
+        REFERENCES proyecto.roles(id_rol)
         ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
@@ -909,7 +913,8 @@ INSERT INTO proyecto.roles (nom_rol) VALUES
     ('PSICOPEDAGOGO'),
     ('TUTOR'),
     ('DOCENTE'),
-    ('LEGALES')
+    ('LEGALES'),
+    ('ESTUDIANTE')
 ON CONFLICT (nom_rol) DO NOTHING;
 
 -- =============================================
@@ -1118,5 +1123,15 @@ FROM proyecto.roles r
         'VER_REPORTES', 'EXPORTAR_REPORTES'
     )
 WHERE r.nom_rol = 'LEGALES'
+ON CONFLICT DO NOTHING;
+
+-- ESTUDIANTE
+INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM proyecto.roles r
+    JOIN proyecto.permisos p ON p.nom_permiso IN (
+        'VER_COMENTARIO_NORMAL_ESTUDIANTE'
+    )
+WHERE r.nom_rol = 'ESTUDIANTE'
 ON CONFLICT DO NOTHING;
 

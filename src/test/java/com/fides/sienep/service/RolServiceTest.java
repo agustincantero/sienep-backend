@@ -217,6 +217,26 @@ class RolServiceTest {
     }
 
     @Test
+    @DisplayName("Desactivar Rol - Lanza Forbidden si intenta borrar ESTUDIANTE")
+    void desactivar_DebeLanzarExcepcion_SiEsEstudiante() {
+        // Arrange
+        Rol estudiante = new Rol();
+        estudiante.setIdRol(2);
+        estudiante.setNombre("ESTUDIANTE");
+
+        when(rolRepository.findById(2)).thenReturn(Optional.of(estudiante));
+
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            rolService.desactivar(2);
+        });
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        assertTrue(exception.getReason().contains("Acción denegada"));
+        verify(rolRepository, never()).save(any(Rol.class));
+    }
+
+    @Test
     @DisplayName("Desactivar Rol - Éxito (Baja lógica)")
     void desactivar_DebeDarDeBajaCorrectamente_CuandoEsRolValido() {
         // Arrange

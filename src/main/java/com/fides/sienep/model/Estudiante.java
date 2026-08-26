@@ -46,6 +46,10 @@ public class Estudiante extends Usuario {
     @Column(name = "foto", length = 255)
     private String foto;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_rol", nullable = false)
+    private Rol rol;
+
     // Los timestamps de la tabla estudiantes los gestiona el trigger de BD.
     // insertable = false, updatable = false: JPA nunca escribe estas columnas,
     // el trigger y el DEFAULT de PostgreSQL son los únicos que las modifican.
