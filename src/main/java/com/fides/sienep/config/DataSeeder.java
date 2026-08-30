@@ -7,14 +7,19 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+// Solo corre si SEED_DEMO_USERS=true está explícitamente seteado (ver
+// application.properties). Default false: a diferencia de "@Profile(\"!test\")"
+// (que corría en cualquier perfil salvo test, incluida producción si no se fijaba
+// spring.profiles.active), acá el default seguro es NO crear usuarios, y hay que
+// habilitarlo a mano en dev/local.
 @Component
 @RequiredArgsConstructor
-@Profile("!test")   // ← clave: no se ejecuta en el perfil test
+@ConditionalOnProperty(name = "app.seed-demo-users", havingValue = "true")
 public class DataSeeder {
 
     private final FuncionarioRepository funcionarioRepository;
