@@ -53,6 +53,7 @@ class ComentarioNormalInstanciaServiceTest {
     void setUp() {
         instancia = mock(Instancia.class);
         lenient().when(instancia.getCodInstancia()).thenReturn(1);
+        lenient().when(instancia.getEstado()).thenReturn(EstadoLogico.ACTIVO);
 
         autor = new Funcionario();
         autor.setIdUsuario(2);
@@ -130,6 +131,35 @@ class ComentarioNormalInstanciaServiceTest {
                 () -> comentarioService.crear(1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(comentarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear comentario normal - Instancia no activa (422)")
+    void crear_LanzaUnprocessable_InstanciaNoActiva() {
+        mockSecurityContext(2);
+        when(instancia.getEstado()).thenReturn(EstadoLogico.INACTIVO);
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> comentarioService.crear(1, requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(comentarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear comentario normal - Funcionario autor no activo (422)")
+    void crear_LanzaUnprocessable_AutorNoActivo() {
+        mockSecurityContext(2);
+        autor.setEstado(EstadoLogico.INACTIVO);
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(autor));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> comentarioService.crear(1, requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
     }
 

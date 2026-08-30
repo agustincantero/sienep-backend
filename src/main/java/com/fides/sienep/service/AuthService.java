@@ -19,6 +19,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +41,14 @@ public class AuthService {
     private static final int  MAX_INTENTOS_FALLIDOS  = 5;
     private static final int  VENTANA_MINUTOS        = 10;
     private static final int  TOKEN_VALIDEZ_MINUTOS  = 30;
+
+    // Hash BCrypt válido de una contraseña que no corresponde a ningún usuario real.
+    // Se usa únicamente para forzar el mismo costo de cómputo que un login con
+    // contraseña incorrecta cuando el email ni siquiera existe (ver login()) —
+    // de lo contrario, la ausencia de ese costo es un oráculo de timing que permite
+    // enumerar cuentas registradas sin necesidad de acertar ninguna contraseña.
+    private static final String HASH_DUMMY_TIMING =
+            new BCryptPasswordEncoder().encode("valor-fijo-sin-uso-real-solo-para-timing");
 
     private final AuthenticationManager           authManager;
     private final JwtTokenUtil                    jwtTokenUtil;
@@ -83,10 +92,15 @@ public class AuthService {
             idUsuario = funcionarioOpt.get().getIdUsuario();
             rol = funcionarioOpt.get().getRol().getNombre();
         } else {
-            Estudiante estudiante = estudianteRepository.findByEmail(emailNormalizado)
-                    .orElseThrow(() -> credencialesInvalidas(ip));
-            idUsuario = estudiante.getIdUsuario();
-            rol = estudiante.getRol().getNombre();
+            Optional<Estudiante> estudianteOpt = estudianteRepository.findByEmail(emailNormalizado);
+            if (estudianteOpt.isEmpty()) {
+                // Igualar el tiempo de respuesta con el caso "contraseña incorrecta"
+                // (que sí ejecuta BCrypt más abajo vía authManager.authenticate()).
+                passwordEncoder.matches(dto.getContrasenia(), HASH_DUMMY_TIMING);
+                throw credencialesInvalidas(ip);
+            }
+            idUsuario = estudianteOpt.get().getIdUsuario();
+            rol = estudianteOpt.get().getRol().getNombre();
         }
 
         // 2. Verificar si está bloqueado
