@@ -60,7 +60,7 @@ class ComentarioConfidencialEstudianteControllerTest {
     // por sí solo no lo trae en Spring Boot 4) — no hace falta para este test,
     // que solo necesita serializar el body de la request, no ejercer el
     // ObjectMapper real que usa la app para las responses.
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @MockitoBean private FuncionarioRepository funcionarioRepository;
     @MockitoBean private EstudianteRepository estudianteRepository;

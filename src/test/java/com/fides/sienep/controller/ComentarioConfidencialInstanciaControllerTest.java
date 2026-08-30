@@ -50,7 +50,7 @@ class ComentarioConfidencialInstanciaControllerTest {
     // Ver nota en ComentarioConfidencialEstudianteControllerTest: no hay un bean
     // ObjectMapper autoconfigurado para inyectar en este contexto de test, aunque
     // la serialización real de las responses sí funciona (la ejerce este mismo test).
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @MockitoBean private FuncionarioRepository funcionarioRepository;
     @MockitoBean private InstanciaRepository instanciaRepository;
