@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
@@ -42,10 +44,13 @@ public class Frecuencia {
     @Column(name = "estado", nullable = false, columnDefinition = "proyecto.estado_logico")
     private EstadoLogico estado;
 
-    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    // Ver Carrera.java para el porqué de @CreationTimestamp/@UpdateTimestamp acá.
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false, insertable = false)
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     public Frecuencia(String descripcion, TipoFrecuencia tipo, Integer intDias, DiaSemana diaSemana) {
