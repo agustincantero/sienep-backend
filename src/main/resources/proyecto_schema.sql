@@ -382,14 +382,20 @@ CREATE TRIGGER trg_actualizar_rol_permisos
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
 -- =====================================================
--- TABLA: instancias -> Agrego la SEQUENCE para generar el idNegInstancia con formato correcto.
+-- TABLA: instancias
 -- =====================================================
 
-CREATE SEQUENCE IF NOT EXISTS proyecto.seq_instancia
-    START WITH 1
-    INCREMENT BY 1
-    NO MAXVALUE
-    NO CYCLE;
+-- Contador anual para InstanciaIdGenerator/RecordatorioIdGenerator: reemplaza
+-- a las viejas SEQUENCE globales seq_instancia/seq_recordatorio, que no
+-- reseteaban por año pese a que el formato del id (INST-AAAA-NNNNNN) aparenta
+-- un contador anual. Con este contador particionado por (tipo, año), cada año
+-- arranca en 1 de verdad — ver Javadoc de InstanciaIdGenerator.
+CREATE TABLE proyecto.contador_id_negocio (
+    tipo         VARCHAR(20) NOT NULL,
+    anio         INT         NOT NULL,
+    ultimo_valor INT         NOT NULL DEFAULT 0,
+    CONSTRAINT pk_contador_id_negocio PRIMARY KEY (tipo, anio)
+);
 
 CREATE TABLE proyecto.instancias (
     cod_instancia    SERIAL                 PRIMARY KEY,
@@ -442,12 +448,6 @@ CREATE TRIGGER trg_actualizar_incidencias
 -- =====================================================
 -- TABLA: recordatorios
 -- =====================================================
-CREATE SEQUENCE IF NOT EXISTS proyecto.seq_recordatorio
-    START WITH 1
-    INCREMENT BY 1
-    NO MAXVALUE
-    NO CYCLE;
-
 CREATE TABLE proyecto.recordatorios (
     cod_recordatorio      SERIAL                     PRIMARY KEY,
     id_categoria          INT                        NOT NULL,
