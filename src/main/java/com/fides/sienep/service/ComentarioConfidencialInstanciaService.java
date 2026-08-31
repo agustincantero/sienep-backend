@@ -44,9 +44,19 @@ public class ComentarioConfidencialInstanciaService {
                                                             ComentarioConfidencialInstanciaRequestDTO dto) {
         Instancia instancia = buscarInstanciaOFallar(codInstancia);
 
+        if (instancia.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "La instancia con id " + codInstancia + " no está activa");
+        }
+
         Funcionario autor = funcionarioRepository.findById(getIdUsuarioAutenticado())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
+
+        if (autor.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El funcionario autenticado no está activo");
+        }
 
         ComentarioConfidencialInstancia comentario = new ComentarioConfidencialInstancia();
         comentario.setId(new ComentarioConfidencialInstancia.ComentarioConfidencialInstanciaId());

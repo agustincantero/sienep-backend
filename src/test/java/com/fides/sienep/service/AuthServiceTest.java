@@ -154,6 +154,21 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Login - Email no existe igual ejecuta un matches() dummy (mitigación de timing side-channel)")
+    void login_EmailNoExiste_EjecutaMatchesDummyParaIgualarTiempos() {
+        when(funcionarioRepository.findByEmail(any())).thenReturn(Optional.empty());
+        when(estudianteRepository.findByEmail(any())).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () -> authService.login(loginDto, IP));
+
+        // No debe importar el resultado (siempre false), solo que se pague el mismo
+        // costo de BCrypt que en el camino de "contraseña incorrecta" — de lo
+        // contrario un atacante puede distinguir "email no existe" por timing.
+        verify(passwordEncoder).matches(eq(loginDto.getContrasenia()), anyString());
+        verifyNoInteractions(authManager);
+    }
+
+    @Test
     @DisplayName("Login - Usuario bloqueado (401 igual que credenciales inválidas, B20), ni siquiera valida contraseña")
     void login_LanzaUnauthorized_UsuarioBloqueado() {
         funcionario.setBloqueado(true);
