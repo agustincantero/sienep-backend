@@ -110,6 +110,14 @@
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Necesaria para @WithMockUser / MockMvc + Spring Security en tests
+             @WebMvcTest — sin ella no se puede simular un usuario autenticado
+             ni ejercer JwtRequestFilter/@PreAuthorize a través de MockMvc. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Source: https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-starter-webmvc-ui -->
         <dependency>
             <groupId>org.springdoc</groupId>
