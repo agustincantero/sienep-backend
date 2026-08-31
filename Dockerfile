@@ -17,6 +17,18 @@ RUN ./mvnw clean package -DskipTests -B
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Zona horaria del proceso: America/Montevideo (UTC-3), la misma en la que corre
+# la base (ver TZ/PGTZ en docker-compose.yml y el "options=-c timezone=..." del
+# JDBC URL en application.properties). La imagen alpine no incluye tzdata; sin
+# esto la JVM cae a UTC y los timestamps que genera Hibernate por la JVM
+# (@CreationTimestamp/@UpdateTimestamp con SourceType.VM, LocalDate.now() en los
+# *IdGenerator, etc.) quedan 3h desfasados respecto a CURRENT_TIMESTAMP y a los
+# defaults/triggers de Postgres.
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/America/Montevideo /etc/localtime && \
+    echo "America/Montevideo" > /etc/timezone
+ENV TZ=America/Montevideo
+
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
