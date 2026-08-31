@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
@@ -27,10 +29,15 @@ public abstract class ComentarioBase {
     @JoinColumn(name = "id_autor", nullable = false)
     protected Funcionario autor;
 
-    @Column(name = "created_at",  updatable = false, insertable = false)
+    // Ver Carrera.java para el porqué de @CreationTimestamp/@UpdateTimestamp acá.
+    // Antes de este cambio, updated_at tenía updatable=false: Hibernate no lo
+    // tocaba ni siquiera al editar el comentario, dependía 100% del trigger SQL.
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     protected LocalDateTime createdAt;
 
-    @Column(name = "updated_at", updatable = false, insertable = false)
+    @UpdateTimestamp
+    @Column(name = "updated_at")
     protected LocalDateTime updatedAt;
 
     public ComentarioBase(String contenido) {

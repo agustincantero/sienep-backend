@@ -2,6 +2,8 @@ package com.fides.sienep.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -50,13 +52,13 @@ public class Estudiante extends Usuario {
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
-    // Los timestamps de la tabla estudiantes los gestiona el trigger de BD.
-    // insertable = false, updatable = false: JPA nunca escribe estas columnas,
-    // el trigger y el DEFAULT de PostgreSQL son los únicos que las modifican.
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    // Ver Carrera.java para el porqué de @CreationTimestamp/@UpdateTimestamp acá.
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime estudianteCreatedAt;
 
-    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime estudianteUpdatedAt;
 
     @OneToMany(mappedBy = "estudiante", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
