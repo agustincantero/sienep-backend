@@ -130,7 +130,9 @@ class ComentarioConfidencialInstanciaControllerTest {
     @DisplayName("Crear - Con el permiso y datos válidos responde 201")
     void crear_ConPermiso_Responde201() throws Exception {
         String token = tokenConPermisos("CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA");
-        when(instanciaRepository.findById(COD_INSTANCIA)).thenReturn(Optional.of(mock(Instancia.class)));
+        Instancia instancia = mock(Instancia.class);
+        when(instancia.getEstado()).thenReturn(EstadoLogico.ACTIVO);
+        when(instanciaRepository.findById(COD_INSTANCIA)).thenReturn(Optional.of(instancia));
         when(comentarioRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         mockMvc.perform(post(basePath())
