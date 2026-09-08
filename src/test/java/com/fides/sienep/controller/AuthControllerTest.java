@@ -4,6 +4,9 @@ import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
 import com.fides.sienep.dto.OlvideContraseniaDTO;
 import com.fides.sienep.dto.RestablecerContraseniaConTokenDTO;
+import com.fides.sienep.dto.UsuarioAutenticadoDTO;
+import com.fides.sienep.model.EstadoLogico;
+import com.fides.sienep.model.TipoUsuario;
 import com.fides.sienep.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,9 +16,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -121,5 +127,40 @@ class AuthControllerTest extends AbstractControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Me - Autenticado (sin permiso específico) responde 200 con identidad y permisos")
+    void me_Autenticado_Responde200() throws Exception {
+        UsuarioAutenticadoDTO dto = UsuarioAutenticadoDTO.builder()
+                .idUsuario(12)
+                .tipo(TipoUsuario.FUNCIONARIO)
+                .email("ana.perez@utec.edu.uy")
+                .nombre("Ana")
+                .apellido("Pérez")
+                .estado(EstadoLogico.ACTIVO)
+                .rol("ADMINISTRADOR")
+                .permisos(List.of("CREAR_INSTANCIA", "VER_FUNCIONARIOS"))
+                .build();
+        when(authService.usuarioAutenticado()).thenReturn(dto);
+
+        mockMvc.perform(get("/auth/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idUsuario").value(12))
+                .andExpect(jsonPath("$.tipo").value("FUNCIONARIO"))
+                .andExpect(jsonPath("$.estado").value("ACTIVO"))
+                .andExpect(jsonPath("$.rol").value("ADMINISTRADOR"))
+                .andExpect(jsonPath("$.permisos[0]").value("CREAR_INSTANCIA"))
+                .andExpect(jsonPath("$.permisos.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("Me - Error propagado desde el service responde 401")
+    void me_UsuarioDelTokenNoExiste_Responde401() throws Exception {
+        when(authService.usuarioAutenticado())
+                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario del token no encontrado"));
+
+        mockMvc.perform(get("/auth/me"))
+                .andExpect(status().isUnauthorized());
     }
 }

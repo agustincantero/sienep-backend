@@ -3,6 +3,7 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
+import com.fides.sienep.dto.UsuarioAutenticadoDTO;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
@@ -19,6 +20,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -197,6 +200,55 @@ public class AuthService {
         auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGIN, idUsuario, ip);
 
         return new LoginResponseDTO(token);
+    }
+
+    // =========================================================
+    // USUARIO AUTENTICADO (GET /auth/me)
+    // =========================================================
+
+    // Identidad + permisos del dueño del token, para que el frontend gatee la
+    // navegación y la UI. Sin parámetros: el id sale del SecurityContext (sub del
+    // JWT ya validado por JwtRequestFilter), así que solo devuelve la cuenta
+    // propia. Read-only, no genera auditoría.
+    @Transactional(readOnly = true)
+    public UsuarioAutenticadoDTO usuarioAutenticado() {
+        int idUsuario = Integer.parseInt(
+                SecurityContextHolder.getContext().getAuthentication().getName());
+
+        Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByIdConRolYPermisos(idUsuario);
+        if (funcionarioOpt.isPresent()) {
+            Funcionario f = funcionarioOpt.get();
+            return toDto(f, f.getRol(), TipoUsuario.FUNCIONARIO);
+        }
+
+        Estudiante estudiante = estudianteRepository.findByIdConRolYPermisos(idUsuario)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Usuario del token no encontrado"));
+        return toDto(estudiante, estudiante.getRol(), TipoUsuario.ESTUDIANTE);
+    }
+
+    private UsuarioAutenticadoDTO toDto(Usuario usuario, Rol rol, TipoUsuario tipo) {
+        return UsuarioAutenticadoDTO.builder()
+                .idUsuario(usuario.getIdUsuario())
+                .tipo(tipo)
+                .email(usuario.getEmail())
+                .nombre(usuario.getNombre())
+                .apellido(usuario.getApellido())
+                .estado(usuario.getEstado())
+                .rol(rol.getNombre())
+                .permisos(permisosActivos(rol))
+                .build();
+    }
+
+    // Mismo criterio que CustomUsuarioDetailsService: solo RolPermiso ACTIVO, y
+    // el nom_permiso (sin el prefijo ROLE_ que sí lleva la GrantedAuthority).
+    private List<String> permisosActivos(Rol rol) {
+        return rol.getRolPermisos().stream()
+                .filter(rp -> rp.getEstado() == EstadoLogico.ACTIVO)
+                .map(rp -> rp.getPermiso().getNombre())
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     // Único punto de salida para todo login rechazado (email inexistente, usuario

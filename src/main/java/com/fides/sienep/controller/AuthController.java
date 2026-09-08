@@ -5,6 +5,7 @@ import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
 import com.fides.sienep.dto.OlvideContraseniaDTO;
 import com.fides.sienep.dto.RestablecerContraseniaConTokenDTO;
+import com.fides.sienep.dto.UsuarioAutenticadoDTO;
 import com.fides.sienep.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -53,6 +54,19 @@ public class AuthController {
             @RequestBody @Valid GoogleLoginRequestDTO dto, HttpServletRequest request) {
         LoginResponseDTO response = authService.loginConGoogle(dto, request.getRemoteAddr());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Datos y permisos del usuario autenticado",
+            description = "Devuelve identidad, tipo (FUNCIONARIO/ESTUDIANTE), rol y lista de permisos " +
+                    "activos del dueño del token. Sin parámetros: siempre la cuenta propia. El frontend " +
+                    "lo usa para gatear navegación y UI (shell por 'tipo', acciones por 'permisos').")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Datos del usuario autenticado"),
+            @ApiResponse(responseCode = "401", description = "Sin token válido")
+    })
+    public ResponseEntity<UsuarioAutenticadoDTO> me() {
+        return ResponseEntity.ok(authService.usuarioAutenticado());
     }
 
     @PostMapping("/logout")

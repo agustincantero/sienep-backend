@@ -3,11 +3,15 @@ package com.fides.sienep.service;
 import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
+import com.fides.sienep.dto.UsuarioAutenticadoDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.model.LogIntento;
+import com.fides.sienep.model.Permiso;
 import com.fides.sienep.model.Rol;
+import com.fides.sienep.model.RolPermiso;
+import com.fides.sienep.model.TipoUsuario;
 import com.fides.sienep.model.TokenRestablecimiento;
 import com.fides.sienep.model.Usuario;
 import com.fides.sienep.repository.EstudianteRepository;
@@ -16,6 +20,7 @@ import com.fides.sienep.repository.LogIntentoRepository;
 import com.fides.sienep.repository.TokenRestablecimientoRepository;
 import com.fides.sienep.repository.UsuarioRepository;
 import com.fides.sienep.utils.JwtTokenUtil;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,12 +32,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -492,5 +500,105 @@ class AuthServiceTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
         verify(usuarioRepository, never()).save(any());
+    }
+
+    // ── Usuario autenticado (GET /auth/me) ────────────────────
+
+    @AfterEach
+    void limpiarSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void autenticarComo(int idUsuario) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(String.valueOf(idUsuario), null));
+    }
+
+    @Test
+    @DisplayName("usuarioAutenticado - Funcionario: mapea identidad, rol y tipo FUNCIONARIO")
+    void usuarioAutenticado_Funcionario_MapeaTodo() {
+        autenticarComo(2);
+        funcionario.setApellido("García");
+        rol.agregarPermiso(new Permiso("VER_FUNCIONARIOS", "d"));
+        rol.agregarPermiso(new Permiso("CREAR_INSTANCIA", "d"));
+        when(funcionarioRepository.findByIdConRolYPermisos(2)).thenReturn(Optional.of(funcionario));
+
+        UsuarioAutenticadoDTO dto = authService.usuarioAutenticado();
+
+        assertEquals(2, dto.getIdUsuario());
+        assertEquals(TipoUsuario.FUNCIONARIO, dto.getTipo());
+        assertEquals("juan.garcia@utec.edu.uy", dto.getEmail());
+        assertEquals("Juan", dto.getNombre());
+        assertEquals("García", dto.getApellido());
+        assertEquals(EstadoLogico.ACTIVO, dto.getEstado());
+        assertEquals("ADMINISTRADOR", dto.getRol());
+        assertEquals(List.of("CREAR_INSTANCIA", "VER_FUNCIONARIOS"), dto.getPermisos());
+        verifyNoInteractions(estudianteRepository);
+    }
+
+    @Test
+    @DisplayName("usuarioAutenticado - Si no es funcionario, resuelve como ESTUDIANTE")
+    void usuarioAutenticado_Estudiante_TipoEstudiante() {
+        autenticarComo(7);
+        Estudiante estudiante = new Estudiante();
+        estudiante.setIdUsuario(7);
+        estudiante.setNombre("Ana");
+        estudiante.setApellido("Pérez");
+        estudiante.setEmail("ana.perez@utec.edu.uy");
+        estudiante.setEstado(EstadoLogico.ACTIVO);
+        Rol rolEst = new Rol("ESTUDIANTE");
+        rolEst.agregarPermiso(new Permiso("VER_COMENTARIO_NORMAL_ESTUDIANTE", "d"));
+        estudiante.setRol(rolEst);
+        when(funcionarioRepository.findByIdConRolYPermisos(7)).thenReturn(Optional.empty());
+        when(estudianteRepository.findByIdConRolYPermisos(7)).thenReturn(Optional.of(estudiante));
+
+        UsuarioAutenticadoDTO dto = authService.usuarioAutenticado();
+
+        assertEquals(TipoUsuario.ESTUDIANTE, dto.getTipo());
+        assertEquals("ESTUDIANTE", dto.getRol());
+        assertEquals(List.of("VER_COMENTARIO_NORMAL_ESTUDIANTE"), dto.getPermisos());
+    }
+
+    @Test
+    @DisplayName("usuarioAutenticado - permisos: descarta RolPermiso no ACTIVO, deduplica y ordena")
+    void usuarioAutenticado_FiltraDeduplicaYOrdenaPermisos() {
+        autenticarComo(2);
+        Rol r = new Rol("COORDINADOR");
+        r.agregarPermiso(new Permiso("VER_B", "d"));
+        r.agregarPermiso(new Permiso("VER_A", "d"));
+        r.agregarPermiso(new Permiso("VER_A", "d")); // duplicado
+        r.getRolPermisos().add(new RolPermiso(r, new Permiso("VER_Z_INACTIVO", "d"), EstadoLogico.INACTIVO));
+        funcionario.setRol(r);
+        when(funcionarioRepository.findByIdConRolYPermisos(2)).thenReturn(Optional.of(funcionario));
+
+        UsuarioAutenticadoDTO dto = authService.usuarioAutenticado();
+
+        assertEquals(List.of("VER_A", "VER_B"), dto.getPermisos());
+    }
+
+    @Test
+    @DisplayName("usuarioAutenticado - Rol sin permisos resuelve igual con permisos = []")
+    void usuarioAutenticado_RolSinPermisos_PermisosVacio() {
+        autenticarComo(2);
+        funcionario.setRol(new Rol("SIN_PERMISOS"));
+        when(funcionarioRepository.findByIdConRolYPermisos(2)).thenReturn(Optional.of(funcionario));
+
+        UsuarioAutenticadoDTO dto = authService.usuarioAutenticado();
+
+        assertEquals(List.of(), dto.getPermisos());
+        assertEquals("SIN_PERMISOS", dto.getRol());
+    }
+
+    @Test
+    @DisplayName("usuarioAutenticado - Id del token sin funcionario ni estudiante (401)")
+    void usuarioAutenticado_TokenSinUsuario_Lanza401() {
+        autenticarComo(999);
+        when(funcionarioRepository.findByIdConRolYPermisos(999)).thenReturn(Optional.empty());
+        when(estudianteRepository.findByIdConRolYPermisos(999)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.usuarioAutenticado());
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
     }
 }

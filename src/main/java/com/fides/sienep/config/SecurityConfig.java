@@ -60,6 +60,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // /auth/me es el único /auth/* que exige token. Va ANTES del
+                        // permitAll de abajo: gana el primer matcher que matchea.
+                        .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reportes/validar").permitAll()
                         .requestMatchers(
