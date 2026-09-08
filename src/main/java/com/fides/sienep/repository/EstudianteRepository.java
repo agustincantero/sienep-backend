@@ -17,6 +17,16 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Integer>
 
     Optional<Estudiante> findByEmail(String email);
 
+    // Para GET /auth/me: trae rol + permisos en una sola query (evita N+1 y no
+    // depende de open-in-view). LEFT en rolPermisos/permiso: un rol sin permisos
+    // igual resuelve el estudiante (con permisos = []). Mismo criterio que FuncionarioRepository.
+    @Query("SELECT e FROM Estudiante e " +
+            "JOIN FETCH e.rol r " +
+            "LEFT JOIN FETCH r.rolPermisos rp " +
+            "LEFT JOIN FETCH rp.permiso " +
+            "WHERE e.idUsuario = :id")
+    Optional<Estudiante> findByIdConRolYPermisos(@Param("id") int id);
+
     // Búsqueda por nombre, apellido o documento (parcial, sin importar mayúsculas)
     // — versión con y sin filtro de estado.
     @Query("""

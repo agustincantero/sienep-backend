@@ -22,6 +22,16 @@ public interface FuncionarioRepository extends JpaRepository<Funcionario, Intege
 
     Optional<Funcionario> findByEmail(String email);
 
+    // Para GET /auth/me: trae rol + permisos en una sola query (evita N+1 y no
+    // depende de open-in-view). LEFT en rolPermisos/permiso para que un rol sin
+    // permisos igual resuelva el funcionario (con permisos = []).
+    @Query("SELECT f FROM Funcionario f " +
+            "JOIN FETCH f.rol r " +
+            "LEFT JOIN FETCH r.rolPermisos rp " +
+            "LEFT JOIN FETCH rp.permiso " +
+            "WHERE f.idUsuario = :id")
+    Optional<Funcionario> findByIdConRolYPermisos(@Param("id") int id);
+
 
     Optional<Funcionario> findByDocumento(String documento);
 
