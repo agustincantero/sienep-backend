@@ -70,7 +70,8 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
         }
 
         return new SienepUserDetails(String.valueOf(funcionario.getIdUsuario()),
-                funcionario.getContrasenia(), authorities, funcionario.getCredencialesVigentesDesde());
+                funcionario.getContrasenia(), authorities, funcionario.getCredencialesVigentesDesde(),
+                funcionario.getEstado());
     }
 
     private UserDetails buildEstudianteDetails(Estudiante estudiante) {
@@ -87,6 +88,7 @@ public class CustomUsuarioDetailsService implements UserDetailsService {
         }
 
         return new SienepUserDetails(String.valueOf(estudiante.getIdUsuario()),
-                estudiante.getContrasenia(), authorities, estudiante.getCredencialesVigentesDesde());
+                estudiante.getContrasenia(), authorities, estudiante.getCredencialesVigentesDesde(),
+                estudiante.getEstado());
     }
 }

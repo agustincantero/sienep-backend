@@ -1,5 +1,6 @@
 package com.fides.sienep.security;
 
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.utils.JwtTokenUtil;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -73,8 +74,13 @@ class JwtRequestFilterTest {
     }
 
     private SienepUserDetails userDetails(String idUsuario, LocalDateTime credencialesVigentesDesde) {
+        return userDetails(idUsuario, credencialesVigentesDesde, EstadoLogico.ACTIVO);
+    }
+
+    private SienepUserDetails userDetails(String idUsuario, LocalDateTime credencialesVigentesDesde,
+                                           EstadoLogico estado) {
         return new SienepUserDetails(idUsuario, "hash-irrelevante",
-                List.of(new SimpleGrantedAuthority("ROLE_ADMINISTRADOR")), credencialesVigentesDesde);
+                List.of(new SimpleGrantedAuthority("ROLE_ADMINISTRADOR")), credencialesVigentesDesde, estado);
     }
 
     @Test
@@ -202,6 +208,94 @@ class JwtRequestFilterTest {
 
         verify(chain).doFilter(request, response);
         verifyNoInteractions(userDetailsService);
+    }
+
+    // ── PENDIENTE_DE_ACTIVACION: whitelist de endpoints ─────────────────────────
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - GET /auth/me continúa la cadena")
+    void pendienteActivacion_AuthMe_ContinuaLaCadena() throws Exception {
+        assertRutaPermitidaPendienteActivacion("GET", "/auth/me");
+    }
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - POST /auth/logout continúa la cadena")
+    void pendienteActivacion_AuthLogout_ContinuaLaCadena() throws Exception {
+        assertRutaPermitidaPendienteActivacion("POST", "/auth/logout");
+    }
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - PATCH /funcionarios/{id}/contrasenia continúa la cadena")
+    void pendienteActivacion_CambiarContraseniaFuncionario_ContinuaLaCadena() throws Exception {
+        assertRutaPermitidaPendienteActivacion("PATCH", "/funcionarios/2/contrasenia");
+    }
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - PATCH /estudiantes/{id}/contrasenia continúa la cadena")
+    void pendienteActivacion_CambiarContraseniaEstudiante_ContinuaLaCadena() throws Exception {
+        assertRutaPermitidaPendienteActivacion("PATCH", "/estudiantes/2/contrasenia");
+    }
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - ruta fuera de la whitelist responde 403 y no continúa la cadena")
+    void pendienteActivacion_RutaNoWhitelisteada_Responde403_NoContinuaCadena() throws Exception {
+        String token = tokenValido("2");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/funcionarios");
+        when(userDetailsService.loadUserByUsername("2"))
+                .thenReturn(userDetails("2", null, EstadoLogico.PENDIENTE_DE_ACTIVACION));
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_FORBIDDEN),
+                eq("Debe cambiar su contraseña temporal antes de continuar."));
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - POST /funcionarios/{id}/contrasenia (reset admin, mismo path " +
+            "distinto método) responde 403")
+    void pendienteActivacion_ResetAdminMismoPathDistintoMetodo_Responde403() throws Exception {
+        String token = tokenValido("2");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getRequestURI()).thenReturn("/funcionarios/2/contrasenia");
+        when(userDetailsService.loadUserByUsername("2"))
+                .thenReturn(userDetails("2", null, EstadoLogico.PENDIENTE_DE_ACTIVACION));
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_FORBIDDEN), any());
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    @DisplayName("Usuario ACTIVO - ruta cualquiera no se ve afectada por el enforcement de PENDIENTE_DE_ACTIVACION")
+    void usuarioActivo_RutaNoWhitelisteada_ContinuaLaCadena() throws Exception {
+        String token = tokenValido("2");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(userDetailsService.loadUserByUsername("2"))
+                .thenReturn(userDetails("2", null, EstadoLogico.ACTIVO));
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(response, never()).sendError(anyInt(), any());
+    }
+
+    private void assertRutaPermitidaPendienteActivacion(String metodo, String path) throws Exception {
+        String token = tokenValido("2");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(request.getMethod()).thenReturn(metodo);
+        when(request.getRequestURI()).thenReturn(path);
+        when(userDetailsService.loadUserByUsername("2"))
+                .thenReturn(userDetails("2", null, EstadoLogico.PENDIENTE_DE_ACTIVACION));
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(response, never()).sendError(anyInt(), any());
     }
 
     private void assertNotNullAndAuthenticated(Authentication auth) {

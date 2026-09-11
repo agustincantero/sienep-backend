@@ -236,9 +236,23 @@ public class EstudianteService {
     public void restablecerContrasenia(Integer id) {
         Estudiante estudiante = buscarOFallar(id);
 
+        // Mismo criterio que CustomUsuarioDetailsService para decidir si una cuenta es
+        // usable: sin este guard, resetear la contraseña de un estudiante INACTIVO o
+        // ELIMINADO lo reactivaría de forma silenciosa (quedaría PENDIENTE_DE_ACTIVACION,
+        // un estado logueable) sin pasar por reactivar().
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO
+                && estudiante.getEstado() != EstadoLogico.PENDIENTE_DE_ACTIVACION) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede restablecer la contraseña de un estudiante inactivo.");
+        }
+
         String contraseniaPlana = passwordGeneratorService.generar();
         estudiante.setContrasenia(passwordEncoder.encode(contraseniaPlana));
         estudiante.setCredencialesVigentesDesde(LocalDateTime.now());
+        // Deja al estudiante obligado a elegir una contraseña propia en el próximo
+        // login (JwtRequestFilter lo restringe mientras esté en este estado) — sin esto,
+        // si la cuenta ya estaba ACTIVO, el reset admin no dispara el cambio forzado.
+        estudiante.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
         estudianteRepository.save(estudiante);
 
         emailService.enviarContraseniaRestablecida(estudiante.getEmail(), estudiante.getNombre(), contraseniaPlana);

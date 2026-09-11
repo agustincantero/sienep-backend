@@ -546,8 +546,12 @@ class FuncionarioServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Restablecer contraseña - Éxito")
+    @DisplayName("Restablecer contraseña - Éxito, deja al funcionario PENDIENTE_DE_ACTIVACION")
     void restablecerContrasenia_Exito() {
+        // Arranca ACTIVO (caso realista: un admin resetea la contraseña de un
+        // funcionario que ya venía usando el sistema con normalidad).
+        funcionarioMock.setEstado(EstadoLogico.ACTIVO);
+
         when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
         when(passwordGeneratorService.generar()).thenReturn("NuevaPassGenerada123!");
         when(passwordEncoder.encode("NuevaPassGenerada123!")).thenReturn("hashedNuevaPass");
@@ -556,6 +560,11 @@ class FuncionarioServiceTest {
         funcionarioService.restablecerContrasenia(1);
 
         assertEquals("hashedNuevaPass", funcionarioMock.getContrasenia());
+        // El reset admin obliga al próximo login a elegir una contraseña propia
+        // (JwtRequestFilter restringe a un usuario en este estado) — sin esto, un
+        // funcionario ya ACTIVO seguiría ACTIVO después del reset y el enforcement
+        // nunca se dispararía.
+        assertEquals(EstadoLogico.PENDIENTE_DE_ACTIVACION, funcionarioMock.getEstado());
         verify(funcionarioRepository).save(funcionarioMock);
         verify(emailService).enviarContraseniaRestablecida(
                 funcionarioMock.getEmail(), funcionarioMock.getNombre(), "NuevaPassGenerada123!");
@@ -572,6 +581,21 @@ class FuncionarioServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Restablecer contraseña - Funcionario inactivo (409), no lo reactiva silenciosamente")
+    void restablecerContrasenia_FuncionarioInactivo_LanzaConflict() {
+        funcionarioMock.setEstado(EstadoLogico.INACTIVO);
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.restablecerContrasenia(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+        verify(emailService, never()).enviarContraseniaRestablecida(any(), any(), any());
     }
 
     // =========================================================

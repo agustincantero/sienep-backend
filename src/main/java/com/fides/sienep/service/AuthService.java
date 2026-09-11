@@ -369,6 +369,13 @@ public class AuthService {
         usuario.setContrasenia(passwordEncoder.encode(contraseniaNueva));
         usuario.setBloqueado(false);
         usuario.setCredencialesVigentesDesde(LocalDateTime.now());
+        // Mismo criterio que FuncionarioService/EstudianteService.cambiarContrasenia():
+        // si el usuario estaba obligado a cambiar una contraseña temporal, elegir una acá
+        // también lo saca de ese estado — si no, quedaría en loop infinito en la pantalla
+        // obligatoria del frontend pese a tener ya una contraseña propia y funcional.
+        if (EstadoLogico.PENDIENTE_DE_ACTIVACION.equals(usuario.getEstado())) {
+            usuario.setEstado(EstadoLogico.ACTIVO);
+        }
         usuarioRepository.save(usuario);
 
         token.setUsado(true);

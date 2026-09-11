@@ -144,9 +144,23 @@ public class FuncionarioService {
     public void restablecerContrasenia(Integer id) {
         Funcionario funcionario = buscarOFallar(id);
 
+        // Mismo criterio que CustomUsuarioDetailsService para decidir si una cuenta es
+        // usable: sin este guard, resetear la contraseña de un funcionario INACTIVO o
+        // ELIMINADO lo reactivaría de forma silenciosa (quedaría PENDIENTE_DE_ACTIVACION,
+        // un estado logueable) sin pasar por reactivar().
+        if (funcionario.getEstado() != EstadoLogico.ACTIVO
+                && funcionario.getEstado() != EstadoLogico.PENDIENTE_DE_ACTIVACION) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede restablecer la contraseña de un funcionario inactivo.");
+        }
+
         String contraseniaPlana = passwordGeneratorService.generar();
         funcionario.setContrasenia(passwordEncoder.encode(contraseniaPlana));
         funcionario.setCredencialesVigentesDesde(LocalDateTime.now());
+        // Deja al funcionario obligado a elegir una contraseña propia en el próximo
+        // login (JwtRequestFilter lo restringe mientras esté en este estado) — sin esto,
+        // si la cuenta ya estaba ACTIVO, el reset admin no dispara el cambio forzado.
+        funcionario.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
         funcionarioRepository.save(funcionario);
 
         emailService.enviarContraseniaRestablecida(funcionario.getEmail(), funcionario.getNombre(), contraseniaPlana);

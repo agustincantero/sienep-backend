@@ -791,8 +791,10 @@ class EstudianteServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Restablecer contraseña - Éxito")
+    @DisplayName("Restablecer contraseña - Éxito, deja al estudiante PENDIENTE_DE_ACTIVACION")
     void restablecerContrasenia_Exito() {
+        // estudianteExistente ya arranca ACTIVO (setUp) — caso realista: un admin
+        // resetea la contraseña de un estudiante que ya venía usando el sistema.
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
         when(passwordGeneratorService.generar()).thenReturn("NuevaPassGenerada123!");
         when(passwordEncoder.encode("NuevaPassGenerada123!")).thenReturn("hashedNuevaPass");
@@ -801,6 +803,11 @@ class EstudianteServiceTest {
         estudianteService.restablecerContrasenia(1);
 
         assertEquals("hashedNuevaPass", estudianteExistente.getContrasenia());
+        // El reset admin obliga al próximo login a elegir una contraseña propia
+        // (JwtRequestFilter restringe a un usuario en este estado) — sin esto, un
+        // estudiante ya ACTIVO seguiría ACTIVO después del reset y el enforcement
+        // nunca se dispararía.
+        assertEquals(EstadoLogico.PENDIENTE_DE_ACTIVACION, estudianteExistente.getEstado());
         verify(estudianteRepository).save(estudianteExistente);
         verify(emailService).enviarContraseniaRestablecida(
                 estudianteExistente.getEmail(), estudianteExistente.getNombre(), "NuevaPassGenerada123!");
@@ -817,6 +824,21 @@ class EstudianteServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Restablecer contraseña - Estudiante inactivo (409), no lo reactiva silenciosamente")
+    void restablecerContrasenia_EstudianteInactivo_LanzaConflict() {
+        estudianteExistente.setEstado(EstadoLogico.INACTIVO);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.restablecerContrasenia(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
+        verify(emailService, never()).enviarContraseniaRestablecida(any(), any(), any());
     }
 
     // =========================================================
