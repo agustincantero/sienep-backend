@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,6 +37,9 @@ class EmailServiceTest {
                 .defaultHeader("Content-Type", "application/json");
         mockServer = MockRestServiceServer.bindTo(builder).build();
         emailService = new EmailService(builder.build());
+        // @Value no se procesa al instanciar "a mano" fuera de Spring — mismo patrón
+        // que AuthServiceTest para su propio frontendUrl.
+        ReflectionTestUtils.setField(emailService, "frontendUrl", "http://localhost:3000");
     }
 
     @Test
@@ -52,6 +56,23 @@ class EmailServiceTest {
                           "subject": "Acceso al sistema - Contraseña temporal"
                         }
                         """))
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        assertDoesNotThrow(() ->
+                emailService.enviarContraseniaTemporal("juan@utec.edu.uy", "Juan", "temp1234"));
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("enviarContraseniaTemporal - el HTML lleva los valores interpolados, sin placeholders sin resolver")
+    void enviarContraseniaTemporal_HtmlConValoresInterpolados() {
+        mockServer.expect(requestTo(BREVO_URL))
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("\"htmlContent\""),
+                        org.hamcrest.Matchers.containsString("Juan"),
+                        org.hamcrest.Matchers.containsString("temp1234"),
+                        org.hamcrest.Matchers.containsString("http://localhost:3000"),
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
         assertDoesNotThrow(() ->
@@ -80,11 +101,44 @@ class EmailServiceTest {
     }
 
     @Test
+    @DisplayName("enviarContraseniaRestablecida - el HTML lleva los valores interpolados, sin placeholders sin resolver")
+    void enviarContraseniaRestablecida_HtmlConValoresInterpolados() {
+        mockServer.expect(requestTo(BREVO_URL))
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("\"htmlContent\""),
+                        org.hamcrest.Matchers.containsString("Juan"),
+                        org.hamcrest.Matchers.containsString("temp1234"),
+                        org.hamcrest.Matchers.containsString("http://localhost:3000"),
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        assertDoesNotThrow(() ->
+                emailService.enviarContraseniaRestablecida("juan@utec.edu.uy", "Juan", "temp1234"));
+        mockServer.verify();
+    }
+
+    @Test
     @DisplayName("enviarLinkRestablecimiento manda el link en el cuerpo del mail")
     void enviarLinkRestablecimiento_ok() {
         mockServer.expect(requestTo(BREVO_URL))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "https://sienep.app/restablecer?token=abc123")))
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        assertDoesNotThrow(() -> emailService.enviarLinkRestablecimiento(
+                "juan@utec.edu.uy", "Juan", "https://sienep.app/restablecer?token=abc123"));
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("enviarLinkRestablecimiento - el HTML lleva los valores interpolados, sin placeholders sin resolver")
+    void enviarLinkRestablecimiento_HtmlConValoresInterpolados() {
+        mockServer.expect(requestTo(BREVO_URL))
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("\"htmlContent\""),
+                        org.hamcrest.Matchers.containsString("Juan"),
+                        org.hamcrest.Matchers.containsString("https://sienep.app/restablecer?token=abc123"),
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
         assertDoesNotThrow(() -> emailService.enviarLinkRestablecimiento(
@@ -102,6 +156,23 @@ class EmailServiceTest {
     }
 
     @Test
+    @DisplayName("enviarNotificacionInstancia - el HTML lleva los valores interpolados, sin placeholders sin resolver")
+    void enviarNotificacionInstancia_HtmlConValoresInterpolados() {
+        mockServer.expect(requestTo(BREVO_URL))
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("\"htmlContent\""),
+                        org.hamcrest.Matchers.containsString("Juan"),
+                        org.hamcrest.Matchers.containsString("INST-2026-000001"),
+                        org.hamcrest.Matchers.containsString("Seguimiento"),
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        assertDoesNotThrow(() -> emailService.enviarNotificacionInstancia(
+                "juan@utec.edu.uy", "Juan", "INST-2026-000001", "Seguimiento", LocalDateTime.now().plusDays(1)));
+        mockServer.verify();
+    }
+
+    @Test
     @DisplayName("enviarNotificacionRecordatorio NO relanza la excepción si Brevo falla (solo warn)")
     void enviarNotificacionRecordatorio_falloBrevo_noLanza() {
         mockServer.expect(requestTo(BREVO_URL)).andRespond(withServerError());
@@ -111,11 +182,45 @@ class EmailServiceTest {
     }
 
     @Test
+    @DisplayName("enviarNotificacionRecordatorio - el HTML lleva los valores interpolados, sin placeholders sin resolver")
+    void enviarNotificacionRecordatorio_HtmlConValoresInterpolados() {
+        mockServer.expect(requestTo(BREVO_URL))
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("\"htmlContent\""),
+                        org.hamcrest.Matchers.containsString("Juan"),
+                        org.hamcrest.Matchers.containsString("REC-2026-000001"),
+                        org.hamcrest.Matchers.containsString("Control"),
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        assertDoesNotThrow(() -> emailService.enviarNotificacionRecordatorio(
+                "juan@utec.edu.uy", "Juan", "REC-2026-000001", "Control", LocalDateTime.now()));
+        mockServer.verify();
+    }
+
+    @Test
     @DisplayName("enviarRecordatorioProximo NO relanza la excepción si Brevo falla (solo warn)")
     void enviarRecordatorioProximo_falloBrevo_noLanza() {
         mockServer.expect(requestTo(BREVO_URL)).andRespond(withServerError());
 
         assertDoesNotThrow(() -> emailService.enviarRecordatorioProximo(
                 "juan@utec.edu.uy", "Juan", "REC-2026-000001", "Control", LocalDateTime.now()));
+    }
+
+    @Test
+    @DisplayName("enviarRecordatorioProximo - el HTML lleva los valores interpolados, sin placeholders sin resolver")
+    void enviarRecordatorioProximo_HtmlConValoresInterpolados() {
+        mockServer.expect(requestTo(BREVO_URL))
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("\"htmlContent\""),
+                        org.hamcrest.Matchers.containsString("Juan"),
+                        org.hamcrest.Matchers.containsString("REC-2026-000001"),
+                        org.hamcrest.Matchers.containsString("Control"),
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        assertDoesNotThrow(() -> emailService.enviarRecordatorioProximo(
+                "juan@utec.edu.uy", "Juan", "REC-2026-000001", "Control", LocalDateTime.now()));
+        mockServer.verify();
     }
 }
