@@ -340,7 +340,7 @@ public class AuthService {
         // El fallo de envío no debe revelar nada distinto de "email inexistente" — se
         // loguea y listo, la respuesta externa es la misma en ambos casos.
         try {
-            String link = frontendUrl + "/restablecer-contrasenia?token=" + tokenPlano;
+            String link = frontendUrl + "/reset-password?token=" + tokenPlano;
             emailService.enviarLinkRestablecimiento(usuario.getEmail(), usuario.getNombre(), link);
         } catch (Exception e) {
             log.warn("[AUDIT] No se pudo enviar el email de restablecimiento a {}: {}",

@@ -83,7 +83,7 @@ class AuthControllerTest extends AbstractControllerTest {
         OlvideContraseniaDTO dto = new OlvideContraseniaDTO();
         dto.setEmail("juan.garcia@utec.edu.uy");
 
-        mockMvc.perform(post("/auth/olvide-contrasenia")
+        mockMvc.perform(post("/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
@@ -95,7 +95,7 @@ class AuthControllerTest extends AbstractControllerTest {
         OlvideContraseniaDTO dto = new OlvideContraseniaDTO();
         dto.setEmail("no-es-un-email");
 
-        mockMvc.perform(post("/auth/olvide-contrasenia")
+        mockMvc.perform(post("/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
@@ -110,7 +110,7 @@ class AuthControllerTest extends AbstractControllerTest {
         org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inválido o vencido"))
                 .when(authService).restablecerContraseniaConToken(anyString(), anyString());
 
-        mockMvc.perform(post("/auth/restablecer-contrasenia")
+        mockMvc.perform(post("/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isUnauthorized());
@@ -123,7 +123,7 @@ class AuthControllerTest extends AbstractControllerTest {
         dto.setToken("token-valido");
         dto.setContraseniaNueva("corta");
 
-        mockMvc.perform(post("/auth/restablecer-contrasenia")
+        mockMvc.perform(post("/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());

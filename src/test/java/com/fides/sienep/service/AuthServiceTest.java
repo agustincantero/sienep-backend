@@ -400,7 +400,7 @@ class AuthServiceTest {
                 t.getIdUsuario() == 2 && !t.isUsado() && t.getFechaExpiracion().isAfter(LocalDateTime.now())));
         verify(emailService).enviarLinkRestablecimiento(
                 eq("juan.garcia@utec.edu.uy"), eq("Juan"),
-                argThat(link -> link.startsWith("http://localhost:3000/restablecer-contrasenia?token=")));
+                argThat(link -> link.startsWith("http://localhost:3000/reset-password?token=")));
     }
 
     @Test

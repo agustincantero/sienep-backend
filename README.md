@@ -88,8 +88,8 @@ A continuación se detalla la responsabilidad de las clases clave que componen e
 
 Si el usuario olvida su contraseña, el flujo se separa en dos pasos para no aplicar el cambio sin confirmación:
 
-1. **`POST /api/auth/olvide-contrasenia`** (público): recibe un email, genera un token de un solo uso (UUID), guarda su hash SHA-256 con vencimiento de 30 minutos e invalida cualquier token anterior del mismo usuario. Envía por correo un link armado con la variable de entorno `FRONTEND_URL` (ej. `https://tu-frontend/restablecer-contrasenia?token=...`). La contraseña actual no se modifica todavía en este paso.
-2. **`POST /api/auth/restablecer-contrasenia`** (público): recibe el token y la nueva contraseña, valida que no esté vencido ni ya usado, y recién ahí la aplica.
+1. **`POST /api/auth/forgot-password`** (público): recibe un email, genera un token de un solo uso (UUID), guarda su hash SHA-256 con vencimiento de 30 minutos e invalida cualquier token anterior del mismo usuario. Envía por correo un link armado con la variable de entorno `FRONTEND_URL` (ej. `https://tu-frontend/reset-password?token=...`). La contraseña actual no se modifica todavía en este paso.
+2. **`POST /api/auth/reset-password`** (público): recibe el token y la nueva contraseña, valida que no esté vencido ni ya usado, y recién ahí la aplica.
 
 Por diseño, este flujo responde siempre igual (200) exista o no el email, para no permitir enumerar cuentas registradas, y limita a **3 solicitudes cada 15 minutos por email** (`429 Too Many Requests` si se supera), para frenar abuso hacia el correo del usuario o hacia el proveedor de mail.
 

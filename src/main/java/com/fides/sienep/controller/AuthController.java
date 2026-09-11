@@ -78,11 +78,11 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/olvide-contrasenia")
+    @PostMapping("/forgot-password")
     @Operation(summary = "Olvidé mi contraseña",
             description = "Genera un token de un solo uso (válido 30 minutos) y manda un link al email " +
                     "registrado. La contraseña actual sigue funcionando hasta que se confirme el cambio " +
-                    "en /restablecer-contrasenia con ese token.")
+                    "en /reset-password con ese token.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Si el email existe, se envió el link")
     })
@@ -91,10 +91,10 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/restablecer-contrasenia")
+    @PostMapping("/reset-password")
     @Operation(summary = "Confirmar restablecimiento de contraseña",
             description = "Aplica la nueva contraseña usando el token de un solo uso recibido por email " +
-                    "en /olvide-contrasenia. El token vence a los 30 minutos o al primer uso.")
+                    "en /forgot-password. El token vence a los 30 minutos o al primer uso.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Contraseña restablecida"),
             @ApiResponse(responseCode = "401", description = "Token inválido, vencido o ya usado")
