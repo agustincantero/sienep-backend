@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -42,20 +43,43 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    static final String MENSAJE_VALIDACION =
+            "Hay datos inválidos en el formulario. Revisá los campos e intentá de nuevo.";
+    static final String MENSAJE_FORMATO_INVALIDO = "El valor ingresado no tiene el formato esperado.";
+
     // 1. Ataja las validaciones de los DTOs (@NotBlank, @Pattern, etc.)
+    //
+    // Lleva "message" además de "detalles": el frontend muestra el "message" tal
+    // cual, y sin él este 400 —el más común de la API— caía en un texto genérico
+    // por código. "detalles" sigue siendo el mapa campo -> motivo para marcar
+    // cada campo del formulario.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Error de validación en los datos enviados");
+        body.put("message", MENSAJE_VALIDACION);
 
         // Recolecta exactamente qué campos fallaron y el mensaje personalizado
-        Map<String, String> detalles = new HashMap<>();
+        Map<String, String> detalles = new LinkedHashMap<>();
         for (var error : ex.getBindingResult().getAllErrors()) {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            detalles.put(fieldName, errorMessage);
+            // Un error a nivel de objeto (ej. una constraint de clase) no es un
+            // FieldError: el cast directo de antes rompía con ClassCastException.
+            String fieldName = (error instanceof FieldError fieldError)
+                    ? fieldError.getField()
+                    : error.getObjectName();
+
+            // Un valor que ni siquiera se pudo convertir al tipo del campo (ej.
+            // "abc" en un Integer de un formulario multipart) trae el texto crudo de
+            // Spring, en inglés y con nombres de clases Java: no se le muestra tal cual.
+            String errorMessage = (error instanceof FieldError fieldError && fieldError.isBindingFailure())
+                    ? MENSAJE_FORMATO_INVALIDO
+                    : error.getDefaultMessage();
+
+            // Si un campo falla más de una constraint, se queda con la primera
+            // (antes ganaba la última, y HashMap no garantiza orden).
+            detalles.putIfAbsent(fieldName, errorMessage);
         }
         body.put("detalles", detalles);
 
