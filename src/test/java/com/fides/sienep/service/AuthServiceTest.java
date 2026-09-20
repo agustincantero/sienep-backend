@@ -400,7 +400,7 @@ class AuthServiceTest {
                 t.getIdUsuario() == 2 && !t.isUsado() && t.getFechaExpiracion().isAfter(LocalDateTime.now())));
         verify(emailService).enviarLinkRestablecimiento(
                 eq("juan.garcia@utec.edu.uy"), eq("Juan"),
-                argThat(link -> link.startsWith("http://localhost:3000/restablecer-contrasenia?token=")));
+                argThat(link -> link.startsWith("http://localhost:3000/reset-password?token=")));
     }
 
     @Test
@@ -471,8 +471,31 @@ class AuthServiceTest {
         assertEquals("hash-nueva", funcionario.getContrasenia());
         assertFalse(funcionario.isBloqueado());
         assertTrue(token.isUsado());
+        // Ya estaba ACTIVO — este camino no debería tocar el estado en ese caso.
+        assertEquals(EstadoLogico.ACTIVO, funcionario.getEstado());
         verify(usuarioRepository).save(funcionario);
         verify(tokenRestablecimientoRepository).save(token);
+    }
+
+    @Test
+    @DisplayName("Restablecer con token - Estado PENDIENTE_DE_ACTIVACION pasa a ACTIVO")
+    void restablecerConToken_ActivaEstadoPendiente() {
+        funcionario.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
+        TokenRestablecimiento token = new TokenRestablecimiento(2, "hash-fake", LocalDateTime.now().plusMinutes(10));
+
+        when(tokenRestablecimientoRepository.findByTokenHashAndUsadoFalse(anyString()))
+                .thenReturn(Optional.of(token));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(passwordEncoder.encode("NuevaPass123!")).thenReturn("hash-nueva");
+
+        // Cubre el caso de alguien PENDIENTE_DE_ACTIVACION que pierde la contraseña
+        // temporal y usa "olvidé mi contraseña" en vez de cambiarla desde adentro —
+        // sin esto, quedaría en loop infinito en la pantalla obligatoria del frontend
+        // pese a tener ya una contraseña propia y funcional.
+        authService.restablecerContraseniaConToken("token-plano", "NuevaPass123!");
+
+        assertEquals(EstadoLogico.ACTIVO, funcionario.getEstado());
+        verify(usuarioRepository).save(funcionario);
     }
 
     @Test
