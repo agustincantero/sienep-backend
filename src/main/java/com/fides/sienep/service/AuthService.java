@@ -259,7 +259,7 @@ public class AuthService {
         if (!loginIpRateLimiter.registrarIntento(ip)) {
             log.warn("Límite de intentos de login fallidos excedido para ip={}", ip);
             return new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Demasiados intentos de inicio de sesión fallidos. Intentá nuevamente más tarde.");
+                    "Demasiados intentos de inicio de sesión fallidos. Intenta nuevamente más tarde.");
         }
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
     }

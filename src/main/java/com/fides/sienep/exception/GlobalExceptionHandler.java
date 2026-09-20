@@ -44,7 +44,7 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     static final String MENSAJE_VALIDACION =
-            "Hay datos inválidos en el formulario. Revisá los campos e intentá de nuevo.";
+            "Hay datos inválidos en el formulario. Revisa los campos e intenta de nuevo.";
     static final String MENSAJE_FORMATO_INVALIDO = "El valor ingresado no tiene el formato esperado.";
 
     // 1. Ataja las validaciones de los DTOs (@NotBlank, @Pattern, etc.)
