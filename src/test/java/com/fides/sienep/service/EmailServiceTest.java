@@ -173,6 +173,25 @@ class EmailServiceTest {
     }
 
     @Test
+    @DisplayName("Plantilla - Un valor que contiene {{OTRA_CLAVE}} no es pisado por un reemplazo posterior")
+    void plantilla_ValorConPlaceholder_NoSePisa() {
+        // Un título de instancia lo escribe un usuario: si trae "{{NOMBRE_USUARIO}}", tiene que salir
+        // literal. Aparece 2 veces en el body: en el texto plano y en el HTML. Con el reemplazo
+        // clave por clave, según el orden del Map, el del HTML se convertía en el nombre ("Juan").
+        mockServer.expect(requestTo(BREVO_URL))
+                .andExpect(request -> {
+                    String body = ((org.springframework.mock.http.client.MockClientHttpRequest) request).getBodyAsString();
+                    int ocurrencias = body.split(java.util.regex.Pattern.quote("{{NOMBRE_USUARIO}}"), -1).length - 1;
+                    assertEquals(2, ocurrencias);
+                })
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        assertDoesNotThrow(() -> emailService.enviarNotificacionInstancia(
+                "juan@utec.edu.uy", "Juan", "INST-2026-000001", "{{NOMBRE_USUARIO}}", LocalDateTime.now()));
+        mockServer.verify();
+    }
+
+    @Test
     @DisplayName("enviarNotificacionRecordatorio NO relanza la excepción si Brevo falla (solo warn)")
     void enviarNotificacionRecordatorio_falloBrevo_noLanza() {
         mockServer.expect(requestTo(BREVO_URL)).andRespond(withServerError());
