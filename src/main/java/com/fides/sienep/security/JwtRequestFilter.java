@@ -1,5 +1,6 @@
 package com.fides.sienep.security;
 
+import com.fides.sienep.exception.ApiErrorAttributes;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.utils.JwtTokenUtil;
 import io.jsonwebtoken.JwtException;
@@ -87,6 +88,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 && !esRutaPermitidaPendienteActivacion(request)) {
             log.warn("Usuario id={} en PENDIENTE_DE_ACTIVACION intentó acceder a {} {}",
                     sienepUserDetails.getUsername(), request.getMethod(), request.getRequestURI());
+            // Código estable para que el frontend distinga este 403 de uno por falta de
+            // permisos sin comparar el texto del message (ApiErrorAttributes lo copia al body).
+            request.setAttribute(ApiErrorAttributes.ATRIBUTO_CODIGO, CODIGO_CAMBIO_CONTRASENIA_REQUERIDO);
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
                     "Debe cambiar su contraseña temporal antes de continuar.");
             return;
@@ -95,21 +99,26 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
+    static final String CODIGO_CAMBIO_CONTRASENIA_REQUERIDO = "PASSWORD_CHANGE_REQUIRED";
+
     private static final String PATRON_CAMBIO_CONTRASENIA = "^/(funcionarios|estudiantes)/\\d+/contrasenia$";
 
-    // Whitelist mínima para un usuario PENDIENTE_DE_ACTIVACION: ver su propia
-    // identidad, cerrar sesión, y cambiar su propia contraseña (que es lo único que
-    // lo saca de este estado, en FuncionarioService/EstudianteService.cambiarContrasenia()).
+    // Whitelist para un usuario PENDIENTE_DE_ACTIVACION: todo /auth/** (ver su identidad,
+    // cerrar sesión, y también las rutas públicas de login y recuperación de contraseña:
+    // este filtro corre para cualquier request con un token válido, y el frontend puede
+    // adjuntar el Bearer a todo), el POST público /reportes/validar, y cambiar su propia
+    // contraseña (que es lo único que lo saca de este estado, en
+    // FuncionarioService/EstudianteService.cambiarContrasenia()).
     // Nota: el reset admin (POST .../contrasenia, distinto endpoint que comparte el
     // mismo path) queda deliberadamente afuera — no es "el usuario cambiando la suya".
     private boolean esRutaPermitidaPendienteActivacion(HttpServletRequest request) {
         String metodo = request.getMethod();
         String path = request.getRequestURI();
 
-        if ("GET".equals(metodo) && "/auth/me".equals(path)) {
+        if (path.startsWith("/auth/")) {
             return true;
         }
-        if ("POST".equals(metodo) && "/auth/logout".equals(path)) {
+        if ("POST".equals(metodo) && "/reportes/validar".equals(path)) {
             return true;
         }
         return "PATCH".equals(metodo) && path.matches(PATRON_CAMBIO_CONTRASENIA);

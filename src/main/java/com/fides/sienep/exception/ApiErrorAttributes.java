@@ -32,12 +32,18 @@ import java.util.Map;
  * y "errors", que DevTools puede activar.
  *
  * Mismo formato de timestamp que GlobalExceptionHandler (LocalDateTime, sin zona).
+ * Si el request trae {@link #ATRIBUTO_CODIGO}, se agrega al body como "code".
  */
 @Component
 public class ApiErrorAttributes extends DefaultErrorAttributes {
 
     private static final String SIN_MENSAJE_DE_BOOT = "No message available";
     static final String MENSAJE_500 = "Ocurrió un error inesperado.";
+
+    // Atributo del request con un código de error estable (ej. "PASSWORD_CHANGE_REQUIRED").
+    // Un filtro que responde con sendError(...) lo setea antes, y acá se copia al body como
+    // "code": el frontend distingue así un caso puntual sin comparar el texto del message.
+    public static final String ATRIBUTO_CODIGO = "sienep.error.codigo";
 
     @Override
     public Map<String, Object> getErrorAttributes(WebRequest webRequest, ErrorAttributeOptions options) {
@@ -57,6 +63,10 @@ public class ApiErrorAttributes extends DefaultErrorAttributes {
         atributos.put("message", mensajeParaElCliente(status, mensajeCrudo));
         if (base.get("path") != null) {
             atributos.put("path", base.get("path"));
+        }
+        Object codigo = webRequest.getAttribute(ATRIBUTO_CODIGO, RequestAttributes.SCOPE_REQUEST);
+        if (codigo instanceof String texto && !texto.isBlank()) {
+            atributos.put("code", texto);
         }
         return atributos;
     }

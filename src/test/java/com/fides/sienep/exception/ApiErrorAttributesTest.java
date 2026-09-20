@@ -89,6 +89,22 @@ class ApiErrorAttributesTest {
     }
 
     @Test
+    @DisplayName("code - Si el request trae un código estable se copia al body; si no, no aparece")
+    void code_SoloSiElRequestLoTrae() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, 403);
+        request.setAttribute(RequestDispatcher.ERROR_MESSAGE, "Debe cambiar su contraseña temporal antes de continuar.");
+        request.setAttribute(ApiErrorAttributes.ATRIBUTO_CODIGO, "PASSWORD_CHANGE_REQUIRED");
+
+        Map<String, Object> conCodigo = errorAttributes.getErrorAttributes(
+                new ServletWebRequest(request), ErrorAttributeOptions.defaults());
+
+        assertEquals("PASSWORD_CHANGE_REQUIRED", conCodigo.get("code"));
+        assertEquals("Debe cambiar su contraseña temporal antes de continuar.", conCodigo.get("message"));
+        assertFalse(atributos(403, "No tienes permisos", true).containsKey("code"));
+    }
+
+    @Test
     @DisplayName("Forma del cuerpo - timestamp como el del resto de la API, y sin exception/trace/errors")
     void forma_MismoFormatoQueElResto_YSinDatosInternos() {
         Map<String, Object> resultado = atributos(401, "No autenticado", true);

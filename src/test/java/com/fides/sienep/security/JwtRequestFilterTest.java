@@ -236,6 +236,34 @@ class JwtRequestFilterTest {
         assertRutaPermitidaPendienteActivacion("PATCH", "/estudiantes/2/contrasenia");
     }
 
+    // El front puede adjuntar el Bearer a todo request: un usuario pendiente que vuelve a
+    // loguearse, pide "olvidé mi contraseña" o valida un reporte NO debe recibir un 403.
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - Las rutas públicas de /auth y POST /reportes/validar continúan la cadena")
+    void pendienteActivacion_RutasPublicas_ContinuanLaCadena() throws Exception {
+        assertRutaPermitidaPendienteActivacion("POST", "/auth/login");
+        assertRutaPermitidaPendienteActivacion("POST", "/auth/google");
+        assertRutaPermitidaPendienteActivacion("POST", "/auth/forgot-password");
+        assertRutaPermitidaPendienteActivacion("POST", "/auth/reset-password");
+        assertRutaPermitidaPendienteActivacion("POST", "/reportes/validar");
+    }
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - Un path que solo empieza parecido a /auth/ sigue bloqueado")
+    void pendienteActivacion_PrefijoParecidoAAuth_Responde403() throws Exception {
+        String token = tokenValido("2");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/authorities");
+        when(userDetailsService.loadUserByUsername("2"))
+                .thenReturn(userDetails("2", null, EstadoLogico.PENDIENTE_DE_ACTIVACION));
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_FORBIDDEN), any());
+        verify(chain, never()).doFilter(any(), any());
+    }
+
     @Test
     @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - ruta fuera de la whitelist responde 403 y no continúa la cadena")
     void pendienteActivacion_RutaNoWhitelisteada_Responde403_NoContinuaCadena() throws Exception {
@@ -250,6 +278,9 @@ class JwtRequestFilterTest {
 
         verify(response).sendError(eq(HttpServletResponse.SC_FORBIDDEN),
                 eq("Debe cambiar su contraseña temporal antes de continuar."));
+        // Código estable para el frontend (no depender del texto del message).
+        verify(request).setAttribute(
+                com.fides.sienep.exception.ApiErrorAttributes.ATRIBUTO_CODIGO, "PASSWORD_CHANGE_REQUIRED");
         verify(chain, never()).doFilter(any(), any());
     }
 
@@ -285,6 +316,10 @@ class JwtRequestFilterTest {
     }
 
     private void assertRutaPermitidaPendienteActivacion(String metodo, String path) throws Exception {
+        // Reentrante: un mismo test puede probar varias rutas seguidas.
+        SecurityContextHolder.clearContext();
+        clearInvocations(request, response, chain, userDetailsService);
+
         String token = tokenValido("2");
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(request.getMethod()).thenReturn(metodo);
