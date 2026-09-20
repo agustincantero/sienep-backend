@@ -86,7 +86,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("Validación de DTO - Si un campo falla más de una constraint, se queda con el primer mensaje")
+    @DisplayName("Validación de DTO - Si un campo falla más de una constraint, muestra uno solo (el primero que llega, no el último)")
     @SuppressWarnings("unchecked")
     void handleValidation_VariosErroresEnUnCampo_PrimeroGana() {
         var ex = validationException(

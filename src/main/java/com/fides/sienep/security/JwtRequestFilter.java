@@ -45,7 +45,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 username = jwtTokenUtil.extractUsername(jwt);
             } catch (JwtException | IllegalArgumentException e) {
                 log.warn("Token JWT inválido o vencido: {}", e.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido");
+                ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido", null);
                 return;
             }
         }
@@ -57,7 +57,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 userDetails = userDetailsService.loadUserByUsername(username);
             } catch (UsernameNotFoundException e) {
                 log.warn("Usuario no encontrado para el token: {}", e.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
+                ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido", null);
                 return;
             }
 
@@ -70,7 +70,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } else {
                 log.warn("Token no válido para el usuario: {}", username);
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido");
+                ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido", null);
                 return;
             }
         }
@@ -90,9 +90,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                     sienepUserDetails.getUsername(), request.getMethod(), request.getRequestURI());
             // Código estable para que el frontend distinga este 403 de uno por falta de
             // permisos sin comparar el texto del message (ApiErrorAttributes lo copia al body).
-            request.setAttribute(ApiErrorAttributes.ATRIBUTO_CODIGO, CODIGO_CAMBIO_CONTRASENIA_REQUERIDO);
-            response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Debe cambiar su contraseña temporal antes de continuar.");
+            ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_FORBIDDEN,
+                    "Debe cambiar su contraseña temporal antes de continuar.",
+                    CODIGO_CAMBIO_CONTRASENIA_REQUERIDO);
             return;
         }
 

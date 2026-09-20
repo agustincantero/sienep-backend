@@ -77,8 +77,10 @@ public class GlobalExceptionHandler {
                     ? MENSAJE_FORMATO_INVALIDO
                     : error.getDefaultMessage();
 
-            // Si un campo falla más de una constraint, se queda con la primera
-            // (antes ganaba la última, y HashMap no garantiza orden).
+            // Si un campo falla más de una constraint, se muestra una sola: la primera que
+            // informa Hibernate Validator. Ese orden NO está garantizado, así que cuál sale
+            // es arbitrario; da igual, alcanza con que el usuario vea que el campo es
+            // inválido (antes ganaba la última, con el mismo problema).
             detalles.putIfAbsent(fieldName, errorMessage);
         }
         body.put("detalles", detalles);

@@ -281,6 +281,9 @@ class JwtRequestFilterTest {
         // Código estable para el frontend (no depender del texto del message).
         verify(request).setAttribute(
                 com.fides.sienep.exception.ApiErrorAttributes.ATRIBUTO_CODIGO, "PASSWORD_CHANGE_REQUIRED");
+        // Y el texto para el cliente se declara (es el único que ApiErrorAttributes deja pasar).
+        verify(request).setAttribute(com.fides.sienep.exception.ApiErrorAttributes.ATRIBUTO_MENSAJE,
+                "Debe cambiar su contraseña temporal antes de continuar.");
         verify(chain, never()).doFilter(any(), any());
     }
 
