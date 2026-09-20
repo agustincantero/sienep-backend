@@ -36,6 +36,9 @@ build/
 .vscode/
 .env
 
+### Archivos subidos (informes y fotos de perfil, ver STORAGE_PATH; FileStorageService crea la carpeta en el primer upload) ###
+/uploads/
+
 ### OpenAPI spec exportado (generado localmente, no versionado) ###
 docs/openapi.json
 docs/openapi.yaml

@@ -47,6 +47,23 @@ class FileStorageServiceTest {
     }
 
     @Test
+    @DisplayName("Guardar - Si la carpeta base (ej. uploads/) todavía no existe, la crea junto con el subdirectorio")
+    void guardar_CarpetaBaseInexistente_LaCrea() {
+        // Caso de un clon nuevo: uploads/ no existe hasta el primer archivo subido.
+        Path baseInexistente = baseDir.resolve("uploads");
+        ReflectionTestUtils.setField(fileStorageService, "baseDir", baseInexistente.toString());
+        assertFalse(Files.exists(baseInexistente));
+
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "foto.png", "image/png",
+                new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
+
+        String nombreFisico = fileStorageService.guardar(archivo, "fotos/7", EXTENSIONES, MAX_TAMANIO);
+
+        assertTrue(Files.exists(baseInexistente.resolve("fotos/7").resolve(nombreFisico)));
+    }
+
+    @Test
     @DisplayName("Guardar - Éxito con extensión en mayúsculas, normaliza a minúsculas")
     void guardar_Exito_ExtensionMayuscula() {
         MultipartFile archivo = new MockMultipartFile(
