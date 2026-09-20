@@ -161,9 +161,9 @@ public class EmailService {
         try {
             String texto = "¡Hola, " + nombreUsuario + "!\n\n" +
                     "Solicitaste restablecer tu contraseña.\n" +
-                    "Si fuiste vos, entrá a este link (válido por 30 minutos):\n" +
+                    "Si fuiste tú, ingresa a este enlace (válido por 30 minutos):\n" +
                     link + "\n\n" +
-                    "Si no fuiste vos, ignorá este mensaje: tu contraseña actual sigue funcionando.";
+                    "Si no fuiste tú, ignora este mensaje: tu contraseña actual sigue funcionando.";
             String html = renderizarPlantilla(PLANTILLA_RESTABLECIMIENTO_LINK, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "URL_RESTABLECIMIENTO", link
@@ -190,7 +190,7 @@ public class EmailService {
                     "ID: " + idNegInstancia + "\n" +
                     "Título: " + tituloInstancia + "\n" +
                     "Fecha y hora: " + fechaHoraFormateada + "\n\n" +
-                    "Podés consultarla en el sistema SIENEP.";
+                    "Puedes consultarla en el sistema SIENEP.";
             String html = renderizarPlantilla(PLANTILLA_NOTIFICACION_INSTANCIA, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "ID_NEG_INSTANCIA", idNegInstancia,
@@ -219,7 +219,7 @@ public class EmailService {
                     "ID: " + idNegRecordatorio + "\n" +
                     "Título: " + tituloRecordatorio + "\n" +
                     "Fecha y hora: " + fechaHoraFormateada + "\n\n" +
-                    "Podés consultarlo en el sistema SIENEP.";
+                    "Puedes consultarlo en el sistema SIENEP.";
             String html = renderizarPlantilla(PLANTILLA_NOTIFICACION_RECORDATORIO, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "ID_NEG_RECORDATORIO", idNegRecordatorio,
@@ -250,11 +250,11 @@ public class EmailService {
         try {
             String fechaHoraFormateada = fechaHora.format(FORMATTER_FECHA_HORA);
             String texto = "¡Hola, " + nombreUsuario + "!\n\n" +
-                    "Tenés un recordatorio próximo a vencer en el sistema SIENEP.\n\n" +
+                    "Tienes un recordatorio próximo a vencer en el sistema SIENEP.\n\n" +
                     "ID: " + idNegRecordatorio + "\n" +
                     "Título: " + tituloRecordatorio + "\n" +
                     "Fecha y hora: " + fechaHoraFormateada + "\n\n" +
-                    "Recordá revisarlo antes de que venza.";
+                    "Recuerda revisarlo antes de que venza.";
             String html = renderizarPlantilla(PLANTILLA_RECORDATORIO_PROXIMO, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "ID_NEG_RECORDATORIO", idNegRecordatorio,
