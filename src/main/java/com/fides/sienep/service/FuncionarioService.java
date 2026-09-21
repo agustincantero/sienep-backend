@@ -91,7 +91,7 @@ public class FuncionarioService {
             log.warn("[AUDIT] No se pudo enviar el email de contraseña temporal al funcionario {}: {}",
                     guardado.getIdUsuario(), e.getMessage());
             response.setAdvertencia("El funcionario se creó correctamente, pero no se pudo enviar el email " +
-                    "con la contraseña temporal. Usá 'Restablecer contraseña' para reintentar el envío.");
+                    "con la contraseña temporal. Usa 'Restablecer contraseña' para reintentar el envío.");
         }
 
         return response;

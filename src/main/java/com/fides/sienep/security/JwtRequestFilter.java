@@ -1,5 +1,6 @@
 package com.fides.sienep.security;
 
+import com.fides.sienep.exception.ApiErrorAttributes;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.utils.JwtTokenUtil;
 import io.jsonwebtoken.JwtException;
@@ -44,7 +45,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 username = jwtTokenUtil.extractUsername(jwt);
             } catch (JwtException | IllegalArgumentException e) {
                 log.warn("Token JWT inválido o vencido: {}", e.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido");
+                ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido", null);
                 return;
             }
         }
@@ -56,7 +57,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 userDetails = userDetailsService.loadUserByUsername(username);
             } catch (UsernameNotFoundException e) {
                 log.warn("Usuario no encontrado para el token: {}", e.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
+                ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido", null);
                 return;
             }
 
@@ -69,7 +70,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } else {
                 log.warn("Token no válido para el usuario: {}", username);
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido");
+                ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido o vencido", null);
                 return;
             }
         }
@@ -87,29 +88,44 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 && !esRutaPermitidaPendienteActivacion(request)) {
             log.warn("Usuario id={} en PENDIENTE_DE_ACTIVACION intentó acceder a {} {}",
                     sienepUserDetails.getUsername(), request.getMethod(), request.getRequestURI());
-            response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Debe cambiar su contraseña temporal antes de continuar.");
+            // Código estable para que el frontend distinga este 403 de uno por falta de
+            // permisos sin comparar el texto del message (ApiErrorAttributes lo copia al body).
+            ApiErrorAttributes.enviarError(request, response, HttpServletResponse.SC_FORBIDDEN,
+                    "Debe cambiar su contraseña temporal antes de continuar.",
+                    CODIGO_CAMBIO_CONTRASENIA_REQUERIDO);
             return;
         }
 
         chain.doFilter(request, response);
     }
 
+    static final String CODIGO_CAMBIO_CONTRASENIA_REQUERIDO = "PASSWORD_CHANGE_REQUIRED";
+
     private static final String PATRON_CAMBIO_CONTRASENIA = "^/(funcionarios|estudiantes)/\\d+/contrasenia$";
 
-    // Whitelist mínima para un usuario PENDIENTE_DE_ACTIVACION: ver su propia
-    // identidad, cerrar sesión, y cambiar su propia contraseña (que es lo único que
-    // lo saca de este estado, en FuncionarioService/EstudianteService.cambiarContrasenia()).
+    // Whitelist para un usuario PENDIENTE_DE_ACTIVACION: todo /auth/** (ver su identidad,
+    // cerrar sesión, y también las rutas públicas de login y recuperación de contraseña:
+    // este filtro corre para cualquier request con un token válido, y el frontend puede
+    // adjuntar el Bearer a todo), el POST público /reportes/validar, y cambiar su propia
+    // contraseña (que es lo único que lo saca de este estado, en
+    // FuncionarioService/EstudianteService.cambiarContrasenia()).
     // Nota: el reset admin (POST .../contrasenia, distinto endpoint que comparte el
     // mismo path) queda deliberadamente afuera — no es "el usuario cambiando la suya".
+    //
+    // OJO: esta lista está duplicada a mano con las rutas públicas de SecurityConfig
+    // (filterChain). Si se agrega o quita una ruta pública allá, revisar acá: una ruta
+    // pública que falte en esta lista le devuelve 403 "cambie su contraseña" a un usuario
+    // pendiente que le mande el Bearer (el filtro corre también en las rutas públicas).
+    // Hoy no se incluyen Swagger, /actuator/health ni /error: el usuario pendiente no los
+    // necesita.
     private boolean esRutaPermitidaPendienteActivacion(HttpServletRequest request) {
         String metodo = request.getMethod();
         String path = request.getRequestURI();
 
-        if ("GET".equals(metodo) && "/auth/me".equals(path)) {
+        if (path.startsWith("/auth/")) {
             return true;
         }
-        if ("POST".equals(metodo) && "/auth/logout".equals(path)) {
+        if ("POST".equals(metodo) && "/reportes/validar".equals(path)) {
             return true;
         }
         return "PATCH".equals(metodo) && path.matches(PATRON_CAMBIO_CONTRASENIA);

@@ -112,7 +112,7 @@ public class EstudianteService {
             log.warn("[AUDIT] No se pudo enviar el email de contraseña temporal al estudiante {}: {}",
                     guardado.getIdUsuario(), e.getMessage());
             response.setAdvertencia("El estudiante se creó correctamente, pero no se pudo enviar el email " +
-                    "con la contraseña temporal. Usá 'Restablecer contraseña' para reintentar el envío.");
+                    "con la contraseña temporal. Usa 'Restablecer contraseña' para reintentar el envío.");
         }
 
         return response;
@@ -192,7 +192,7 @@ public class EstudianteService {
     @Transactional
     public EstudianteResponseDTO editarMisDatos(Integer id, MisDatosRequestDTO dto) {
         if (!getIdUsuarioAutenticado().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo podés editar tus propios datos.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes editar tus propios datos.");
         }
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambiosContacto(estudiante, dto);

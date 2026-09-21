@@ -20,6 +20,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +35,20 @@ public class EmailService {
     // sistema — sin esto sale el ISO crudo de LocalDateTime.toString() (ej. "2026-08-25T15:00").
     private static final DateTimeFormatter FORMATTER_FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    // Plantillas HTML en src/main/resources/email-templates/ (ver renderizarPlantilla).
+    private static final String PLANTILLA_CONTRASENIA_TEMPORAL = "email-templates/contrasenia-temporal.html";
+    private static final String PLANTILLA_CONTRASENIA_RESTABLECIDA = "email-templates/contrasenia-restablecida.html";
+    private static final String PLANTILLA_RESTABLECIMIENTO_LINK = "email-templates/restablecimiento-link.html";
+    private static final String PLANTILLA_NOTIFICACION_INSTANCIA = "email-templates/notificacion-instancia.html";
+    private static final String PLANTILLA_NOTIFICACION_RECORDATORIO = "email-templates/notificacion-recordatorio.html";
+    private static final String PLANTILLA_RECORDATORIO_PROXIMO = "email-templates/recordatorio-proximo.html";
+
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{(\\w+)}}");
+
     private final RestClient brevoRestClient;
+
+    // Las plantillas son recursos estáticos del jar: se leen una sola vez, no en cada envío.
+    private final Map<String, String> plantillasCargadas = new ConcurrentHashMap<>();
 
     // Campo separado (no final): mismo motivo que AuthService.frontendUrl — Lombok no
     // copia @Value a los parámetros del constructor generado por @RequiredArgsConstructor.
@@ -43,10 +59,7 @@ public class EmailService {
     // saliente a los puertos SMTP (25/465/587) desde el 26/09/2025, así que
     // JavaMailSender nunca podía conectar. La API HTTP va por 443, mismo
     // puerto que ya usa GoogleCalendarService contra la API de Google.
-    private void enviarEmailBrevo(String destinatario, String asunto, String texto) {
-        enviarEmailBrevo(destinatario, asunto, texto, null);
-    }
-
+    //
     // Con html != null, Brevo manda un mensaje multipart/alternative (texto + HTML):
     // el textContent queda de fallback para clientes de correo que no renderizan HTML
     // o marcan como spam un mensaje sin alternativa de texto plano.
@@ -66,27 +79,41 @@ public class EmailService {
                 .toBodilessEntity();
     }
 
-    // Carga una plantilla HTML de src/main/resources/email-templates/ y reemplaza sus
-    // placeholders {{CLAVE}}. Los valores se escapan con HtmlUtils antes de insertarlos
-    // (nombre/contraseña vienen de datos de usuario) para no permitir que un nombre con
-    // caracteres tipo "<" rompa el markup del mail.
-    private String renderizarPlantilla(String recursoClasspath, Map<String, String> valores) {
-        String plantilla;
+    // Reemplaza los placeholders {{CLAVE}} de una plantilla HTML. Los valores se escapan con
+    // HtmlUtils antes de insertarlos (nombre/contraseña/títulos vienen de datos de usuario)
+    // para que un valor con caracteres tipo "<" no rompa el markup del mail.
+    //
+    // Un solo pase con regex: lo que se inserta nunca se vuelve a escanear. Reemplazar clave
+    // por clave iterando el Map dejaba que un valor con "{{OTRA_CLAVE}}" (ej. un título escrito
+    // por un usuario) fuera pisado por un reemplazo posterior, según el orden de iteración.
+    //
+    // Un placeholder sin valor corta el envío (IllegalStateException): dejarlo literal mandaba
+    // un mail con "{{CLAVE}}" a la vista del destinatario — típico de agregar un placeholder a
+    // la plantilla y olvidarse de pasarlo desde el método que la usa. Quien llama ya captura
+    // cualquier Exception, la registra y responde el error de envío, así que el fallo queda
+    // visible en el log en vez de salir un correo roto. (Package-private para poder testearlo.)
+    String renderizarPlantilla(String recursoClasspath, Map<String, String> valores) {
+        String plantilla = plantillasCargadas.computeIfAbsent(recursoClasspath, this::cargarPlantilla);
+        return PLACEHOLDER.matcher(plantilla).replaceAll(coincidencia -> {
+            String valor = valores.get(coincidencia.group(1));
+            if (valor == null) {
+                throw new IllegalStateException("La plantilla " + recursoClasspath
+                        + " usa el placeholder {{" + coincidencia.group(1) + "}} sin valor asignado");
+            }
+            return Matcher.quoteReplacement(HtmlUtils.htmlEscape(valor));
+        });
+    }
+
+    private String cargarPlantilla(String recursoClasspath) {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream(recursoClasspath)) {
             if (is == null) {
                 throw new IllegalStateException("Plantilla de email no encontrada: " + recursoClasspath);
             }
-            plantilla = StreamUtils.copyToString(is, StandardCharsets.UTF_8);
+            return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo leer la plantilla de email " + recursoClasspath, e);
         }
-        for (Map.Entry<String, String> valor : valores.entrySet()) {
-            plantilla = plantilla.replace("{{" + valor.getKey() + "}}", HtmlUtils.htmlEscape(valor.getValue()));
-        }
-        return plantilla;
     }
-
-    private static final String PLANTILLA_CONTRASENIA_TEMPORAL = "email-templates/contrasenia-temporal.html";
 
     public void enviarContraseniaTemporal(String destinatario, String nombreUsuario, String contrasenia) {
         try {
@@ -109,8 +136,6 @@ public class EmailService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo enviar el email a " + destinatario);
         }
     }
-
-    private static final String PLANTILLA_CONTRASENIA_RESTABLECIDA = "email-templates/contrasenia-restablecida.html";
 
     public void enviarContraseniaRestablecida(String destinatario, String nombreUsuario, String contrasenia) {
         try {
@@ -141,15 +166,13 @@ public class EmailService {
     // (usada cuando un admin autenticado resetea la de otro), acá no se manda ninguna
     // contraseña — se manda un link con un token de un solo uso, y la contraseña la
     // elige el usuario recién al confirmar (AuthService.restablecerContraseniaConToken).
-    private static final String PLANTILLA_RESTABLECIMIENTO_LINK = "email-templates/restablecimiento-link.html";
-
     public void enviarLinkRestablecimiento(String destinatario, String nombreUsuario, String link) {
         try {
             String texto = "¡Hola, " + nombreUsuario + "!\n\n" +
                     "Solicitaste restablecer tu contraseña.\n" +
-                    "Si fuiste vos, entrá a este link (válido por 30 minutos):\n" +
+                    "Si fuiste tú, ingresa a este enlace (válido por 30 minutos):\n" +
                     link + "\n\n" +
-                    "Si no fuiste vos, ignorá este mensaje: tu contraseña actual sigue funcionando.";
+                    "Si no fuiste tú, ignora este mensaje: tu contraseña actual sigue funcionando.";
             String html = renderizarPlantilla(PLANTILLA_RESTABLECIMIENTO_LINK, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "URL_RESTABLECIMIENTO", link
@@ -166,8 +189,6 @@ public class EmailService {
     // A diferencia de los flujos de contraseña, un fallo de envío NO debe interrumpir
     // la operación principal: la instancia ya fue persistida correctamente.
     // Por eso este método registra el error como warn y no relanza la excepción.
-    private static final String PLANTILLA_NOTIFICACION_INSTANCIA = "email-templates/notificacion-instancia.html";
-
     public void enviarNotificacionInstancia(String destinatario, String nombreUsuario,
                                             String idNegInstancia, String tituloInstancia,
                                             LocalDateTime fechaHora) {
@@ -178,7 +199,7 @@ public class EmailService {
                     "ID: " + idNegInstancia + "\n" +
                     "Título: " + tituloInstancia + "\n" +
                     "Fecha y hora: " + fechaHoraFormateada + "\n\n" +
-                    "Podés consultarla en el sistema SIENEP.";
+                    "Puedes consultarla en el sistema SIENEP.";
             String html = renderizarPlantilla(PLANTILLA_NOTIFICACION_INSTANCIA, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "ID_NEG_INSTANCIA", idNegInstancia,
@@ -197,8 +218,6 @@ public class EmailService {
     // RF23 — notificación por email al responsable cuando se le asigna un recordatorio.
     // Mismo criterio que RF15: un fallo de envío no debe revertir la creación del
     // recordatorio, que ya fue persistido (y, si corresponde, sincronizado con Calendar).
-    private static final String PLANTILLA_NOTIFICACION_RECORDATORIO = "email-templates/notificacion-recordatorio.html";
-
     public void enviarNotificacionRecordatorio(String destinatario, String nombreUsuario,
                                                String idNegRecordatorio, String tituloRecordatorio,
                                                LocalDateTime fechaHora) {
@@ -209,7 +228,7 @@ public class EmailService {
                     "ID: " + idNegRecordatorio + "\n" +
                     "Título: " + tituloRecordatorio + "\n" +
                     "Fecha y hora: " + fechaHoraFormateada + "\n\n" +
-                    "Podés consultarlo en el sistema SIENEP.";
+                    "Puedes consultarlo en el sistema SIENEP.";
             String html = renderizarPlantilla(PLANTILLA_NOTIFICACION_RECORDATORIO, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "ID_NEG_RECORDATORIO", idNegRecordatorio,
@@ -234,19 +253,17 @@ public class EmailService {
     // que cualquier aviso de Calendar es un efecto lateral de Google (depende de que la sync
     // haya funcionado y de que el responsable tenga ese calendario agregado). RF22 y RF23 son
     // requerimientos separados en la especificación, no uno sustituto del otro.
-    private static final String PLANTILLA_RECORDATORIO_PROXIMO = "email-templates/recordatorio-proximo.html";
-
     public void enviarRecordatorioProximo(String destinatario, String nombreUsuario,
                                           String idNegRecordatorio, String tituloRecordatorio,
                                           LocalDateTime fechaHora) {
         try {
             String fechaHoraFormateada = fechaHora.format(FORMATTER_FECHA_HORA);
             String texto = "¡Hola, " + nombreUsuario + "!\n\n" +
-                    "Tenés un recordatorio próximo a vencer en el sistema SIENEP.\n\n" +
+                    "Tienes un recordatorio próximo a vencer en el sistema SIENEP.\n\n" +
                     "ID: " + idNegRecordatorio + "\n" +
                     "Título: " + tituloRecordatorio + "\n" +
                     "Fecha y hora: " + fechaHoraFormateada + "\n\n" +
-                    "Recordá revisarlo antes de que venza.";
+                    "Recuerda revisarlo antes de que venza.";
             String html = renderizarPlantilla(PLANTILLA_RECORDATORIO_PROXIMO, Map.of(
                     "NOMBRE_USUARIO", nombreUsuario,
                     "ID_NEG_RECORDATORIO", idNegRecordatorio,

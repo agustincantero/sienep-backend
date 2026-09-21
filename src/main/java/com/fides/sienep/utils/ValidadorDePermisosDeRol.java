@@ -39,7 +39,7 @@ public final class ValidadorDePermisosDeRol {
             }
             if (!permisosDelActor.contains(rp.getPermiso().getNombre())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "No podés asignar un rol que tenga permisos que vos mismo no tenés.");
+                        "No puedes asignar un rol que tenga permisos que tú mismo no tienes.");
             }
         }
     }

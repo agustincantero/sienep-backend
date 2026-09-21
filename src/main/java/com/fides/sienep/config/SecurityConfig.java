@@ -1,5 +1,6 @@
 package com.fides.sienep.config;
 
+import com.fides.sienep.exception.ApiErrorAttributes;
 import com.fides.sienep.security.JwtRequestFilter;
 import com.fides.sienep.security.LoginUsuarioDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -60,6 +61,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // OJO: JwtRequestFilter.esRutaPermitidaPendienteActivacion mantiene a
+                        // mano una lista de rutas parecida (las públicas /auth/** y
+                        // POST /reportes/validar, más cambiar la propia contraseña). Si se
+                        // cambian las rutas públicas de acá, actualizar también esa.
+                        //
                         // /auth/me es el único /auth/* que exige token. Va ANTES del
                         // permitAll de abajo: gana el primer matcher que matchea.
                         .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
@@ -76,7 +82,8 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No autenticado"))
+                                ApiErrorAttributes.enviarError(request, response,
+                                        HttpServletResponse.SC_UNAUTHORIZED, "No autenticado", null))
                 )
                 .addFilterBefore(jwtRequestFilter,
                         UsernamePasswordAuthenticationFilter.class);

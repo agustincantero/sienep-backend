@@ -33,7 +33,7 @@ public class ReporteVerificacionService {
     public ReporteValidacionResponseDTO validar(MultipartFile archivo, String ip) {
         if (!reporteValidacionRateLimiter.registrarIntento(ip)) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Demasiadas validaciones desde esta IP. Intentá nuevamente más tarde.");
+                    "Demasiadas validaciones desde esta IP. Intenta nuevamente más tarde.");
         }
 
         if (archivo == null || archivo.isEmpty()) {

@@ -259,7 +259,7 @@ public class AuthService {
         if (!loginIpRateLimiter.registrarIntento(ip)) {
             log.warn("Límite de intentos de login fallidos excedido para ip={}", ip);
             return new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Demasiados intentos de inicio de sesión fallidos. Intentá nuevamente más tarde.");
+                    "Demasiados intentos de inicio de sesión fallidos. Intenta nuevamente más tarde.");
         }
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
     }
@@ -318,7 +318,7 @@ public class AuthService {
         if (!passwordResetRateLimiter.registrarIntento(emailNormalizado)) {
             log.warn("Límite de restablecimiento excedido para email={}", emailNormalizado);
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Has solicitado restablecer la contraseña demasiadas veces. Por favor, intentá nuevamente más tarde.");
+                    "Has solicitado restablecer la contraseña demasiadas veces. Por favor, intenta nuevamente más tarde.");
         }
 
         // Respuesta genérica siempre — no revelar si el email existe o no

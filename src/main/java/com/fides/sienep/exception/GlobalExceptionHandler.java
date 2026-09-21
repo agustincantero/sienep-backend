@@ -44,7 +44,7 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     static final String MENSAJE_VALIDACION =
-            "Hay datos inválidos en el formulario. Revisá los campos e intentá de nuevo.";
+            "Hay datos inválidos en el formulario. Revisa los campos e intenta de nuevo.";
     static final String MENSAJE_FORMATO_INVALIDO = "El valor ingresado no tiene el formato esperado.";
 
     // 1. Ataja las validaciones de los DTOs (@NotBlank, @Pattern, etc.)
@@ -77,8 +77,10 @@ public class GlobalExceptionHandler {
                     ? MENSAJE_FORMATO_INVALIDO
                     : error.getDefaultMessage();
 
-            // Si un campo falla más de una constraint, se queda con la primera
-            // (antes ganaba la última, y HashMap no garantiza orden).
+            // Si un campo falla más de una constraint, se muestra una sola: la primera que
+            // informa Hibernate Validator. Ese orden NO está garantizado, así que cuál sale
+            // es arbitrario; da igual, alcanza con que el usuario vea que el campo es
+            // inválido (antes ganaba la última, con el mismo problema).
             detalles.putIfAbsent(fieldName, errorMessage);
         }
         body.put("detalles", detalles);

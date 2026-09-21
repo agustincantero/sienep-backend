@@ -23,18 +23,18 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class RecordatorioInicialDTO {
 
-    @NotBlank(message = "Por favor ingresá el título del recordatorio")
+    @NotBlank(message = "Por favor ingresa el título del recordatorio")
     @Size(max = 150, message = "El título no puede superar los 150 caracteres")
     private String titulo;
 
-    @NotNull(message = "Por favor seleccioná el tipo de recordatorio")
+    @NotNull(message = "Por favor selecciona el tipo de recordatorio")
     private TipoRecordatorio tipo;
 
-    @NotNull(message = "Por favor ingresá la fecha y hora del recordatorio")
+    @NotNull(message = "Por favor ingresa la fecha y hora del recordatorio")
     @Future(message = "La fecha y hora del recordatorio debe ser futura")
     private LocalDateTime fechaHora;
 
-    @NotNull(message = "Por favor seleccioná la categoría del recordatorio")
+    @NotNull(message = "Por favor selecciona la categoría del recordatorio")
     private Integer idCategoria;
 
     private Integer idResponsable; // opcional — default: funcionario creador de la instancia
