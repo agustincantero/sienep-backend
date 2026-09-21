@@ -14,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class InstanciaDesdeRecordatorioDTO {
 
-    @NotNull(message = "Por favor seleccioná la categoría de la instancia")
+    @NotNull(message = "Por favor selecciona la categoría de la instancia")
     private Integer idCategoria;
 
     @Size(max = 150, message = "El título no puede superar los 150 caracteres")

@@ -59,7 +59,7 @@ public class GrupoController {
     @GetMapping
     @Operation(
             summary = "Listar grupos",
-            description = "Filtrá por idCarrera y/o generacion para acotar resultados. Sin el parámetro estado, devuelve solo los ACTIVOS."
+            description = "Filtra por idCarrera y/o generacion para acotar resultados. Sin el parámetro estado, devuelve solo los ACTIVOS."
     )
     @ApiResponse(responseCode = "200", description = "Listado obtenido")
     public ResponseEntity<List<GrupoResponseDTO>> listar(

@@ -126,7 +126,7 @@ public class FrecuenciaService {
             case SEMANAL -> {
                 if (dto.getDiaSemana() == null)
                     throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST, "Por favor indicá el día de la semana para la frecuencia semanal");
+                            HttpStatus.BAD_REQUEST, "Por favor indica el día de la semana para la frecuencia semanal");
             }
             case MENSUAL -> {
                 if (dto.getIntDias() != null || dto.getDiaSemana() != null)
@@ -136,7 +136,7 @@ public class FrecuenciaService {
             case PERSONALIZADA -> {
                 if (dto.getIntDias() == null)
                     throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST, "Por favor indicá el intervalo de días para la frecuencia personalizada");
+                            HttpStatus.BAD_REQUEST, "Por favor indica el intervalo de días para la frecuencia personalizada");
             }
         }
     }

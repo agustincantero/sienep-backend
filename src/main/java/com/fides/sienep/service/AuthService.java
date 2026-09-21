@@ -318,7 +318,7 @@ public class AuthService {
         if (!passwordResetRateLimiter.registrarIntento(emailNormalizado)) {
             log.warn("Límite de restablecimiento excedido para email={}", emailNormalizado);
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Has solicitado restablecer la contraseña demasiadas veces. Por favor, intentá nuevamente más tarde.");
+                    "Has solicitado restablecer la contraseña demasiadas veces. Por favor, intenta nuevamente más tarde.");
         }
 
         // Respuesta genérica siempre — no revelar si el email existe o no

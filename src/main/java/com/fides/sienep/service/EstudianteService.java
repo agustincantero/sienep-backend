@@ -191,7 +191,7 @@ public class EstudianteService {
     @Transactional
     public EstudianteResponseDTO editarMisDatos(Integer id, MisDatosRequestDTO dto) {
         if (!getIdUsuarioAutenticado().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo podés editar tus propios datos.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes editar tus propios datos.");
         }
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambiosContacto(estudiante, dto);
