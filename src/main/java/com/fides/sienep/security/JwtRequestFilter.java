@@ -111,6 +111,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     // FuncionarioService/EstudianteService.cambiarContrasenia()).
     // Nota: el reset admin (POST .../contrasenia, distinto endpoint que comparte el
     // mismo path) queda deliberadamente afuera — no es "el usuario cambiando la suya".
+    //
+    // OJO: esta lista está duplicada a mano con las rutas públicas de SecurityConfig
+    // (filterChain). Si se agrega o quita una ruta pública allá, revisar acá: una ruta
+    // pública que falte en esta lista le devuelve 403 "cambie su contraseña" a un usuario
+    // pendiente que le mande el Bearer (el filtro corre también en las rutas públicas).
+    // Hoy no se incluyen Swagger, /actuator/health ni /error: el usuario pendiente no los
+    // necesita.
     private boolean esRutaPermitidaPendienteActivacion(HttpServletRequest request) {
         String metodo = request.getMethod();
         String path = request.getRequestURI();

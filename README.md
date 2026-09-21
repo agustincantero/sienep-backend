@@ -15,6 +15,8 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
 - [Arquitectura general](#arquitectura-general)
 - [Arquitectura de Seguridad y Autenticación](#arquitectura-de-seguridad-y-autenticación)
     - [Recuperación de contraseña](#recuperación-de-contraseña)
+    - [Contraseña temporal (`PENDIENTE_DE_ACTIVACION`)](#contraseña-temporal-pendiente_de_activacion)
+    - [Formato de las respuestas de error](#formato-de-las-respuestas-de-error)
 - [Archivos subidos](#archivos-subidos)
 - [Configuración y Ejecución](#configuración-y-ejecución)
     - [Preparar la base de datos (Docker)](#preparar-la-base-de-datos-docker)
@@ -92,6 +94,41 @@ Si el usuario olvida su contraseña, el flujo se separa en dos pasos para no apl
 2. **`POST /api/auth/reset-password`** (público): recibe el token y la nueva contraseña, valida que no esté vencido ni ya usado, y recién ahí la aplica.
 
 Por diseño, este flujo responde siempre igual (200) exista o no el email, para no permitir enumerar cuentas registradas, y limita a **3 solicitudes cada 15 minutos por email** (`429 Too Many Requests` si se supera), para frenar abuso hacia el correo del usuario o hacia el proveedor de mail.
+
+### Contraseña temporal (`PENDIENTE_DE_ACTIVACION`)
+
+Una cuenta nueva, o una cuya contraseña resetea un administrador, queda en estado `PENDIENTE_DE_ACTIVACION` con una contraseña temporal enviada por mail. Puede iniciar sesión, pero `JwtRequestFilter` le responde **403** en cualquier ruta que no sea:
+
+- `/auth/**` y `POST /reportes/validar` (el filtro corre también en las rutas públicas si llega un Bearer), y
+- cambiar su propia contraseña: `PATCH /funcionarios/{id}/contrasenia` o `PATCH /estudiantes/{id}/contrasenia`. Es lo único que la pasa a `ACTIVO`. El reset de un administrador (`POST` al mismo path) **no** está permitido en este estado.
+
+Ese 403 lleva `"code": "PASSWORD_CHANGE_REQUIRED"`, para que el frontend lo distinga de un 403 por falta de permisos sin comparar el texto del `message`:
+
+```json
+{
+  "timestamp": "2026-08-25T15:00:00",
+  "status": 403,
+  "error": "Forbidden",
+  "message": "Debe cambiar su contraseña temporal antes de continuar.",
+  "path": "/carreras",
+  "code": "PASSWORD_CHANGE_REQUIRED"
+}
+```
+
+Esta whitelist vive en `JwtRequestFilter.esRutaPermitidaPendienteActivacion`, separada de las rutas públicas de `SecurityConfig`: si se cambian las públicas hay que revisar también esa lista (hay un comentario cruzado en ambos lugares).
+
+### Formato de las respuestas de error
+
+Todo error trae `timestamp`, `status`, `error`, `message` y `path`. El texto para mostrar al usuario es siempre **`message`** (en español, tuteo). `error` es la etiqueta HTTP estándar en inglés (`"Forbidden"`) y **no** es para mostrar ni para comparar.
+
+Hay dos orígenes de error, con una diferencia que importa:
+
+| Origen | Cuándo | Campos extra |
+|---|---|---|
+| `GlobalExceptionHandler` | Errores que salen de un controlador o servicio (validación, 404, 409, etc.) | En validación (400): `detalles`, un mapa `campo → mensaje`. **Nunca** trae `code`. |
+| `ApiErrorAttributes` (`/error`) | Errores que un filtro responde antes de llegar al controlador: 401 de `JwtRequestFilter` y del entry point, 403 de contraseña temporal, y requests que rechaza el firewall (ej. `//carreras`, 400) | `code`, **solo** cuando el error lo declara (hoy únicamente `PASSWORD_CHANGE_REQUIRED`). |
+
+Es decir: `code` existe únicamente en errores de filtro, y hoy en uno solo. Un 403 por falta de permisos (que sí sale de `@PreAuthorize`, vía `GlobalExceptionHandler`) no lo trae, y ningún error de validación o de negocio tampoco. Los 5xx siempre devuelven el mensaje genérico `"Ocurrió un error inesperado."`.
 
 ## Archivos subidos
 
