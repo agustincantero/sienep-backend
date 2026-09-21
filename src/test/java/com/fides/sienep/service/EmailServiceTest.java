@@ -192,6 +192,25 @@ class EmailServiceTest {
     }
 
     @Test
+    @DisplayName("Plantilla - Un placeholder sin valor falla en vez de dejar {{CLAVE}} literal en el mail")
+    void plantilla_PlaceholderSinValor_Falla() {
+        IllegalStateException e = assertThrows(IllegalStateException.class, () ->
+                emailService.renderizarPlantilla("email-templates/prueba-dos-placeholders.html",
+                        java.util.Map.of("NOMBRE", "Juan")));
+
+        org.junit.jupiter.api.Assertions.assertTrue(e.getMessage().contains("{{CODIGO}}"), e.getMessage());
+    }
+
+    @Test
+    @DisplayName("Plantilla - Con todos los valores se reemplaza y se escapa el HTML")
+    void plantilla_TodosLosValores_Renderiza() {
+        String html = emailService.renderizarPlantilla("email-templates/prueba-dos-placeholders.html",
+                java.util.Map.of("NOMBRE", "<Juan>", "CODIGO", "123"));
+
+        assertEquals("<p>Hola &lt;Juan&gt;, tu código es 123.</p>\n", html);
+    }
+
+    @Test
     @DisplayName("enviarNotificacionRecordatorio NO relanza la excepción si Brevo falla (solo warn)")
     void enviarNotificacionRecordatorio_falloBrevo_noLanza() {
         mockServer.expect(requestTo(BREVO_URL)).andRespond(withServerError());

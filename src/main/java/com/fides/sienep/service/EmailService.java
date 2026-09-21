@@ -86,12 +86,21 @@ public class EmailService {
     // Un solo pase con regex: lo que se inserta nunca se vuelve a escanear. Reemplazar clave
     // por clave iterando el Map dejaba que un valor con "{{OTRA_CLAVE}}" (ej. un título escrito
     // por un usuario) fuera pisado por un reemplazo posterior, según el orden de iteración.
-    // Un placeholder sin valor queda tal cual en el resultado.
-    private String renderizarPlantilla(String recursoClasspath, Map<String, String> valores) {
+    //
+    // Un placeholder sin valor corta el envío (IllegalStateException): dejarlo literal mandaba
+    // un mail con "{{CLAVE}}" a la vista del destinatario — típico de agregar un placeholder a
+    // la plantilla y olvidarse de pasarlo desde el método que la usa. Quien llama ya captura
+    // cualquier Exception, la registra y responde el error de envío, así que el fallo queda
+    // visible en el log en vez de salir un correo roto. (Package-private para poder testearlo.)
+    String renderizarPlantilla(String recursoClasspath, Map<String, String> valores) {
         String plantilla = plantillasCargadas.computeIfAbsent(recursoClasspath, this::cargarPlantilla);
         return PLACEHOLDER.matcher(plantilla).replaceAll(coincidencia -> {
             String valor = valores.get(coincidencia.group(1));
-            return Matcher.quoteReplacement(valor != null ? HtmlUtils.htmlEscape(valor) : coincidencia.group());
+            if (valor == null) {
+                throw new IllegalStateException("La plantilla " + recursoClasspath
+                        + " usa el placeholder {{" + coincidencia.group(1) + "}} sin valor asignado");
+            }
+            return Matcher.quoteReplacement(HtmlUtils.htmlEscape(valor));
         });
     }
 
