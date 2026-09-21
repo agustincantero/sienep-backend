@@ -227,6 +227,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Obtener resumen por ID - Éxito")
     void obtenerResumenPorId_Exito() {
+        mockAuthConPermiso("1", "VER_ESTUDIANTE_RESUMIDO");
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
         when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
 
@@ -250,6 +251,32 @@ class EstudianteServiceTest {
         verify(estudianteMapper, never()).toResumenDto(any());
     }
 
+    @Test
+    @DisplayName("Obtener resumen por ID - Con VER_ESTUDIANTE conserva la urlFoto")
+    void obtenerResumenPorId_ConVerEstudiante_ConservaUrlFoto() {
+        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "VER_ESTUDIANTE");
+        resumenDTO.setUrlFoto("/estudiantes/1/foto");
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        EstudianteResumenDTO resultado = estudianteService.obtenerResumenPorId(1);
+
+        assertEquals("/estudiantes/1/foto", resultado.getUrlFoto());
+    }
+
+    @Test
+    @DisplayName("Obtener resumen por ID - Sin VER_ESTUDIANTE oculta la urlFoto (el endpoint de foto daría 403)")
+    void obtenerResumenPorId_SinVerEstudiante_OcultaUrlFoto() {
+        mockAuthConPermiso("1", "VER_ESTUDIANTE_RESUMIDO");
+        resumenDTO.setUrlFoto("/estudiantes/1/foto");
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        EstudianteResumenDTO resultado = estudianteService.obtenerResumenPorId(1);
+
+        assertNull(resultado.getUrlFoto());
+    }
+
     // =========================================================
     // LISTAR
     // =========================================================
@@ -269,6 +296,40 @@ class EstudianteServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Listar - Con VER_ESTUDIANTE conserva la urlFoto de cada estudiante")
+    void listar_ConVerEstudiante_ConservaUrlFoto() {
+        mockAuthConPermiso("1", "VER_ESTUDIANTE");
+        resumenDTO.setUrlFoto("/estudiantes/1/foto");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        Page<EstudianteResumenDTO> resultado = estudianteService.listar(
+                null, null, null, null, EstadoLogico.ACTIVO, PageRequest.of(0, 10));
+
+        assertEquals("/estudiantes/1/foto", resultado.getContent().get(0).getUrlFoto());
+    }
+
+    @Test
+    @DisplayName("Listar - Sin VER_ESTUDIANTE (ej. TUTOR, DOCENTE) oculta la urlFoto")
+    void listar_SinVerEstudiante_OcultaUrlFoto() {
+        mockAuthConPermiso("1", "VER_ESTUDIANTE_RESUMIDO");
+        resumenDTO.setUrlFoto("/estudiantes/1/foto");
+
+        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteExistente));
+        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO, PageRequest.of(0, 10)))
+                .thenReturn(pagina);
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        Page<EstudianteResumenDTO> resultado = estudianteService.listar(
+                null, null, null, null, null, PageRequest.of(0, 10));
+
+        assertNull(resultado.getContent().get(0).getUrlFoto());
     }
 
     @Test
@@ -695,6 +756,21 @@ class EstudianteServiceTest {
         assertNotNull(resultado);
         assertEquals("Ana", resultado.getNombre());
         verify(estudianteMapper).toResumenDto(estudianteExistente);
+    }
+
+    @Test
+    @DisplayName("Ver mi perfil - El propio estudiante conserva la urlFoto de su foto")
+    void verMiPerfil_ConservaUrlFotoPropia() {
+        mockAuth("1", true);
+        resumenDTO.setUrlFoto("/estudiantes/1/foto");
+
+        when(estudianteRepository.findById(anyInt()))
+                .thenReturn(Optional.of(estudianteExistente));
+        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+
+        EstudianteResumenDTO resultado = estudianteService.verMiPerfil();
+
+        assertEquals("/estudiantes/1/foto", resultado.getUrlFoto());
     }
 
     // =========================================================

@@ -140,7 +140,7 @@ public class EstudianteService {
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
     public EstudianteResumenDTO obtenerResumenPorId(Integer id) {
-        return estudianteMapper.toResumenDto(buscarOFallar(id));
+        return aResumen(buscarOFallar(id), tienePermiso("VER_ESTUDIANTE"));
     }
 
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
@@ -151,7 +151,8 @@ public class EstudianteService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Requiere permiso BUSCAR_ESTUDIANTE para buscar o filtrar.");
         }
 
-        EstadoLogico estadoEfectivo = tienePermiso("VER_ESTUDIANTE") ? estado : EstadoLogico.ACTIVO;
+        boolean puedeVerEstudiante = tienePermiso("VER_ESTUDIANTE");
+        EstadoLogico estadoEfectivo = puedeVerEstudiante ? estado : EstadoLogico.ACTIVO;
 
         Page<Estudiante> resultado;
         if (texto != null) {
@@ -176,7 +177,7 @@ public class EstudianteService {
                     : estudianteRepository.findAll(pageable);
         }
 
-        return resultado.map(estudianteMapper::toResumenDto);
+        return resultado.map(estudiante -> aResumen(estudiante, puedeVerEstudiante));
     }
 
     @PreAuthorize("hasAuthority('EDITAR_ESTUDIANTE')")
@@ -202,7 +203,20 @@ public class EstudianteService {
     @Transactional(readOnly = true)
     public EstudianteResumenDTO verMiPerfil() {
         Integer id = getIdUsuarioAutenticado();
-        return estudianteMapper.toResumenDto(buscarOFallar(id));
+        return aResumen(buscarOFallar(id), true);
+    }
+
+    // La ruta de la foto solo se ofrece a quien puede pedirla: GET /estudiantes/{id}/foto exige
+    // VER_ESTUDIANTE o ser el propio estudiante (ver obtenerFoto). El resumen también lo ven roles
+    // sin ese permiso (TUTOR, DOCENTE), a los que no se les da una URL que devolvería 403. Se
+    // nulifica acá, igual que el bloque confidencial de obtenerPorId, para no acoplar MapStruct a
+    // SecurityContextHolder.
+    private EstudianteResumenDTO aResumen(Estudiante estudiante, boolean puedeVerFoto) {
+        EstudianteResumenDTO dto = estudianteMapper.toResumenDto(estudiante);
+        if (!puedeVerFoto) {
+            dto.setUrlFoto(null);
+        }
+        return dto;
     }
 
     // =========================================================
