@@ -64,6 +64,15 @@ public class InformeAdjuntoService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Estudiante no encontrado: " + dto.getIdUsuario()));
 
+        // PENDIENTE_DE_ACTIVACION también se admite: es el estado con el que se crea todo
+        // estudiante hasta su primer login (y al que vuelve tras un reset de contraseña), y
+        // no debe impedir cargarle informes. Mismo criterio que restablecerContrasenia.
+        if (estudiante.getEstado() != EstadoLogico.ACTIVO
+                && estudiante.getEstado() != EstadoLogico.PENDIENTE_DE_ACTIVACION) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "No se puede adjuntar un informe a un estudiante inactivo.");
+        }
+
         if (informeRepository.existsByEstudianteIdUsuarioAndNombre(dto.getIdUsuario(), dto.getNombre())) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Ya existe un informe con ese nombre para este estudiante");
