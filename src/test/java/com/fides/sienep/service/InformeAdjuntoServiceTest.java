@@ -133,6 +133,61 @@ class InformeAdjuntoServiceTest {
     }
 
     @Test
+    @DisplayName("Adjuntar informe - Estudiante inactivo (422)")
+    void adjuntar_LanzaExcepcion_EstudianteInactivo() {
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "informe.pdf", "application/pdf", "contenido".getBytes());
+        InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
+        estudianteMock.setEstado(EstadoLogico.INACTIVO);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> informeService.adjuntar(dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(informeRepository, never()).save(any());
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    @DisplayName("Adjuntar informe - Estudiante eliminado (422)")
+    void adjuntar_LanzaExcepcion_EstudianteEliminado() {
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "informe.pdf", "application/pdf", "contenido".getBytes());
+        InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
+        estudianteMock.setEstado(EstadoLogico.ELIMINADO);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> informeService.adjuntar(dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(informeRepository, never()).save(any());
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    @DisplayName("Adjuntar informe - Estudiante pendiente de activación - Éxito")
+    void adjuntar_Exito_EstudiantePendienteDeActivacion() {
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "informe.pdf", "application/pdf", "contenido".getBytes());
+        InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
+        estudianteMock.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
+        when(fileStorageService.guardar(eq(archivo), eq("informes/1"), anyList(), anyLong()))
+                .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
+        when(informeRepository.save(any(InformeAdjunto.class))).thenReturn(informeMock);
+        when(informeMapper.toDto(any(InformeAdjunto.class))).thenReturn(responseDTO);
+
+        assertNotNull(informeService.adjuntar(dto));
+        verify(informeRepository).save(any(InformeAdjunto.class));
+    }
+
+    @Test
     @DisplayName("Adjuntar informe - Nombre duplicado (409)")
     void adjuntar_LanzaExcepcion_NombreDuplicado() {
         MultipartFile archivo = new MockMultipartFile(
