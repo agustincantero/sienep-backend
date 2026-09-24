@@ -24,7 +24,15 @@ public class Sha256BCryptPasswordEncoder implements PasswordEncoder {
 
     @Override
     public boolean matches(CharSequence rawPassword, String encodedPassword) {
-        return bcrypt.matches(sha256Hex(rawPassword), encodedPassword);
+        if (bcrypt.matches(sha256Hex(rawPassword), encodedPassword)) return true;
+        // Hashes guardados antes de introducir el pre-hash: BCrypt directo sobre la
+        // contraseña. Sin este fallback, todas las cuentas existentes dejan de poder
+        // loguearse. Un hash BCrypt no indica cuál de los dos esquemas se usó, así que
+        // se prueban ambos. Solo aplica hasta 72 bytes: las contraseñas más largas
+        // nunca se pudieron guardar con el esquema anterior (y BCrypt las rechaza).
+        // Cada cuenta pasa al esquema nuevo la próxima vez que cambia su contraseña.
+        return rawPassword.toString().getBytes(StandardCharsets.UTF_8).length <= 72
+                && bcrypt.matches(rawPassword, encodedPassword);
     }
 
     private String sha256Hex(CharSequence rawPassword) {
