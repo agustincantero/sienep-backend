@@ -14,6 +14,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,8 +77,13 @@ public class JwtTokenUtil {
         return extractClaim(token, Claims::getIssuedAt);
     }
 
+    // El claim "iat" del JWT trunca a segundos enteros (así lo exige el spec), pero
+    // credencialesVigentesDesde se guarda con LocalDateTime.now() (precisión de
+    // milisegundos). Sin truncar acá, un token emitido genuinamente después de una
+    // invalidación, pero dentro del mismo segundo de reloj, se rechazaría igual: su
+    // iat redondeado hacia abajo quedaría "antes" de la marca con sub-segundos.
     private Date toDate(LocalDateTime fecha) {
-        return Date.from(fecha.atZone(ZoneId.systemDefault()).toInstant());
+        return Date.from(fecha.truncatedTo(ChronoUnit.SECONDS).atZone(ZoneId.systemDefault()).toInstant());
     }
 
     private Boolean isTokenExpired(String token) {
