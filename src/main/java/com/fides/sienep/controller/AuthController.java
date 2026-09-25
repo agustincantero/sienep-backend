@@ -71,7 +71,8 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "Cerrar sesión",
-            description = "Stateless: el cliente descarta el token.")
+            description = "El cliente descarta el token y, además, cualquier JWT emitido antes de este momento " +
+                    "queda invalidado del lado del servidor (mismo mecanismo que un cambio de contraseña).")
     @ApiResponse(responseCode = "200", description = "Sesión cerrada")
     public ResponseEntity<Void> logout(HttpServletRequest request, Authentication auth) {
         authService.logout(auth, request.getRemoteAddr());

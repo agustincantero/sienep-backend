@@ -284,15 +284,23 @@ public class AuthService {
     //
     // Por ahora se acepta la limitación como decisión de diseño consciente.
     // No implementar ninguna de estas opciones sin definir el alcance con el equipo.
+    @Transactional
     public void logout(Authentication auth, String ip) {
         if (auth != null && auth.isAuthenticated()
                 && !auth.getPrincipal().equals("anonymousUser")) {
             try {
                 int idUsuario = Integer.parseInt(auth.getName());
+
+                // Mismo mecanismo que invalida tokens tras un cambio de contraseña
+                usuarioRepository.findById(idUsuario).ifPresent(usuario -> {
+                    usuario.setCredencialesVigentesDesde(LocalDateTime.now());
+                    usuarioRepository.save(usuario);
+                });
+
                 auditoriaService.registrarEventoManual(
                         "SISTEMA", TipoAccion.LOGOUT, idUsuario, ip);
             } catch (Exception e) {
-                log.warn("No se pudo auditar el logout: {}", e.getMessage());
+                log.warn("No se pudo completar el logout: {}", e.getMessage());
             }
         }
     }
