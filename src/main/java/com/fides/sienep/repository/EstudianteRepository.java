@@ -94,6 +94,10 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Integer>
     boolean existsByDocumento(String documento);
     boolean existsByEmail(String email);
 
+    // Para editar(): excluye al propio estudiante, si no cualquier edición que no
+    // toque el email fallaría al "chocar" contra su propio registro.
+    boolean existsByEmailAndIdUsuarioNot(String email, int idUsuario);
+
 
     // ── Queries para Reportes — sin paginación ────────────────
     // Usado por ReporteService solo para la exportación PDF (que trae la
