@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.AdLoginRequestDTO;
 import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
@@ -65,6 +66,7 @@ class AuthServiceTest {
     @Mock private PasswordResetRateLimiter passwordResetRateLimiter;
     @Mock private LoginIpRateLimiter loginIpRateLimiter;
     @Mock private GoogleIdTokenVerifierService googleIdTokenVerifierService;
+    @Mock private ActiveDirectoryVerifierService activeDirectoryVerifierService;
 
     @InjectMocks
     private AuthService authService;
@@ -347,6 +349,145 @@ class AuthServiceTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
         verifyNoInteractions(jwtTokenUtil);
+    }
+
+    // ── Login con Active Directory ───────────────────────────────
+
+    private AdLoginRequestDTO adDto() {
+        AdLoginRequestDTO dto = new AdLoginRequestDTO();
+        dto.setUsuario("jgarcia");
+        dto.setContrasenia("Corp123!");
+        return dto;
+    }
+
+    @Test
+    @DisplayName("Login con AD - Éxito para funcionario activo, genera token y audita")
+    void loginConAd_Exito_Funcionario() {
+        when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!"))
+                .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(jwtTokenUtil.generateToken(2, "ADMINISTRADOR")).thenReturn("token-fake");
+
+        LoginResponseDTO resultado = authService.loginConAd(adDto(), IP);
+
+        assertEquals("token-fake", resultado.getToken());
+        verify(logIntentoRepository).save(argThat((LogIntento l) -> l.getIdUsuario() == 2 && l.isFueExitoso()));
+        verify(auditoriaService).registrarEventoManual(eq("SISTEMA"), any(), eq(2), eq(IP));
+        verifyNoInteractions(authManager);
+    }
+
+    @Test
+    @DisplayName("Login con AD - Éxito para estudiante, usa rol ESTUDIANTE")
+    void loginConAd_Exito_Estudiante() {
+        Estudiante estudiante = new Estudiante();
+        estudiante.setIdUsuario(1);
+        estudiante.setEmail("ana.perez@estudiantes.utec.edu.uy");
+        estudiante.setBloqueado(false);
+        estudiante.setEstado(EstadoLogico.ACTIVO);
+        estudiante.setRol(new Rol("ESTUDIANTE"));
+
+        when(activeDirectoryVerifierService.emailVerificado("aperez", "Corp123!"))
+                .thenReturn(Optional.of("ana.perez@estudiantes.utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("ana.perez@estudiantes.utec.edu.uy")).thenReturn(Optional.empty());
+        when(estudianteRepository.findByEmail("ana.perez@estudiantes.utec.edu.uy")).thenReturn(Optional.of(estudiante));
+        when(usuarioRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(jwtTokenUtil.generateToken(1, "ESTUDIANTE")).thenReturn("token-estudiante");
+
+        AdLoginRequestDTO dto = adDto();
+        dto.setUsuario("aperez");
+
+        LoginResponseDTO resultado = authService.loginConAd(dto, IP);
+
+        assertEquals("token-estudiante", resultado.getToken());
+        verify(jwtTokenUtil).generateToken(1, "ESTUDIANTE");
+    }
+
+    @Test
+    @DisplayName("Login con AD - Cuenta PENDIENTE_DE_ACTIVACION pasa a ACTIVO")
+    void loginConAd_CuentaPendiente_PasaAActivo() {
+        funcionario.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
+        when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!"))
+                .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(jwtTokenUtil.generateToken(2, "ADMINISTRADOR")).thenReturn("token-fake");
+
+        authService.loginConAd(adDto(), IP);
+
+        assertEquals(EstadoLogico.ACTIVO, funcionario.getEstado());
+        verify(funcionarioRepository).save(funcionario);
+    }
+
+    @Test
+    @DisplayName("Login con AD - Credenciales rechazadas por AD (401), no consulta cuentas")
+    void loginConAd_CredencialesRechazadas_LanzaUnauthorized() {
+        when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConAd(adDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(funcionarioRepository, estudianteRepository, jwtTokenUtil);
+    }
+
+    @Test
+    @DisplayName("Login con AD - Email verificado no pertenece a ninguna cuenta (401), no da de alta nada")
+    void loginConAd_EmailSinCuenta_LanzaUnauthorized() {
+        when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!"))
+                .thenReturn(Optional.of("desconocido@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("desconocido@utec.edu.uy")).thenReturn(Optional.empty());
+        when(estudianteRepository.findByEmail("desconocido@utec.edu.uy")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConAd(adDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(jwtTokenUtil);
+    }
+
+    @Test
+    @DisplayName("Login con AD - Cuenta inactiva (401)")
+    void loginConAd_CuentaInactiva_LanzaUnauthorized() {
+        funcionario.setEstado(EstadoLogico.INACTIVO);
+        when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!"))
+                .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConAd(adDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(jwtTokenUtil);
+    }
+
+    @Test
+    @DisplayName("Login con AD - Usuario bloqueado (401)")
+    void loginConAd_UsuarioBloqueado_LanzaUnauthorized() {
+        funcionario.setBloqueado(true);
+        when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!"))
+                .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
+        when(funcionarioRepository.findByEmail("juan.garcia@utec.edu.uy")).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConAd(adDto(), IP));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verifyNoInteractions(jwtTokenUtil);
+    }
+
+    @Test
+    @DisplayName("Login con AD - AD no configurado o controlador de dominio inalcanzable (503)")
+    void loginConAd_AdNoDisponible_Lanza503() {
+        when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!"))
+                .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AD no configurado"));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConAd(adDto(), IP));
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
+        verifyNoInteractions(funcionarioRepository, estudianteRepository, jwtTokenUtil);
     }
 
     // ── Logout ────────────────────────────────────────────────

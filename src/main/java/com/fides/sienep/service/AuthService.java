@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.AdLoginRequestDTO;
 import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
@@ -66,6 +67,7 @@ public class AuthService {
     private final PasswordResetRateLimiter        passwordResetRateLimiter;
     private final LoginIpRateLimiter              loginIpRateLimiter;
     private final GoogleIdTokenVerifierService    googleIdTokenVerifierService;
+    private final ActiveDirectoryVerifierService  activeDirectoryVerifierService;
 
     // Campo separado (no final): Lombok no copia @Value a los parámetros del
     // constructor generado por @RequiredArgsConstructor sin un lombok.config,
@@ -154,49 +156,67 @@ public class AuthService {
     public LoginResponseDTO loginConGoogle(GoogleLoginRequestDTO dto, String ip) {
         String email = googleIdTokenVerifierService.emailVerificado(dto.getIdToken())
                 .orElseThrow(() -> credencialesInvalidas(ip));
+        return loginConIdentidadExterna(email, ip, false, "Google");
+    }
 
-        // 1. Resolver quién es y si la cuenta está activa — mismo criterio que
-        // LoginUsuarioDetailsService.loadUserByUsername(), reimplementado acá
-        // porque este flujo no pasa por authManager.authenticate() (no hay
-        // contraseña que validar, Google ya probó la identidad).
+    // =========================================================
+    // LOGIN CON ACTIVE DIRECTORY (LDAP)
+    // =========================================================
+
+    // Mismo patrón que loginConGoogle(): el controlador de dominio prueba quién es la persona y SIENEP solo busca la cuenta existente por el atributo mail de AD y emite su propio token. A diferencia de Google, acá un login exitoso sí saca a la cuenta de PENDIENTE_DE_ACTIVACION: la contraseña temporal local no interviene en este flujo, así que dejarla pendiente forzaría una pantalla de cambio de contraseña que un usuario de AD nunca necesita.
+    @Transactional(noRollbackFor = ResponseStatusException.class)
+    public LoginResponseDTO loginConAd(AdLoginRequestDTO dto, String ip) {
+        String email = activeDirectoryVerifierService.emailVerificado(dto.getUsuario(), dto.getContrasenia()).orElseThrow(() -> credencialesInvalidas(ip));
+        return loginConIdentidadExterna(email, ip, true, "AD");
+    }
+
+    // Compartido por loginConGoogle() y loginConAd(): ambos ya recibieron un email verificado por un proveedor externo, así que solo queda resolver la cuenta de SIENEP, activarla si correspondiera, validar que no esté bloqueada y emitir el mismo JWT que el resto de los logins. Mismo criterio de activo que LoginUsuarioDetailsService.loadUserByUsername(), reimplementado acá porque este flujo no pasa por authManager.authenticate() (no hay contraseña que validar, el proveedor externo ya probó la identidad).
+    private LoginResponseDTO loginConIdentidadExterna(String email, String ip, boolean activarPendientes, String proveedor) {
         int idUsuario;
         String rol;
         boolean activa;
+        boolean pendiente;
 
         Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByEmail(email);
         if (funcionarioOpt.isPresent()) {
             Funcionario funcionario = funcionarioOpt.get();
+            pendiente = funcionario.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
+            activa = funcionario.getEstado() == EstadoLogico.ACTIVO || pendiente;
+            if (activarPendientes && pendiente) {
+                funcionario.setEstado(EstadoLogico.ACTIVO);
+                funcionarioRepository.save(funcionario);
+            }
             idUsuario = funcionario.getIdUsuario();
             rol = funcionario.getRol().getNombre();
-            activa = funcionario.getEstado() == EstadoLogico.ACTIVO
-                    || funcionario.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
         } else {
-            Estudiante estudiante = estudianteRepository.findByEmail(email)
-                    .orElseThrow(() -> credencialesInvalidas(ip));
+            Estudiante estudiante = estudianteRepository.findByEmail(email).orElseThrow(() -> credencialesInvalidas(ip));
+            pendiente = estudiante.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
+            activa = estudiante.getEstado() == EstadoLogico.ACTIVO || pendiente;
+            if (activarPendientes && pendiente) {
+                estudiante.setEstado(EstadoLogico.ACTIVO);
+                estudianteRepository.save(estudiante);
+            }
             idUsuario = estudiante.getIdUsuario();
             rol = estudiante.getRol().getNombre();
-            activa = estudiante.getEstado() == EstadoLogico.ACTIVO
-                    || estudiante.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
         }
 
         if (!activa) {
-            log.warn("Login con Google denegado — cuenta inactiva id={}", idUsuario);
+            log.warn("Login con {} denegado — cuenta inactiva id={}", proveedor, idUsuario);
             throw credencialesInvalidas(ip);
         }
 
-        // 2. Verificar si está bloqueado (mismo chequeo que login())
+        // Verificar si está bloqueado (mismo chequeo que login())
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> credencialesInvalidas(ip));
 
         if (usuario.isBloqueado()) {
-            log.warn("Login con Google denegado — usuario bloqueado id={}", idUsuario);
+            log.warn("Login con {} denegado — usuario bloqueado id={}", proveedor, idUsuario);
             throw credencialesInvalidas(ip);
         }
 
-        // 3. Éxito
         registrarIntento(idUsuario, true);
         String token = jwtTokenUtil.generateToken(idUsuario, rol);
-        log.info("[AUDIT] Login con Google exitoso: id={} rol={}", idUsuario, rol);
+        log.info("[AUDIT] Login con {} exitoso: id={} rol={}", proveedor, idUsuario, rol);
         auditoriaService.registrarEventoManual("SISTEMA", TipoAccion.LOGIN, idUsuario, ip);
 
         return new LoginResponseDTO(token);

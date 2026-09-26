@@ -1,5 +1,6 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.AdLoginRequestDTO;
 import com.fides.sienep.dto.GoogleLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
@@ -53,6 +54,24 @@ public class AuthController {
     public ResponseEntity<LoginResponseDTO> loginConGoogle(
             @RequestBody @Valid GoogleLoginRequestDTO dto, HttpServletRequest request) {
         LoginResponseDTO response = authService.loginConGoogle(dto, request.getRemoteAddr());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/ad")
+    @Operation(summary = "Iniciar sesión con Active Directory",
+            description = "Autentica un usuario y contraseña contra el controlador de dominio (LDAP) y, si el " +
+                    "atributo mail de esa cuenta de AD coincide con un funcionario o estudiante ya existente en " +
+                    "SIENEP, devuelve un token JWT válido por 5 horas. No da de alta cuentas nuevas. Un login " +
+                    "exitoso saca a la cuenta de PENDIENTE_DE_ACTIVACION.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Login exitoso"),
+            @ApiResponse(responseCode = "401", description = "Credenciales inválidas o no existe una cuenta con ese email"),
+            @ApiResponse(responseCode = "403", description = "Cuenta bloqueada"),
+            @ApiResponse(responseCode = "503", description = "Active Directory no configurado o controlador de dominio inalcanzable")
+    })
+    public ResponseEntity<LoginResponseDTO> loginConAd(
+            @RequestBody @Valid AdLoginRequestDTO dto, HttpServletRequest request) {
+        LoginResponseDTO response = authService.loginConAd(dto, request.getRemoteAddr());
         return ResponseEntity.ok(response);
     }
 

@@ -1,5 +1,6 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.AdLoginRequestDTO;
 import com.fides.sienep.dto.LoginRequestDTO;
 import com.fides.sienep.dto.LoginResponseDTO;
 import com.fides.sienep.dto.OlvideContraseniaDTO;
@@ -75,6 +76,64 @@ class AuthControllerTest extends AbstractControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Login con AD - Credenciales válidas responde 200 con el token")
+    void loginConAd_Valido_Responde200() throws Exception {
+        AdLoginRequestDTO dto = new AdLoginRequestDTO();
+        dto.setUsuario("jgarcia");
+        dto.setContrasenia("Corp123!");
+        when(authService.loginConAd(any(), anyString())).thenReturn(new LoginResponseDTO("token-fake"));
+
+        mockMvc.perform(post("/auth/ad")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("token-fake"));
+    }
+
+    @Test
+    @DisplayName("Login con AD - Usuario en blanco responde 400 (Bean Validation)")
+    void loginConAd_UsuarioEnBlanco_Responde400() throws Exception {
+        AdLoginRequestDTO dto = new AdLoginRequestDTO();
+        dto.setUsuario("");
+        dto.setContrasenia("Corp123!");
+
+        mockMvc.perform(post("/auth/ad")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Login con AD - Credenciales inválidas responde 401 (propagado desde el service)")
+    void loginConAd_CredencialesInvalidas_Responde401() throws Exception {
+        AdLoginRequestDTO dto = new AdLoginRequestDTO();
+        dto.setUsuario("jgarcia");
+        dto.setContrasenia("incorrecta");
+        when(authService.loginConAd(any(), anyString()))
+                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
+
+        mockMvc.perform(post("/auth/ad")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Login con AD - AD no configurado o controlador de dominio inalcanzable responde 503")
+    void loginConAd_AdNoDisponible_Responde503() throws Exception {
+        AdLoginRequestDTO dto = new AdLoginRequestDTO();
+        dto.setUsuario("jgarcia");
+        dto.setContrasenia("Corp123!");
+        when(authService.loginConAd(any(), anyString()))
+                .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AD no configurado"));
+
+        mockMvc.perform(post("/auth/ad")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isServiceUnavailable());
     }
 
     @Test

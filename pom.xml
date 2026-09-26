@@ -143,6 +143,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- Login con Active Directory (ActiveDirectoryVerifierService) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-ldap</artifactId>
+        </dependency>
         <!-- Servlet API -->
         <dependency>
             <groupId>jakarta.servlet</groupId>
