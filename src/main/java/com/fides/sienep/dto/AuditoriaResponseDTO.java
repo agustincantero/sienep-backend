@@ -28,6 +28,9 @@ public class AuditoriaResponseDTO {
     @Schema(description = "Nombre completo del usuario que realizó la acción", example = "Agustín Cantero")
     private String nombreAutor;
 
+    @Schema(description = "Documento del usuario que realizó la acción, sin el país (ver Usuario.paisDocumento). Nulo si fue un DBA directamente en BD", example = "12345678")
+    private String documentoAutor;
+
     @Schema(description = "Usuario del motor de Base de Datos que ejecutó la consulta", example = "sienep_app")
     private String usuarioBd;
 

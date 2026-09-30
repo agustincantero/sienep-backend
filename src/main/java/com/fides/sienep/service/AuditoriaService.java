@@ -55,9 +55,9 @@ public class AuditoriaService {
 
     @PreAuthorize("hasAuthority('VER_AUDITORIA')")
     @Transactional(readOnly = true)
-    public Page<AuditoriaResponseDTO> listarAuditorias(int page, int size, String entidad, TipoAccion accion, Integer idAutor) {
+    public Page<AuditoriaResponseDTO> listarAuditorias(int page, int size, String entidad, TipoAccion accion, Integer idAutor, String texto) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("fechaHora").descending());
-        
+
         Specification<Auditoria> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (entidad != null) {
@@ -68,6 +68,18 @@ public class AuditoriaService {
             }
             if (idAutor != null) {
                 predicates.add(cb.equal(root.get("autor").get("idUsuario"), idAutor));
+            }
+            // Búsqueda general por autor (nombre, apellido o documento, parcial e insensible a mayúsculas), mismo criterio que EstudianteRepository.buscarPorTexto. Un evento sin autor (cambio directo en BD) no tiene nada contra qué buscar, así que queda afuera cuando se usa este filtro.
+            if (texto != null && !texto.isBlank()) {
+                String comodin = "%" + texto.toLowerCase() + "%";
+                predicates.add(cb.and(
+                        cb.isNotNull(root.get("autor")),
+                        cb.or(
+                                cb.like(cb.lower(root.get("autor").get("nombre")), comodin),
+                                cb.like(cb.lower(root.get("autor").get("apellido")), comodin),
+                                cb.like(cb.lower(root.get("autor").get("documento")), comodin)
+                        )
+                ));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

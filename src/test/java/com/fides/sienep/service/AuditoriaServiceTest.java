@@ -86,6 +86,7 @@ public class AuditoriaServiceTest {
         autor.setIdUsuario(1);
         autor.setNombre("Ana");
         autor.setApellido("Gomez");
+        autor.setDocumento("45678911");
 
         Auditoria auditoria = new Auditoria();
         auditoria.setId(10);
@@ -104,6 +105,24 @@ public class AuditoriaServiceTest {
         assertEquals("USUARIO", resultado.getEntidad());
         assertEquals("Ana Gomez", resultado.getNombreAutor());
         assertEquals(1, resultado.getIdAutor());
+        assertEquals("45678911", resultado.getDocumentoAutor());
+    }
+
+    @Test
+    @DisplayName("Obtener auditoría por ID - Sin autor (cambio directo en BD), nombre y documento nulos")
+    void obtenerAuditoriaPorId_SinAutor_NombreYDocumentoNulos() {
+        Auditoria auditoria = new Auditoria();
+        auditoria.setId(12);
+        auditoria.setEntidad("ROLES");
+        auditoria.setAccion(TipoAccion.DELETE);
+        auditoria.setFechaHora(LocalDateTime.now());
+
+        when(auditoriaRepository.findById(12)).thenReturn(Optional.of(auditoria));
+
+        AuditoriaResponseDTO resultado = auditoriaService.obtenerAuditoriaPorId(12);
+
+        assertNull(resultado.getNombreAutor());
+        assertNull(resultado.getDocumentoAutor());
     }
 
     @Test
@@ -134,7 +153,7 @@ public class AuditoriaServiceTest {
 
         when(auditoriaRepository.findAll(Mockito.<Specification<Auditoria>>any(), any(Pageable.class))).thenReturn(pageMock);
 
-        Page<AuditoriaResponseDTO> resultado = auditoriaService.listarAuditorias(0, 10, "PERMISO", TipoAccion.INSERT, 1);
+        Page<AuditoriaResponseDTO> resultado = auditoriaService.listarAuditorias(0, 10, "PERMISO", TipoAccion.INSERT, 1, null);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
@@ -149,7 +168,7 @@ public class AuditoriaServiceTest {
         when(auditoriaRepository.findAll(Mockito.<Specification<Auditoria>>any(), any(Pageable.class)))
             .thenReturn(pageMock);
 
-        Page<AuditoriaResponseDTO> resultado = auditoriaService.listarAuditorias(0, 10, null, null, null);
+        Page<AuditoriaResponseDTO> resultado = auditoriaService.listarAuditorias(0, 10, null, null, null, null);
 
         assertNotNull(resultado);
     }
@@ -178,7 +197,7 @@ public class AuditoriaServiceTest {
         when(auditoriaRepository.findAll(specCaptor.capture(), any(Pageable.class))).thenReturn(pageMock);
 
         // Act
-        auditoriaService.listarAuditorias(0, 10, "USUARIO", TipoAccion.LOGIN, 1);
+        auditoriaService.listarAuditorias(0, 10, "USUARIO", TipoAccion.LOGIN, 1, null);
 
         // Assert - Ejecutamos la lambda capturada para cubrirla
         Specification<Auditoria> spec = specCaptor.getValue();
@@ -187,5 +206,44 @@ public class AuditoriaServiceTest {
         verify(cb).equal(pathEntidad, "USUARIO");
         verify(cb).equal(pathAccion, TipoAccion.LOGIN);
         verify(cb).equal(pathIdUsuario, 1);
+    }
+
+    @Test
+    @DisplayName("Listar auditorías - filtro texto busca por nombre o apellido del autor")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void listarAuditorias_FiltroTexto_BuscaPorAutor() {
+        // Arrange
+        Root<Auditoria> root = mock(Root.class);
+        CriteriaQuery<?> query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path pathAutor = mock(Path.class);
+        Path pathNombre = mock(Path.class);
+        Path pathApellido = mock(Path.class);
+        Path pathDocumento = mock(Path.class);
+
+        when(root.get("autor")).thenReturn(pathAutor);
+        when(pathAutor.get("nombre")).thenReturn(pathNombre);
+        when(pathAutor.get("apellido")).thenReturn(pathApellido);
+        when(pathAutor.get("documento")).thenReturn(pathDocumento);
+        when(cb.lower(pathNombre)).thenReturn(pathNombre);
+        when(cb.lower(pathApellido)).thenReturn(pathApellido);
+        when(cb.lower(pathDocumento)).thenReturn(pathDocumento);
+
+        Page<Auditoria> pageMock = new PageImpl<>(List.of());
+        ArgumentCaptor<Specification<Auditoria>> specCaptor = (ArgumentCaptor<Specification<Auditoria>>) (Object) ArgumentCaptor.forClass(Specification.class);
+
+        when(auditoriaRepository.findAll(specCaptor.capture(), any(Pageable.class))).thenReturn(pageMock);
+
+        // Act - solo el filtro texto, sin entidad/accion/idAutor
+        auditoriaService.listarAuditorias(0, 10, null, null, null, "carlos");
+
+        // Assert
+        Specification<Auditoria> spec = specCaptor.getValue();
+        spec.toPredicate(root, query, cb);
+
+        verify(cb).isNotNull(pathAutor);
+        verify(cb).like(pathNombre, "%carlos%");
+        verify(cb).like(pathApellido, "%carlos%");
+        verify(cb).like(pathDocumento, "%carlos%");
     }
 }
