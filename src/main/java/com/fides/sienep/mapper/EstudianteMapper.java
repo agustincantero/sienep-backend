@@ -2,6 +2,7 @@ package com.fides.sienep.mapper;
 
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
+import com.fides.sienep.dto.MiPerfilEstudianteDTO;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.Grupo;
 import com.fides.sienep.model.Telefono;
@@ -27,6 +28,11 @@ public interface EstudianteMapper {
     @Mapping(target = "grupos",    expression = "java(mapGrupos(entidad.getGrupos()))")
     @Mapping(target = "urlFoto",   expression = "java(mapUrlFoto(entidad))")
     EstudianteResumenDTO toResumenDto(Estudiante entidad);
+
+    @Mapping(target = "telefonos", expression = "java(mapTelefonos(entidad.getTelefonos()))")
+    @Mapping(target = "grupos",    expression = "java(mapGrupos(entidad.getGrupos()))")
+    @Mapping(target = "urlFoto",   expression = "java(mapUrlFoto(entidad))")
+    MiPerfilEstudianteDTO toMiPerfilDto(Estudiante entidad);
 
     List<EstudianteResponseDTO> toDtoList(List<Estudiante> entidades);
 

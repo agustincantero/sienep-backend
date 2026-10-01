@@ -6,6 +6,7 @@ import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.EstudianteUpdateDTO;
+import com.fides.sienep.dto.MiPerfilEstudianteDTO;
 import com.fides.sienep.dto.MisDatosRequestDTO;
 import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.Estudiante;
@@ -733,12 +734,16 @@ class EstudianteServiceTest {
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
         when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
-        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+        MiPerfilEstudianteDTO perfil = MiPerfilEstudianteDTO.builder().ciudad("Montevideo").build();
+        when(estudianteMapper.toMiPerfilDto(estudianteExistente)).thenReturn(perfil);
 
-        EstudianteResponseDTO resultado = estudianteService.editarMisDatos(1, dto);
+        MiPerfilEstudianteDTO resultado = estudianteService.editarMisDatos(1, dto);
 
-        assertNotNull(resultado);
+        assertSame(perfil, resultado);
+        assertEquals("Montevideo", estudianteExistente.getCiudad());
         verify(estudianteRepository).save(estudianteExistente);
+        // Nunca la ficha completa: trae el bloque confidencial y el motivo de derivación.
+        verify(estudianteMapper, never()).toDto(any());
     }
 
     @Test
@@ -762,33 +767,33 @@ class EstudianteServiceTest {
     // =========================================================
 
     @Test
-    @DisplayName("Ver mi perfil - Éxito")
+    @DisplayName("Ver mi perfil - Devuelve el perfil propio (con dirección), nunca la ficha completa")
     void verMiPerfil_Exito() {
         mockAuth("1", true);
+        MiPerfilEstudianteDTO perfil = MiPerfilEstudianteDTO.builder()
+                .nombre("Ana").ciudad("Montevideo").calle("Av. 18 de Julio").nroPuerta(1234).build();
 
-        lenient().when(estudianteRepository.findById(anyInt()))
-                .thenReturn(Optional.of(estudianteExistente));
-        lenient().when(estudianteMapper.toResumenDto(estudianteExistente))
-                .thenReturn(resumenDTO);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteMapper.toMiPerfilDto(estudianteExistente)).thenReturn(perfil);
 
-        EstudianteResumenDTO resultado = estudianteService.verMiPerfil();
+        MiPerfilEstudianteDTO resultado = estudianteService.verMiPerfil();
 
-        assertNotNull(resultado);
         assertEquals("Ana", resultado.getNombre());
-        verify(estudianteMapper).toResumenDto(estudianteExistente);
+        assertEquals("Av. 18 de Julio", resultado.getCalle());
+        // La ficha completa trae el bloque confidencial y el motivo de derivación.
+        verify(estudianteMapper, never()).toDto(any());
     }
 
     @Test
     @DisplayName("Ver mi perfil - El propio estudiante conserva la urlFoto de su foto")
     void verMiPerfil_ConservaUrlFotoPropia() {
         mockAuth("1", true);
-        resumenDTO.setUrlFoto("/estudiantes/1/foto");
+        MiPerfilEstudianteDTO perfil = MiPerfilEstudianteDTO.builder().urlFoto("/estudiantes/1/foto").build();
 
-        when(estudianteRepository.findById(anyInt()))
-                .thenReturn(Optional.of(estudianteExistente));
-        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteMapper.toMiPerfilDto(estudianteExistente)).thenReturn(perfil);
 
-        EstudianteResumenDTO resultado = estudianteService.verMiPerfil();
+        MiPerfilEstudianteDTO resultado = estudianteService.verMiPerfil();
 
         assertEquals("/estudiantes/1/foto", resultado.getUrlFoto());
     }
@@ -944,6 +949,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Subir foto - Éxito, guarda la ruta relativa devuelta por FileStorageService")
     void subirFoto_Exito() {
+        mockAuthConPermisos("10", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         MultipartFile foto = new MockMultipartFile(
                 "foto", "perfil.jpg", "image/jpeg", "contenido".getBytes());
 
@@ -958,6 +964,28 @@ class EstudianteServiceTest {
         assertNotNull(resultado);
         assertEquals("fotos/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg", estudianteExistente.getFoto());
         verify(estudianteRepository).save(estudianteExistente);
+        // Con VER_BLOQUE_CONFIDENCIAL la respuesta conserva el bloque confidencial.
+        assertEquals("Diagnóstico reservado", resultado.getInformacionSalud());
+    }
+
+    @Test
+    @DisplayName("Subir foto - El propio estudiante no recibe el bloque confidencial ni el motivo de derivación")
+    void subirFoto_PropioEstudiante_OcultaBloqueConfidencial() {
+        mockAuth("1", true);
+        MultipartFile foto = new MockMultipartFile(
+                "foto", "perfil.jpg", "image/jpeg", "contenido".getBytes());
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(fileStorageService.guardar(eq(foto), eq("fotos/1"), anyList(), anyLong()))
+                .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.jpg");
+        when(estudianteRepository.save(any(Estudiante.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(estudianteMapper.toDto(estudianteExistente)).thenReturn(responseDTO);
+
+        EstudianteResponseDTO resultado = estudianteService.subirFoto(1, foto);
+
+        assertNull(resultado.getInformacionSalud());
+        assertNull(resultado.getSistemaSalud());
+        assertNull(resultado.getMotivoDerivacion());
     }
 
     @Test
