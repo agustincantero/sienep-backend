@@ -13,6 +13,7 @@ CREATE TYPE proyecto.tipo_accion AS ENUM ('INSERT', 'UPDATE', 'DELETE', 'LOGIN',
 CREATE TYPE proyecto.tipo_frecuencia AS ENUM ('DIARIA', 'SEMANAL', 'MENSUAL', 'PERSONALIZADA');
 CREATE TYPE proyecto.dia_semana AS ENUM ('LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO');
 CREATE TYPE proyecto.tipo_recordatorio AS ENUM ('LLAMADA', 'REUNION', 'TAREA_ADMINISTRATIVA', 'OTRO');
+CREATE TYPE proyecto.estado_solicitud AS ENUM ('PENDIENTE', 'ATENDIDA', 'RECHAZADA');
 
 CREATE TYPE proyecto.pais_documento AS ENUM (
     'AFG','ALB','DZA','AND','AGO','ATG','ARG','ARM','AUS','AUT','AZE',
@@ -737,6 +738,50 @@ CREATE TRIGGER trg_actualizar_inst_com_confidenciales
 CREATE INDEX idx_inst_com_confidenciales_instancia ON proyecto.inst_com_confidenciales(cod_instancia);
 
 -- =====================================================
+-- TABLA: solicitudes_instancia
+-- =====================================================
+-- Pedido de una instancia hecho por el propio estudiante desde "Mi perfil". Un funcionario
+-- la atiende (crea la instancia y la enlaza en cod_instancia) o la rechaza con una respuesta.
+CREATE TABLE proyecto.solicitudes_instancia (
+    id_solicitud   SERIAL                    PRIMARY KEY,
+    id_estudiante  INT                       NOT NULL,
+    motivo         VARCHAR(500)              NOT NULL,
+    estado         proyecto.estado_solicitud NOT NULL DEFAULT 'PENDIENTE',
+    respuesta      VARCHAR(500),
+    id_funcionario INT,
+    cod_instancia  INT,
+    fec_resolucion TIMESTAMP,
+    created_at     TIMESTAMP                 NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP                 NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_solicitud_motivo_valido CHECK (TRIM(motivo) <> ''),
+    -- Cada estado con sus datos de resolución: pendiente sin resolver, atendida con la instancia
+    -- generada, rechazada con la respuesta para el estudiante.
+    CONSTRAINT chk_solicitud_resolucion CHECK (
+        (estado = 'PENDIENTE' AND id_funcionario IS NULL AND cod_instancia IS NULL AND fec_resolucion IS NULL)
+        OR (estado = 'ATENDIDA' AND id_funcionario IS NOT NULL AND cod_instancia IS NOT NULL
+            AND fec_resolucion IS NOT NULL)
+        OR (estado = 'RECHAZADA' AND id_funcionario IS NOT NULL AND cod_instancia IS NULL
+            AND fec_resolucion IS NOT NULL AND respuesta IS NOT NULL AND TRIM(respuesta) <> '')
+    ),
+    CONSTRAINT fk_solicitud_estudiante FOREIGN KEY (id_estudiante)
+        REFERENCES proyecto.estudiantes(id_usuario)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_solicitud_funcionario FOREIGN KEY (id_funcionario)
+        REFERENCES proyecto.funcionarios(id_usuario)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_solicitud_instancia FOREIGN KEY (cod_instancia)
+        REFERENCES proyecto.instancias(cod_instancia)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TRIGGER trg_actualizar_solicitudes_instancia
+    BEFORE UPDATE ON proyecto.solicitudes_instancia
+    FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+CREATE INDEX idx_solicitudes_estudiante ON proyecto.solicitudes_instancia(id_estudiante);
+CREATE INDEX idx_solicitudes_estado     ON proyecto.solicitudes_instancia(estado);
+
+-- =====================================================
 -- TABLA: log_intentos
 -- =====================================================
 CREATE TABLE proyecto.log_intentos (
@@ -862,6 +907,14 @@ BEGIN
         IF v_valor_nuevo IS NOT NULL THEN
             v_valor_nuevo := v_valor_nuevo - 'comentario';
         END IF;
+    -- El motivo de una solicitud lo escribe el estudiante y puede contar algo personal.
+    ELSIF TG_TABLE_NAME = 'solicitudes_instancia' THEN
+        IF v_valor_anterior IS NOT NULL THEN
+            v_valor_anterior := v_valor_anterior - 'motivo';
+        END IF;
+        IF v_valor_nuevo IS NOT NULL THEN
+            v_valor_nuevo := v_valor_nuevo - 'motivo';
+        END IF;
     END IF;
 
     -- Insertar en la tabla de auditoría (registrando también el usuario_bd)
@@ -901,6 +954,7 @@ CREATE TRIGGER trg_audit_involucrados AFTER INSERT OR UPDATE OR DELETE ON proyec
 CREATE TRIGGER trg_audit_inst_comunes AFTER INSERT OR UPDATE OR DELETE ON proyecto.inst_comunes FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
 CREATE TRIGGER trg_audit_inst_comentarios AFTER INSERT OR UPDATE OR DELETE ON proyecto.inst_comentarios FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
 CREATE TRIGGER trg_audit_inst_com_confidenciales AFTER INSERT OR UPDATE OR DELETE ON proyecto.inst_com_confidenciales FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
+CREATE TRIGGER trg_audit_solicitudes_instancia AFTER INSERT OR UPDATE OR DELETE ON proyecto.solicitudes_instancia FOR EACH ROW EXECUTE FUNCTION proyecto.trg_auditoria_general();
 
 
 SET search_path TO proyecto;
@@ -1037,7 +1091,10 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('CREAR_ITR',      'Permite registrar un nuevo ITR'),
     ('EDITAR_ITR',     'Permite editar los datos de un ITR'),
     ('DESACTIVAR_ITR', 'Permite desactivar un ITR'),
-    ('REACTIVAR_ITR',  'Permite reactivar un ITR dado de baja')
+    ('REACTIVAR_ITR',  'Permite reactivar un ITR dado de baja'),
+    -- Solicitudes de instancia (las crea el propio estudiante, sin permiso)
+    ('VER_SOLICITUDES_INSTANCIA',   'Permite ver las solicitudes de instancia hechas por los estudiantes'),
+    ('ATENDER_SOLICITUD_INSTANCIA', 'Permite atender (creando la instancia) o rechazar solicitudes de instancia')
 ON CONFLICT (nom_permiso) DO NOTHING;
 
 -- =============================================
@@ -1091,6 +1148,15 @@ FROM proyecto.roles r
         'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA'
     )
 WHERE r.nom_rol = 'TUTOR'
+ON CONFLICT DO NOTHING;
+
+-- Solicitudes de instancia: los roles que crean instancias (atender una solicitud crea una). ADMINISTRADOR
+-- ya los recibe con "todos los permisos".
+INSERT INTO proyecto.rol_permisos (id_rol, id_permiso)
+SELECT r.id_rol, p.id_permiso
+FROM proyecto.roles r
+    JOIN proyecto.permisos p ON p.nom_permiso IN ('VER_SOLICITUDES_INSTANCIA', 'ATENDER_SOLICITUD_INSTANCIA')
+WHERE r.nom_rol IN ('PSICOPEDAGOGO', 'TUTOR')
 ON CONFLICT DO NOTHING;
 
 -- DOCENTE
