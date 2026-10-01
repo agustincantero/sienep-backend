@@ -41,4 +41,8 @@ public class UsuarioAutenticadoDTO {
 
     @Schema(description = "Nombres de permiso (nom_permiso) activos del rol, sin duplicados y ordenados")
     private List<String> permisos;
+
+    @Schema(description = "Ruta para ver la foto de perfil propia (/estudiantes/{id}/foto o /funcionarios/{id}/foto). " +
+            "Es null si no tiene foto cargada.", example = "/funcionarios/3/foto")
+    private String urlFoto;
 }

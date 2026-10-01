@@ -556,7 +556,18 @@ class AuthServiceTest {
         assertEquals(EstadoLogico.ACTIVO, dto.getEstado());
         assertEquals("ADMINISTRADOR", dto.getRol());
         assertEquals(List.of("CREAR_INSTANCIA", "VER_FUNCIONARIOS"), dto.getPermisos());
+        assertNull(dto.getUrlFoto());
         verifyNoInteractions(estudianteRepository);
+    }
+
+    @Test
+    @DisplayName("usuarioAutenticado - Funcionario con foto: urlFoto apunta a /funcionarios/{id}/foto")
+    void usuarioAutenticado_FuncionarioConFoto_UrlFoto() {
+        autenticarComo(2);
+        funcionario.setFoto("fotos/2/abc.png");
+        when(funcionarioRepository.findByIdConRolYPermisos(2)).thenReturn(Optional.of(funcionario));
+
+        assertEquals("/funcionarios/2/foto", authService.usuarioAutenticado().getUrlFoto());
     }
 
     @Test
@@ -580,6 +591,22 @@ class AuthServiceTest {
         assertEquals(TipoUsuario.ESTUDIANTE, dto.getTipo());
         assertEquals("ESTUDIANTE", dto.getRol());
         assertEquals(List.of("VER_COMENTARIO_NORMAL_ESTUDIANTE"), dto.getPermisos());
+        assertNull(dto.getUrlFoto());
+    }
+
+    @Test
+    @DisplayName("usuarioAutenticado - Estudiante con foto: urlFoto apunta a /estudiantes/{id}/foto")
+    void usuarioAutenticado_EstudianteConFoto_UrlFoto() {
+        autenticarComo(7);
+        Estudiante estudiante = new Estudiante();
+        estudiante.setIdUsuario(7);
+        estudiante.setEstado(EstadoLogico.ACTIVO);
+        estudiante.setFoto("fotos/7/abc.jpg");
+        estudiante.setRol(new Rol("ESTUDIANTE"));
+        when(funcionarioRepository.findByIdConRolYPermisos(7)).thenReturn(Optional.empty());
+        when(estudianteRepository.findByIdConRolYPermisos(7)).thenReturn(Optional.of(estudiante));
+
+        assertEquals("/estudiantes/7/foto", authService.usuarioAutenticado().getUrlFoto());
     }
 
     @Test

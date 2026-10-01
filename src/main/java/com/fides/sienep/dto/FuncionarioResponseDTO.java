@@ -34,6 +34,10 @@ public class FuncionarioResponseDTO {
         @Schema(description = "Nombre del rol asignado")
         private String rol;
 
+        @Schema(description = "Ruta para ver la foto de perfil. Es null si el funcionario no tiene foto cargada.",
+                example = "/funcionarios/3/foto")
+        private String urlFoto;
+
         @Schema(accessMode = Schema.AccessMode.READ_ONLY)
         private LocalDateTime createdAt;
 

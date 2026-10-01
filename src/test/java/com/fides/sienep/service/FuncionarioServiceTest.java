@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
@@ -20,16 +21,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -38,7 +44,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,6 +70,9 @@ class FuncionarioServiceTest {
 
     @Mock
     private FuncionarioMapper funcionarioMapper;
+
+    @Mock
+    private FileStorageService fileStorageService;
 
     @InjectMocks
     private FuncionarioService funcionarioService;
@@ -684,5 +696,82 @@ class FuncionarioServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(funcionarioMapper, never()).toDto(any());
+    }
+
+    // =========================================================
+    // FOTO DE PERFIL
+    // =========================================================
+
+    @Test
+    @DisplayName("Subir foto - Éxito, guarda la ruta relativa devuelta por FileStorageService")
+    void subirFoto_Exito() {
+        MultipartFile foto = new MockMultipartFile("foto", "perfil.png", "image/png", "contenido".getBytes());
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(fileStorageService.guardar(eq(foto), eq("fotos/1"), anyList(), anyLong())).thenReturn("abc.png");
+        when(funcionarioRepository.save(any(Funcionario.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(funcionarioMapper.toDto(funcionarioMock)).thenReturn(responseDTO);
+
+        FuncionarioResponseDTO resultado = funcionarioService.subirFoto(1, foto);
+
+        assertSame(responseDTO, resultado);
+        assertEquals("fotos/1/abc.png", funcionarioMock.getFoto());
+    }
+
+    @Test
+    @DisplayName("Subir foto - Si el save() falla, limpia el archivo físico y restaura la ruta anterior")
+    void subirFoto_LimpiaArchivoFisico_SiFallaElSave() {
+        funcionarioMock.setFoto("fotos/1/vieja.png");
+        MultipartFile foto = new MockMultipartFile("foto", "perfil.png", "image/png", "contenido".getBytes());
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(fileStorageService.guardar(eq(foto), eq("fotos/1"), anyList(), anyLong())).thenReturn("abc.png");
+        when(funcionarioRepository.save(any(Funcionario.class)))
+                .thenThrow(new DataIntegrityViolationException("constraint violation"));
+
+        assertThrows(DataIntegrityViolationException.class, () -> funcionarioService.subirFoto(1, foto));
+
+        assertEquals("fotos/1/vieja.png", funcionarioMock.getFoto());
+        verify(fileStorageService).eliminarSiExiste("fotos/1/abc.png");
+    }
+
+    @Test
+    @DisplayName("Subir foto - Funcionario no encontrado (404), no guarda ningún archivo")
+    void subirFoto_LanzaExcepcion_NoEncontrado() {
+        MultipartFile foto = new MockMultipartFile("foto", "perfil.png", "image/png", "contenido".getBytes());
+        when(funcionarioRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.subirFoto(99, foto));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    @DisplayName("Obtener foto - Éxito")
+    void obtenerFoto_Exito() {
+        funcionarioMock.setFoto("fotos/1/abc.png");
+        Resource recurso = mock(Resource.class);
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(fileStorageService.cargar("fotos/1/abc.png")).thenReturn(recurso);
+        when(fileStorageService.extraerExtension("fotos/1/abc.png")).thenReturn("png");
+        when(fileStorageService.mediaTypeDeExtension("png")).thenReturn(MediaType.IMAGE_PNG);
+
+        ArchivoDescargaDTO resultado = funcionarioService.obtenerFoto(1);
+
+        assertSame(recurso, resultado.recurso());
+        assertEquals(MediaType.IMAGE_PNG, resultado.contentType());
+        assertEquals("foto_1.png", resultado.nombreDescarga());
+    }
+
+    @Test
+    @DisplayName("Obtener foto - Sin foto cargada (404)")
+    void obtenerFoto_SinFoto_404() {
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.obtenerFoto(1));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verifyNoInteractions(fileStorageService);
     }
 }
