@@ -14,6 +14,7 @@ public interface AuditoriaMapper {
     @Mapping(target = "idAuditoria", source = "id")
     @Mapping(target = "idAutor", source = "autor.idUsuario")
     @Mapping(target = "nombreAutor", expression = "java(obtenerNombreCompleto(entidad.getAutor()))")
+    @Mapping(target = "documentoAutor", source = "autor.documento")
     @Mapping(target = "valorAnterior", expression = "java(entidad.getValorAnterior() != null ? entidad.getValorAnterior().toString() : null)")
     @Mapping(target = "valorNuevo", expression = "java(entidad.getValorNuevo() != null ? entidad.getValorNuevo().toString() : null)")
     AuditoriaResponseDTO toDto(Auditoria entidad);

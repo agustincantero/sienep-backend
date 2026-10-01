@@ -41,7 +41,7 @@ class AuditoriaControllerTest extends AbstractControllerTest {
     @DisplayName("Listar - Responde 200 con la página del service")
     void listar_Responde200() throws Exception {
         Page<AuditoriaResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
-        when(auditoriaService.listarAuditorias(anyInt(), anyInt(), any(), any(), any())).thenReturn(pagina);
+        when(auditoriaService.listarAuditorias(anyInt(), anyInt(), any(), any(), any(), any())).thenReturn(pagina);
 
         mockMvc.perform(get("/auditorias"))
                 .andExpect(status().isOk())

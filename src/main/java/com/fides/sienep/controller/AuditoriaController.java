@@ -28,9 +28,10 @@ public class AuditoriaController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String entidad,
             @RequestParam(required = false) TipoAccion accion,
-            @RequestParam(required = false) Integer idAutor) {
-        
-        return ResponseEntity.ok(auditoriaService.listarAuditorias(page, size, entidad, accion, idAutor));
+            @RequestParam(required = false) Integer idAutor,
+            @RequestParam(required = false) String texto) {
+
+        return ResponseEntity.ok(auditoriaService.listarAuditorias(page, size, entidad, accion, idAutor, texto));
     }
 
     @Operation(summary = "Ver detalle de auditoría", description = "Obtiene los detalles específicos de un registro de auditoría mediante su ID, incluyendo los valores previos y nuevos en formato JSON.")
