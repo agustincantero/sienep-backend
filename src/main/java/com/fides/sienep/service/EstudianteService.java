@@ -184,6 +184,11 @@ public class EstudianteService {
     @Transactional
     public EstudianteResponseDTO editar(Integer id, EstudianteUpdateDTO dto) {
         Estudiante estudiante = buscarOFallar(id);
+
+        if (estudianteRepository.existsByEmailAndIdUsuarioNot(dto.getEmail(), id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
+        }
+
         aplicarCambios(estudiante, dto);
         return estudianteMapper.toDto(estudianteRepository.save(estudiante));
     }

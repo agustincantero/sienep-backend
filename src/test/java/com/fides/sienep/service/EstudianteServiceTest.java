@@ -603,6 +603,26 @@ class EstudianteServiceTest {
     }
 
     @Test
+    @DisplayName("Editar - Email duplicado (de otro estudiante) → 409")
+    void editar_LanzaExcepcion_EmailDuplicado() {
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("otro.estudiante@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.existsByEmailAndIdUsuarioNot("otro.estudiante@utec.edu.uy", 1)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.editar(1, dto));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Editar - Da de baja lógica los teléfonos que ya no vienen en la lista")
     void editar_DaDeBajaTelefonosRemovidos() {
         Telefono telefonoViejo = new Telefono(estudianteExistente, "099111111");
