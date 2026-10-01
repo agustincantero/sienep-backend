@@ -1083,6 +1083,34 @@ class EstudianteServiceTest {
         verify(estudianteRepository, never()).save(any());
     }
 
+    @Test
+    @DisplayName("Reactivar - Estudiante PENDIENTE_DE_ACTIVACION → 409, no saltea el cambio de contraseña obligatorio")
+    void reactivar_LanzaExcepcion_PendienteDeActivacion() {
+        estudianteExistente.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Reactivar - Estudiante ya ACTIVO → 409")
+    void reactivar_LanzaExcepcion_YaActivo() {
+        estudianteExistente.setEstado(EstadoLogico.ACTIVO);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
+    }
+
     // =========================================================
     // HELPER
     // =========================================================

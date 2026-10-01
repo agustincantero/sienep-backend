@@ -339,6 +339,11 @@ public class EstudianteService {
     @Transactional
     public void reactivar(Integer id) {
         Estudiante estudiante = buscarOFallar(id);
+
+        if (estudiante.getEstado() != EstadoLogico.INACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede reactivar a un estudiante inactivo.");
+        }
+
         estudiante.setEstado(EstadoLogico.ACTIVO);
         estudianteRepository.save(estudiante);
     }
