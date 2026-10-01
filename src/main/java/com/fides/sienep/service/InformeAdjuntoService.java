@@ -19,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,7 +43,8 @@ public class InformeAdjuntoService {
     private final InformeAdjuntoMapper informeMapper;
     private final FileStorageService fileStorageService;
 
-    @PreAuthorize("hasAuthority('VER_INFORME')")
+    // El propio estudiante también puede listar los suyos (autoservicio desde "Mi perfil"), sin VER_INFORME.
+    @PreAuthorize("hasAuthority('VER_INFORME') or authentication.name == #idUsuario?.toString()")
     @Transactional(readOnly = true)
     public Page<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario, Pageable pageable) {
         Page<InformeAdjunto> pagina = informeRepository
@@ -50,13 +53,18 @@ public class InformeAdjuntoService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @PreAuthorize("hasAuthority('VER_INFORME')")
+    // Sin VER_INFORME, un estudiante solo puede ver los suyos: el dueño se conoce recién al cargar el
+    // informe, así que se valida adentro (verificarAcceso) y no en el @PreAuthorize.
+    @PreAuthorize("hasAuthority('VER_INFORME') or hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
     public InformeAdjuntoResponseDTO obtenerPorId(Integer id) {
-        return informeMapper.toDto(buscarActivoOFallar(id));
+        return informeMapper.toDto(verificarAcceso(buscarActivoOFallar(id)));
     }
 
-    @PreAuthorize("hasAuthority('ADJUNTAR_INFORME')")
+    // El propio estudiante puede adjuntar informes a su historia (autoservicio desde "Mi perfil"), sin
+    // ADJUNTAR_INFORME. No a otro estudiante: authentication.name es su idUsuario. Borrar sigue exigiendo
+    // ELIMINAR_INFORME, para que no se pierda documentación aportada.
+    @PreAuthorize("hasAuthority('ADJUNTAR_INFORME') or authentication.name == #dto.idUsuario?.toString()")
     @Transactional
     public InformeAdjuntoResponseDTO adjuntar(InformeAdjuntoRequestDTO dto) {
 
@@ -99,10 +107,11 @@ public class InformeAdjuntoService {
         return informeMapper.toDto(informe);
     }
 
-    @PreAuthorize("hasAuthority('VER_INFORME')")
+    // Mismo criterio que obtenerPorId: sin VER_INFORME, solo los informes propios.
+    @PreAuthorize("hasAuthority('VER_INFORME') or hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
     public ArchivoDescargaDTO descargar(Integer id) {
-        InformeAdjunto informe = buscarActivoOFallar(id);
+        InformeAdjunto informe = verificarAcceso(buscarActivoOFallar(id));
 
         Resource recurso = fileStorageService.cargar(informe.getRuta() + "/" + informe.getUrlArchivo());
         String extension = fileStorageService.extraerExtension(informe.getUrlArchivo());
@@ -119,6 +128,18 @@ public class InformeAdjuntoService {
         informe.setEstado(EstadoLogico.ELIMINADO);
         informeRepository.save(informe);
         log.info("[AUDIT] Informe {} dado de baja lógica", id);
+    }
+
+    // Quien no tiene VER_INFORME (un estudiante) solo accede a informes de su propia historia.
+    private InformeAdjunto verificarAcceso(InformeAdjunto informe) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean puedeVerTodos = auth.getAuthorities().stream()
+                .anyMatch(a -> "VER_INFORME".equals(a.getAuthority()));
+        boolean esPropio = String.valueOf(informe.getEstudiante().getIdUsuario()).equals(auth.getName());
+        if (!puedeVerTodos && !esPropio) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes ver tus propios informes.");
+        }
+        return informe;
     }
 
     private InformeAdjunto buscarActivoOFallar(Integer id) {
