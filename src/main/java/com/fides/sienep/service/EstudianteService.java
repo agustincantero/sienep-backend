@@ -11,6 +11,7 @@ import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
+import com.fides.sienep.repository.EstudianteSpecs;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
 import com.fides.sienep.repository.RolRepository;
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -149,28 +151,16 @@ public class EstudianteService {
         boolean puedeVerEstudiante = tienePermiso("VER_ESTUDIANTE");
         EstadoLogico estadoEfectivo = puedeVerEstudiante ? estado : EstadoLogico.ACTIVO;
 
-        Page<Estudiante> resultado;
-        if (texto != null) {
-            resultado = estadoEfectivo != null
-                    ? estudianteRepository.buscarPorTextoYEstado(texto, estadoEfectivo, pageable)
-                    : estudianteRepository.buscarPorTexto(texto, pageable);
-        } else if (idGrupo != null) {
-            resultado = estadoEfectivo != null
-                    ? estudianteRepository.findByGrupoAndEstado(idGrupo, estadoEfectivo, pageable)
-                    : estudianteRepository.findByGrupo(idGrupo, pageable);
-        } else if (idCarrera != null) {
-            resultado = estadoEfectivo != null
-                    ? estudianteRepository.findByCarreraAndEstado(idCarrera, estadoEfectivo, pageable)
-                    : estudianteRepository.findByCarrera(idCarrera, pageable);
-        } else if (idItr != null) {
-            resultado = estadoEfectivo != null
-                    ? estudianteRepository.findByItrAndEstado(idItr, estadoEfectivo, pageable)
-                    : estudianteRepository.findByItr(idItr, pageable);
-        } else {
-            resultado = estadoEfectivo != null
-                    ? estudianteRepository.findByEstado(estadoEfectivo, pageable)
-                    : estudianteRepository.findAll(pageable);
-        }
+        // Todos los filtros que lleguen se combinan (AND). Antes se aplicaba solo el primero de texto/grupo/carrera/ITR
+        // y el resto se descartaba sin avisar: "Ana" + carrera LTI devolvía todas las "Ana" de cualquier carrera.
+        Specification<Estudiante> spec = Specification.unrestricted();
+        if (texto != null) spec = spec.and(EstudianteSpecs.texto(texto));
+        if (idGrupo != null) spec = spec.and(EstudianteSpecs.grupo(idGrupo));
+        if (idCarrera != null) spec = spec.and(EstudianteSpecs.carrera(idCarrera));
+        if (idItr != null) spec = spec.and(EstudianteSpecs.itr(idItr));
+        if (estadoEfectivo != null) spec = spec.and(EstudianteSpecs.estado(estadoEfectivo));
+
+        Page<Estudiante> resultado = estudianteRepository.findAll(spec, pageable);
 
         return resultado.map(estudiante -> aResumen(estudiante, puedeVerEstudiante));
     }
