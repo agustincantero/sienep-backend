@@ -296,8 +296,13 @@ CREATE TRIGGER trg_actualizar_estudiantes
 CREATE TABLE proyecto.funcionarios (
     id_usuario INT       PRIMARY KEY,
     id_rol     INT       NOT NULL,
+    foto       VARCHAR(255),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Mismo criterio que estudiantes.foto (chk_foto_extension).
+    CONSTRAINT chk_funcionario_foto_extension CHECK (
+        foto IS NULL OR foto ~* '\.(jpg|jpeg|png)$'
+    ),
     CONSTRAINT fk_funcionario_roles FOREIGN KEY (id_rol)
         REFERENCES proyecto.roles(id_rol)
         ON UPDATE CASCADE ON DELETE RESTRICT,

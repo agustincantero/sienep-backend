@@ -1,5 +1,6 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
@@ -13,12 +14,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/funcionarios")
@@ -141,5 +146,36 @@ public class FuncionarioController {
     @GetMapping("/documento/{documento}")
     public ResponseEntity<FuncionarioResponseDTO> obtenerPorDocumento(@PathVariable String documento) {
         return ResponseEntity.ok(funcionarioService.obtenerPorDocumento(documento));
+    }
+
+    // =========================================================
+    // FOTO DE PERFIL
+    // =========================================================
+
+    @PutMapping(value = "/{id}/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Subir o reemplazar la foto de perfil de un funcionario",
+            description = "Requiere EDITAR_FUNCIONARIO, o ser el propio funcionario autenticado.")
+    @ApiResponse(responseCode = "200", description = "Foto actualizada")
+    @ApiResponse(responseCode = "400", description = "Extensión no permitida, archivo vacío o demasiado grande")
+    @ApiResponse(responseCode = "404", description = "Funcionario no encontrado")
+    public ResponseEntity<FuncionarioResponseDTO> subirFoto(
+            @PathVariable Integer id,
+            @RequestParam("foto") MultipartFile foto) {
+        return ResponseEntity.ok(funcionarioService.subirFoto(id, foto));
+    }
+
+    @GetMapping("/{id}/foto")
+    @Operation(summary = "Ver la foto de perfil de un funcionario",
+            description = "Requiere VER_FUNCIONARIOS, o ser el propio funcionario autenticado.")
+    @ApiResponse(responseCode = "200", description = "Foto obtenida")
+    @ApiResponse(responseCode = "404", description = "Funcionario no encontrado o sin foto cargada")
+    public ResponseEntity<Resource> verFoto(@PathVariable Integer id) {
+        ArchivoDescargaDTO archivo = funcionarioService.obtenerFoto(id);
+        return ResponseEntity.ok()
+                .contentType(archivo.contentType())
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + archivo.nombreDescarga() + "\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(archivo.recurso());
     }
 }

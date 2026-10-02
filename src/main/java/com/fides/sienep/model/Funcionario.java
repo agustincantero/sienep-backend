@@ -21,6 +21,10 @@ public class Funcionario extends Usuario {
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
+    // Ruta relativa de la foto de perfil dentro del almacenamiento (ver FileStorageService), igual que Estudiante.foto.
+    @Column(name = "foto", length = 255)
+    private String foto;
+
     // Ver Carrera.java para el porqué de @CreationTimestamp/@UpdateTimestamp acá.
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

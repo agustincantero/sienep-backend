@@ -218,16 +218,20 @@ public class AuthService {
         Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByIdConRolYPermisos(idUsuario);
         if (funcionarioOpt.isPresent()) {
             Funcionario f = funcionarioOpt.get();
-            return toDto(f, f.getRol(), TipoUsuario.FUNCIONARIO);
+            return toDto(f, f.getRol(), TipoUsuario.FUNCIONARIO,
+                    f.getFoto() != null ? "/funcionarios/" + idUsuario + "/foto" : null);
         }
 
         Estudiante estudiante = estudianteRepository.findByIdConRolYPermisos(idUsuario)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "Usuario del token no encontrado"));
-        return toDto(estudiante, estudiante.getRol(), TipoUsuario.ESTUDIANTE);
+        return toDto(estudiante, estudiante.getRol(), TipoUsuario.ESTUDIANTE,
+                estudiante.getFoto() != null ? "/estudiantes/" + idUsuario + "/foto" : null);
     }
 
-    private UsuarioAutenticadoDTO toDto(Usuario usuario, Rol rol, TipoUsuario tipo) {
+    // urlFoto: la foto propia siempre se puede ver (GET /{estudiantes|funcionarios}/{id}/foto admite al propio
+    // usuario), así el frontend la muestra en la barra superior sin pedir el perfil aparte.
+    private UsuarioAutenticadoDTO toDto(Usuario usuario, Rol rol, TipoUsuario tipo, String urlFoto) {
         return UsuarioAutenticadoDTO.builder()
                 .idUsuario(usuario.getIdUsuario())
                 .tipo(tipo)
@@ -237,6 +241,7 @@ public class AuthService {
                 .estado(usuario.getEstado())
                 .rol(rol.getNombre())
                 .permisos(permisosActivos(rol))
+                .urlFoto(urlFoto)
                 .build();
     }
 

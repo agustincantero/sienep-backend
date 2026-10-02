@@ -1,5 +1,6 @@
 package com.fides.sienep.service;
 
+import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.dto.CambiarContraseniaDTO;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
@@ -16,14 +17,17 @@ import com.fides.sienep.utils.ValidadorDePermisosDeRol;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -40,7 +44,14 @@ public class FuncionarioService {
     private final FuncionarioMapper funcionarioMapper;
     private final EmailService emailService;
     private final PasswordGeneratorService passwordGeneratorService;
+    private final FileStorageService fileStorageService;
     private static final Logger log = LoggerFactory.getLogger(FuncionarioService.class);
+
+    // Mismas reglas que la foto de estudiante (EstudianteService). Misma carpeta "fotos/{id}": los ids salen
+    // de la tabla usuarios, compartida por estudiantes y funcionarios, así que nunca chocan.
+    private static final List<String> EXTENSIONES_FOTO_PERMITIDAS = List.of("jpg", "jpeg", "png");
+    private static final long MAX_TAMANIO_FOTO_BYTES = 5L * 1024 * 1024;
+    private static final String SUBCARPETA_FOTOS = "fotos";
 
     @PreAuthorize("hasAuthority('CREAR_FUNCIONARIO')")
     @Transactional
@@ -199,6 +210,51 @@ public class FuncionarioService {
         funcionario.setEstado(EstadoLogico.ACTIVO);
         funcionarioRepository.save(funcionario);
         return funcionarioMapper.toDto(funcionario);
+    }
+
+    // =========================================================
+    // FOTO DE PERFIL
+    // =========================================================
+
+    // El propio funcionario (desde "Mi perfil") o quien puede editar funcionarios; mismo criterio que
+    // EstudianteService.subirFoto.
+    @PreAuthorize("authentication.name == #id.toString() or hasAuthority('EDITAR_FUNCIONARIO')")
+    @Transactional
+    public FuncionarioResponseDTO subirFoto(Integer id, MultipartFile foto) {
+        Funcionario funcionario = buscarOFallar(id);
+
+        String subdirectorio = SUBCARPETA_FOTOS + "/" + id;
+        String nombreFisico = fileStorageService.guardar(
+                foto, subdirectorio, EXTENSIONES_FOTO_PERMITIDAS, MAX_TAMANIO_FOTO_BYTES);
+
+        // No se borra el archivo físico anterior (si existía): mismo criterio de "nunca borrado
+        // físico" que se usa en el resto del sistema (baja lógica).
+        String rutaAnterior = funcionario.getFoto();
+        String rutaNueva = subdirectorio + "/" + nombreFisico;
+        funcionario.setFoto(rutaNueva);
+
+        try {
+            return funcionarioMapper.toDto(funcionarioRepository.save(funcionario));
+        } catch (RuntimeException e) {
+            funcionario.setFoto(rutaAnterior);
+            fileStorageService.eliminarSiExiste(rutaNueva);
+            throw e;
+        }
+    }
+
+    @PreAuthorize("authentication.name == #id.toString() or hasAuthority('VER_FUNCIONARIOS')")
+    @Transactional(readOnly = true)
+    public ArchivoDescargaDTO obtenerFoto(Integer id) {
+        Funcionario funcionario = buscarOFallar(id);
+        if (funcionario.getFoto() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El funcionario no tiene foto cargada");
+        }
+
+        Resource recurso = fileStorageService.cargar(funcionario.getFoto());
+        String extension = fileStorageService.extraerExtension(funcionario.getFoto());
+        MediaType contentType = fileStorageService.mediaTypeDeExtension(extension);
+
+        return new ArchivoDescargaDTO(recurso, contentType, "foto_" + id + "." + extension);
     }
 
     private Funcionario buscarOFallar(Integer id) {
