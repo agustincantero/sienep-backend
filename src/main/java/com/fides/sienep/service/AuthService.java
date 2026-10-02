@@ -156,48 +156,39 @@ public class AuthService {
     public LoginResponseDTO loginConGoogle(GoogleLoginRequestDTO dto, String ip) {
         String email = googleIdTokenVerifierService.emailVerificado(dto.getIdToken())
                 .orElseThrow(() -> credencialesInvalidas(ip));
-        return loginConIdentidadExterna(email, ip, false, "Google");
+        return loginConIdentidadExterna(email, ip, "Google");
     }
 
     // =========================================================
     // LOGIN CON ACTIVE DIRECTORY (LDAP)
     // =========================================================
 
-    // Mismo patrón que loginConGoogle(): el controlador de dominio prueba quién es la persona y SIENEP solo busca la cuenta existente por el atributo mail de AD y emite su propio token. A diferencia de Google, acá un login exitoso sí saca a la cuenta de PENDIENTE_DE_ACTIVACION: la contraseña temporal local no interviene en este flujo, así que dejarla pendiente forzaría una pantalla de cambio de contraseña que un usuario de AD nunca necesita.
+    // Mismo patrón que loginConGoogle(): el controlador de dominio prueba quién es la persona y SIENEP solo busca la cuenta existente por el atributo mail de AD y emite su propio token. Igual que con Google, una cuenta PENDIENTE_DE_ACTIVACION sigue pendiente: la contraseña temporal local sigue vigente y hay que forzar su cambio, no se puede dejar activa con ella.
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public LoginResponseDTO loginConAd(AdLoginRequestDTO dto, String ip) {
         String email = activeDirectoryVerifierService.emailVerificado(dto.getUsuario(), dto.getContrasenia()).orElseThrow(() -> credencialesInvalidas(ip));
-        return loginConIdentidadExterna(email, ip, true, "AD");
+        return loginConIdentidadExterna(email, ip, "AD");
     }
 
-    // Compartido por loginConGoogle() y loginConAd(): ambos ya recibieron un email verificado por un proveedor externo, así que solo queda resolver la cuenta de SIENEP, activarla si correspondiera, validar que no esté bloqueada y emitir el mismo JWT que el resto de los logins. Mismo criterio de activo que LoginUsuarioDetailsService.loadUserByUsername(), reimplementado acá porque este flujo no pasa por authManager.authenticate() (no hay contraseña que validar, el proveedor externo ya probó la identidad).
-    private LoginResponseDTO loginConIdentidadExterna(String email, String ip, boolean activarPendientes, String proveedor) {
+    // Compartido por loginConGoogle() y loginConAd(): ambos ya recibieron un email verificado por un proveedor externo, así que solo queda resolver la cuenta de SIENEP, validar que esté activa y no bloqueada y emitir el mismo JWT que el resto de los logins. Mismo criterio de activo que LoginUsuarioDetailsService.loadUserByUsername(), reimplementado acá porque este flujo no pasa por authManager.authenticate() (no hay contraseña que validar, el proveedor externo ya probó la identidad).
+    private LoginResponseDTO loginConIdentidadExterna(String email, String ip, String proveedor) {
         int idUsuario;
         String rol;
         boolean activa;
-        boolean pendiente;
 
         Optional<Funcionario> funcionarioOpt = funcionarioRepository.findByEmail(email);
         if (funcionarioOpt.isPresent()) {
             Funcionario funcionario = funcionarioOpt.get();
-            pendiente = funcionario.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
-            activa = funcionario.getEstado() == EstadoLogico.ACTIVO || pendiente;
-            if (activarPendientes && pendiente) {
-                funcionario.setEstado(EstadoLogico.ACTIVO);
-                funcionarioRepository.save(funcionario);
-            }
             idUsuario = funcionario.getIdUsuario();
             rol = funcionario.getRol().getNombre();
+            activa = funcionario.getEstado() == EstadoLogico.ACTIVO
+                    || funcionario.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
         } else {
             Estudiante estudiante = estudianteRepository.findByEmail(email).orElseThrow(() -> credencialesInvalidas(ip));
-            pendiente = estudiante.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
-            activa = estudiante.getEstado() == EstadoLogico.ACTIVO || pendiente;
-            if (activarPendientes && pendiente) {
-                estudiante.setEstado(EstadoLogico.ACTIVO);
-                estudianteRepository.save(estudiante);
-            }
             idUsuario = estudiante.getIdUsuario();
             rol = estudiante.getRol().getNombre();
+            activa = estudiante.getEstado() == EstadoLogico.ACTIVO
+                    || estudiante.getEstado() == EstadoLogico.PENDIENTE_DE_ACTIVACION;
         }
 
         if (!activa) {

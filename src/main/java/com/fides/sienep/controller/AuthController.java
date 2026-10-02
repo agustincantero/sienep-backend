@@ -61,8 +61,8 @@ public class AuthController {
     @Operation(summary = "Iniciar sesión con Active Directory",
             description = "Autentica un usuario y contraseña contra el controlador de dominio (LDAP) y, si el " +
                     "atributo mail de esa cuenta de AD coincide con un funcionario o estudiante ya existente en " +
-                    "SIENEP, devuelve un token JWT válido por 5 horas. No da de alta cuentas nuevas. Un login " +
-                    "exitoso saca a la cuenta de PENDIENTE_DE_ACTIVACION.")
+                    "SIENEP, devuelve un token JWT válido por 5 horas. No da de alta cuentas nuevas. Una cuenta " +
+                    "PENDIENTE_DE_ACTIVACION sigue pendiente: tiene que cambiar su contraseña temporal.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login exitoso"),
             @ApiResponse(responseCode = "401", description = "Credenciales inválidas o no existe una cuenta con ese email"),

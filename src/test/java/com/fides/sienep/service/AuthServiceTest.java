@@ -404,8 +404,8 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Login con AD - Cuenta PENDIENTE_DE_ACTIVACION pasa a ACTIVO")
-    void loginConAd_CuentaPendiente_PasaAActivo() {
+    @DisplayName("Login con AD - Cuenta PENDIENTE_DE_ACTIVACION sigue pendiente (hay que forzar el cambio de contraseña)")
+    void loginConAd_CuentaPendiente_SiguePendienteDeActivacion() {
         funcionario.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
         when(activeDirectoryVerifierService.emailVerificado("jgarcia", "Corp123!"))
                 .thenReturn(Optional.of("juan.garcia@utec.edu.uy"));
@@ -415,8 +415,8 @@ class AuthServiceTest {
 
         authService.loginConAd(adDto(), IP);
 
-        assertEquals(EstadoLogico.ACTIVO, funcionario.getEstado());
-        verify(funcionarioRepository).save(funcionario);
+        assertEquals(EstadoLogico.PENDIENTE_DE_ACTIVACION, funcionario.getEstado());
+        verify(funcionarioRepository, never()).save(any());
     }
 
     @Test
