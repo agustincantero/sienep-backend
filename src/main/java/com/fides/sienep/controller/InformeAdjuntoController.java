@@ -5,6 +5,7 @@ import com.fides.sienep.dto.InformeAdjuntoRequestDTO;
 import com.fides.sienep.dto.InformeAdjuntoResponseDTO;
 import com.fides.sienep.service.InformeAdjuntoService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,12 +49,16 @@ public class InformeAdjuntoController {
     }
 
     @GetMapping("/mios/{id}/descargar")
-    @Operation(summary = "Descargar uno de mis informes",
-            description = "Solo el estudiante autenticado y solo si el informe es suyo (si no, 404).")
-    @ApiResponse(responseCode = "200", description = "Archivo descargado")
+    @Operation(summary = "Descargar o ver uno de mis informes",
+            description = "Solo el estudiante autenticado y solo si el informe es suyo (si no, 404). Con inline=true " +
+                    "el navegador lo muestra en lugar de descargarlo (vista previa).")
+    @ApiResponse(responseCode = "200", description = "Archivo")
     @ApiResponse(responseCode = "404", description = "Informe no encontrado o de otro estudiante")
-    public ResponseEntity<Resource> descargarMio(@PathVariable Integer id) {
-        return respuestaDeDescarga(informeService.descargarMio(id));
+    public ResponseEntity<Resource> descargarMio(
+            @PathVariable Integer id,
+            @Parameter(description = "true para ver el archivo en el navegador (vista previa) en vez de descargarlo")
+            @RequestParam(defaultValue = "false") boolean inline) {
+        return respuestaDeDescarga(informeService.descargarMio(id), inline);
     }
 
     @GetMapping("/{id}")
@@ -78,18 +83,26 @@ public class InformeAdjuntoController {
     }
 
     @GetMapping("/{id}/descargar")
-    @Operation(summary = "Descargar el archivo de un informe adjunto")
-    @ApiResponse(responseCode = "200", description = "Archivo descargado")
+    @Operation(summary = "Descargar o ver el archivo de un informe adjunto",
+            description = "Por defecto se descarga (Content-Disposition: attachment). Con inline=true el navegador " +
+                    "lo muestra en lugar de descargarlo (vista previa).")
+    @ApiResponse(responseCode = "200", description = "Archivo")
     @ApiResponse(responseCode = "404", description = "Informe no encontrado")
-    public ResponseEntity<Resource> descargar(@PathVariable Integer id) {
-        return respuestaDeDescarga(informeService.descargar(id));
+    public ResponseEntity<Resource> descargar(
+            @PathVariable Integer id,
+            @Parameter(description = "true para ver el archivo en el navegador (vista previa) en vez de descargarlo")
+            @RequestParam(defaultValue = "false") boolean inline) {
+        return respuestaDeDescarga(informeService.descargar(id), inline);
     }
 
-    private ResponseEntity<Resource> respuestaDeDescarga(ArchivoDescargaDTO archivo) {
+    // RF09 — vista previa: con inline el navegador muestra el archivo (visor de PDF o imagen) en vez de
+    // descargarlo. Es seguro mostrarlo así: al adjuntar solo se aceptan PDF/JPG/PNG, el Content-Type sale de la
+    // extensión (FileStorageService) y nosniff impide que el navegador lo interprete como otra cosa.
+    private ResponseEntity<Resource> respuestaDeDescarga(ArchivoDescargaDTO archivo, boolean inline) {
         return ResponseEntity.ok()
                 .contentType(archivo.contentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + archivo.nombreDescarga() + "\"")
+                        (inline ? "inline" : "attachment") + "; filename=\"" + archivo.nombreDescarga() + "\"")
                 .header("X-Content-Type-Options", "nosniff")
                 .body(archivo.recurso());
     }
