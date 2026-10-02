@@ -7,12 +7,15 @@ import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.EstudianteUpdateDTO;
 import com.fides.sienep.dto.MiPerfilEstudianteDTO;
 import com.fides.sienep.dto.MisDatosRequestDTO;
+import com.fides.sienep.dto.ProcesosAbiertosDTO;
 import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.*;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
+import com.fides.sienep.repository.InstanciaComunRepository;
+import com.fides.sienep.repository.RecordatorioRepository;
 import com.fides.sienep.repository.RolRepository;
 import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.utils.ValidadorDeCedulasUy;
@@ -56,6 +59,8 @@ public class EstudianteService {
     private final EmailService emailService;
     private final PasswordGeneratorService passwordGeneratorService;
     private final FileStorageService fileStorageService;
+    private final InstanciaComunRepository instanciaComunRepository;
+    private final RecordatorioRepository recordatorioRepository;
     private static final Logger log = LoggerFactory.getLogger(EstudianteService.class);
     // =========================================================
     // CREAR
@@ -327,12 +332,37 @@ public class EstudianteService {
     // BAJA Y REACTIVACIÓN
     // =========================================================
 
+    // RF06 — "verificación de inexistencia de procesos críticos abiertos" antes de la baja.
+    @PreAuthorize("hasAuthority('DESACTIVAR_ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public ProcesosAbiertosDTO procesosAbiertos(Integer id) {
+        buscarOFallar(id);
+        return contarProcesosAbiertos(id);
+    }
+
+    // Si el estudiante tiene procesos abiertos, la baja exige confirmar=true (409 si no): así el aviso no depende de
+    // que el cliente lo muestre. Los procesos no se cancelan: la baja es lógica y el historial se conserva.
     @PreAuthorize("hasAuthority('DESACTIVAR_ESTUDIANTE')")
     @Transactional
-    public void desactivar(Integer id) {
+    public void desactivar(Integer id, boolean confirmar) {
         Estudiante estudiante = buscarOFallar(id);
+        if (!confirmar) {
+            ProcesosAbiertosDTO procesos = contarProcesosAbiertos(id);
+            if (procesos.hayProcesosAbiertos()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "El estudiante tiene " + procesos.describir() + ". Confirmá la baja para continuar.");
+            }
+        }
         estudiante.setEstado(EstadoLogico.INACTIVO);
         estudianteRepository.save(estudiante);
+    }
+
+    private ProcesosAbiertosDTO contarProcesosAbiertos(Integer id) {
+        LocalDateTime ahora = LocalDateTime.now();
+        return new ProcesosAbiertosDTO(
+                instanciaComunRepository.contarFuturasDelEstudiante(id, EstadoLogico.ACTIVO, ahora),
+                recordatorioRepository.contarPendientesDelEstudiante(id, EstadoLogico.ACTIVO,
+                        ahora.toLocalDate().atStartOfDay()));
     }
 
     @PreAuthorize("hasAuthority('REACTIVAR_ESTUDIANTE')")
