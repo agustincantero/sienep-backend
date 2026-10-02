@@ -18,4 +18,8 @@ public interface InformeAdjuntoRepository extends JpaRepository<InformeAdjunto, 
     boolean existsByEstudianteIdUsuarioAndNombre(Integer idUsuario, String nombre);
 
     Optional<InformeAdjunto> findByIdInformeAndEstado(Integer idInforme, EstadoLogico estado);
+
+    // Autoservicio del estudiante: el informe solo se encuentra si es suyo.
+    Optional<InformeAdjunto> findByIdInformeAndEstudianteIdUsuarioAndEstado(
+            Integer idInforme, int idUsuario, EstadoLogico estado);
 }

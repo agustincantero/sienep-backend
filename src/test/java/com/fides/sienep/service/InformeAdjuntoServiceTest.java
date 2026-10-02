@@ -26,6 +26,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -357,5 +360,60 @@ class InformeAdjuntoServiceTest {
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         verify(informeRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable);
+    }
+
+    // ── Autoservicio del estudiante ───────────────────────────
+
+    private void autenticarEstudiante(String idUsuario) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                idUsuario, null, List.of(new SimpleGrantedAuthority("ROLE_ESTUDIANTE"))));
+    }
+
+    @Test
+    @DisplayName("Mis informes - Lista los del estudiante del token, con la ruta de descarga propia")
+    void listarMios_UsaElIdDelTokenYElMapperDelEstudiante() {
+        autenticarEstudiante("5");
+        Pageable pageable = PageRequest.of(0, 20);
+        when(informeRepository.findByEstudianteIdUsuarioAndEstado(5, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(informeMock)));
+        when(informeMapper.toDtoDelEstudiante(informeMock)).thenReturn(responseDTO);
+
+        Page<InformeAdjuntoResponseDTO> resultado = informeService.listarMios(pageable);
+
+        assertEquals(1, resultado.getTotalElements());
+        verify(informeMapper, never()).toDto(any());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("Descargar mío - Informe propio: descarga")
+    void descargarMio_Propio() {
+        autenticarEstudiante("5");
+        Resource recursoMock = mock(Resource.class);
+        when(informeRepository.findByIdInformeAndEstudianteIdUsuarioAndEstado(1, 5, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(informeMock));
+        when(fileStorageService.cargar("informes/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf")).thenReturn(recursoMock);
+        when(fileStorageService.extraerExtension(informeMock.getUrlArchivo())).thenReturn("pdf");
+        when(fileStorageService.mediaTypeDeExtension("pdf")).thenReturn(MediaType.APPLICATION_PDF);
+
+        ArchivoDescargaDTO resultado = informeService.descargarMio(1);
+
+        assertSame(recursoMock, resultado.recurso());
+        assertEquals("informe_2024.pdf", resultado.nombreDescarga());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("Descargar mío - Informe de otro estudiante: 404, sin revelar que existe")
+    void descargarMio_Ajeno_404() {
+        autenticarEstudiante("6");
+        when(informeRepository.findByIdInformeAndEstudianteIdUsuarioAndEstado(1, 6, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> informeService.descargarMio(1));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verifyNoInteractions(fileStorageService);
+        SecurityContextHolder.clearContext();
     }
 }

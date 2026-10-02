@@ -20,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -127,5 +129,57 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
     void eliminar_Responde204() throws Exception {
         mockMvc.perform(delete("/informes-adjuntos/{id}", 1))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("Mis informes - GET /informes-adjuntos/mios va a listarMios, no a obtenerPorId")
+    void listarMios_RutaPropia() throws Exception {
+        when(informeService.listarMios(any())).thenReturn(new PageImpl<>(List.of(responseDTO())));
+
+        mockMvc.perform(get("/informes-adjuntos/mios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].idInforme").value(1));
+
+        verify(informeService).listarMios(any());
+        verify(informeService, never()).obtenerPorId(any());
+    }
+
+    // ── Vista previa (RF09) ───────────────────────────────────
+
+    @Test
+    @DisplayName("Vista previa - Con inline=true responde inline, con el mismo tipo y nosniff")
+    void descargar_Inline_RespondeInline() throws Exception {
+        ArchivoDescargaDTO archivo = new ArchivoDescargaDTO(
+                new ByteArrayResource("contenido".getBytes()), MediaType.APPLICATION_PDF, "informe.pdf");
+        when(informeService.descargar(1)).thenReturn(archivo);
+
+        mockMvc.perform(get("/informes-adjuntos/{id}/descargar", 1).param("inline", "true"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "inline; filename=\"informe.pdf\""))
+                .andExpect(header().string("Content-Type", MediaType.APPLICATION_PDF_VALUE))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+    }
+
+    @Test
+    @DisplayName("Vista previa - inline=false es igual que no mandarlo: descarga")
+    void descargar_InlineFalse_Descarga() throws Exception {
+        ArchivoDescargaDTO archivo = new ArchivoDescargaDTO(
+                new ByteArrayResource("contenido".getBytes()), MediaType.IMAGE_PNG, "foto.png");
+        when(informeService.descargar(1)).thenReturn(archivo);
+
+        mockMvc.perform(get("/informes-adjuntos/{id}/descargar", 1).param("inline", "false"))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"foto.png\""));
+    }
+
+    @Test
+    @DisplayName("Vista previa - El estudiante también puede ver los suyos inline")
+    void descargarMio_Inline_RespondeInline() throws Exception {
+        ArchivoDescargaDTO archivo = new ArchivoDescargaDTO(
+                new ByteArrayResource("contenido".getBytes()), MediaType.IMAGE_JPEG, "informe.jpg");
+        when(informeService.descargarMio(1)).thenReturn(archivo);
+
+        mockMvc.perform(get("/informes-adjuntos/mios/{id}/descargar", 1).param("inline", "true"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "inline; filename=\"informe.jpg\""));
     }
 }

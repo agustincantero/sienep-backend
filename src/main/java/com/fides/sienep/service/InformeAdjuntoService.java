@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -102,8 +103,10 @@ public class InformeAdjuntoService {
     @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public ArchivoDescargaDTO descargar(Integer id) {
-        InformeAdjunto informe = buscarActivoOFallar(id);
+        return aArchivoDescarga(buscarActivoOFallar(id));
+    }
 
+    private ArchivoDescargaDTO aArchivoDescarga(InformeAdjunto informe) {
         Resource recurso = fileStorageService.cargar(informe.getRuta() + "/" + informe.getUrlArchivo());
         String extension = fileStorageService.extraerExtension(informe.getUrlArchivo());
         MediaType contentType = fileStorageService.mediaTypeDeExtension(extension);
@@ -119,6 +122,36 @@ public class InformeAdjuntoService {
         informe.setEstado(EstadoLogico.ELIMINADO);
         informeRepository.save(informe);
         log.info("[AUDIT] Informe {} dado de baja lógica", id);
+    }
+
+    // =========================================================
+    // AUTOSERVICIO DEL ESTUDIANTE ("Mi perfil")
+    // =========================================================
+    // Endpoints separados de los de funcionarios a propósito: los de arriba exigen VER_INFORME /
+    // ADJUNTAR_INFORME / ELIMINAR_INFORME y no tienen ninguna excepción para el estudiante. Acá el estudiante
+    // solo puede ver y descargar sus propios informes (no subirlos ni borrarlos), y su id sale siempre del
+    // token, nunca de un parámetro.
+
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public Page<InformeAdjuntoResponseDTO> listarMios(Pageable pageable) {
+        return informeRepository
+                .findByEstudianteIdUsuarioAndEstado(getIdUsuarioAutenticado(), EstadoLogico.ACTIVO, pageable)
+                .map(informeMapper::toDtoDelEstudiante);
+    }
+
+    // Si el informe es de otro estudiante responde 404, igual que si no existiera: no revela que existe.
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public ArchivoDescargaDTO descargarMio(Integer id) {
+        InformeAdjunto informe = informeRepository
+                .findByIdInformeAndEstudianteIdUsuarioAndEstado(id, getIdUsuarioAutenticado(), EstadoLogico.ACTIVO)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
+        return aArchivoDescarga(informe);
+    }
+
+    private int getIdUsuarioAutenticado() {
+        return Integer.parseInt(SecurityContextHolder.getContext().getAuthentication().getName());
     }
 
     private InformeAdjunto buscarActivoOFallar(Integer id) {
