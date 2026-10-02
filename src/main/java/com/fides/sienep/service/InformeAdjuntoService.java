@@ -19,7 +19,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,8 +42,7 @@ public class InformeAdjuntoService {
     private final InformeAdjuntoMapper informeMapper;
     private final FileStorageService fileStorageService;
 
-    // El propio estudiante también puede listar los suyos (autoservicio desde "Mi perfil"), sin VER_INFORME.
-    @PreAuthorize("hasAuthority('VER_INFORME') or authentication.name == #idUsuario?.toString()")
+    @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public Page<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario, Pageable pageable) {
         Page<InformeAdjunto> pagina = informeRepository
@@ -53,18 +51,13 @@ public class InformeAdjuntoService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    // Sin VER_INFORME, un estudiante solo puede ver los suyos: el dueño se conoce recién al cargar el
-    // informe, así que se valida adentro (verificarAcceso) y no en el @PreAuthorize.
-    @PreAuthorize("hasAuthority('VER_INFORME') or hasRole('ESTUDIANTE')")
+    @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public InformeAdjuntoResponseDTO obtenerPorId(Integer id) {
-        return informeMapper.toDto(verificarAcceso(buscarActivoOFallar(id)));
+        return informeMapper.toDto(buscarActivoOFallar(id));
     }
 
-    // El propio estudiante puede adjuntar informes a su historia (autoservicio desde "Mi perfil"), sin
-    // ADJUNTAR_INFORME. No a otro estudiante: authentication.name es su idUsuario. Borrar sigue exigiendo
-    // ELIMINAR_INFORME, para que no se pierda documentación aportada.
-    @PreAuthorize("hasAuthority('ADJUNTAR_INFORME') or authentication.name == #dto.idUsuario?.toString()")
+    @PreAuthorize("hasAuthority('ADJUNTAR_INFORME')")
     @Transactional
     public InformeAdjuntoResponseDTO adjuntar(InformeAdjuntoRequestDTO dto) {
 
@@ -107,12 +100,13 @@ public class InformeAdjuntoService {
         return informeMapper.toDto(informe);
     }
 
-    // Mismo criterio que obtenerPorId: sin VER_INFORME, solo los informes propios.
-    @PreAuthorize("hasAuthority('VER_INFORME') or hasRole('ESTUDIANTE')")
+    @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public ArchivoDescargaDTO descargar(Integer id) {
-        InformeAdjunto informe = verificarAcceso(buscarActivoOFallar(id));
+        return aArchivoDescarga(buscarActivoOFallar(id));
+    }
 
+    private ArchivoDescargaDTO aArchivoDescarga(InformeAdjunto informe) {
         Resource recurso = fileStorageService.cargar(informe.getRuta() + "/" + informe.getUrlArchivo());
         String extension = fileStorageService.extraerExtension(informe.getUrlArchivo());
         MediaType contentType = fileStorageService.mediaTypeDeExtension(extension);
@@ -130,16 +124,34 @@ public class InformeAdjuntoService {
         log.info("[AUDIT] Informe {} dado de baja lógica", id);
     }
 
-    // Quien no tiene VER_INFORME (un estudiante) solo accede a informes de su propia historia.
-    private InformeAdjunto verificarAcceso(InformeAdjunto informe) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean puedeVerTodos = auth.getAuthorities().stream()
-                .anyMatch(a -> "VER_INFORME".equals(a.getAuthority()));
-        boolean esPropio = String.valueOf(informe.getEstudiante().getIdUsuario()).equals(auth.getName());
-        if (!puedeVerTodos && !esPropio) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes ver tus propios informes.");
-        }
-        return informe;
+    // =========================================================
+    // AUTOSERVICIO DEL ESTUDIANTE ("Mi perfil")
+    // =========================================================
+    // Endpoints separados de los de funcionarios a propósito: los de arriba exigen VER_INFORME /
+    // ADJUNTAR_INFORME / ELIMINAR_INFORME y no tienen ninguna excepción para el estudiante. Acá el estudiante
+    // solo puede ver y descargar sus propios informes (no subirlos ni borrarlos), y su id sale siempre del
+    // token, nunca de un parámetro.
+
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public Page<InformeAdjuntoResponseDTO> listarMios(Pageable pageable) {
+        return informeRepository
+                .findByEstudianteIdUsuarioAndEstado(getIdUsuarioAutenticado(), EstadoLogico.ACTIVO, pageable)
+                .map(informeMapper::toDtoDelEstudiante);
+    }
+
+    // Si el informe es de otro estudiante responde 404, igual que si no existiera: no revela que existe.
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Transactional(readOnly = true)
+    public ArchivoDescargaDTO descargarMio(Integer id) {
+        InformeAdjunto informe = informeRepository
+                .findByIdInformeAndEstudianteIdUsuarioAndEstado(id, getIdUsuarioAutenticado(), EstadoLogico.ACTIVO)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Informe no encontrado: " + id));
+        return aArchivoDescarga(informe);
+    }
+
+    private int getIdUsuarioAutenticado() {
+        return Integer.parseInt(SecurityContextHolder.getContext().getAuthentication().getName());
     }
 
     private InformeAdjunto buscarActivoOFallar(Integer id) {

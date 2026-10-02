@@ -20,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -127,5 +129,18 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
     void eliminar_Responde204() throws Exception {
         mockMvc.perform(delete("/informes-adjuntos/{id}", 1))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("Mis informes - GET /informes-adjuntos/mios va a listarMios, no a obtenerPorId")
+    void listarMios_RutaPropia() throws Exception {
+        when(informeService.listarMios(any())).thenReturn(new PageImpl<>(List.of(responseDTO())));
+
+        mockMvc.perform(get("/informes-adjuntos/mios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].idInforme").value(1));
+
+        verify(informeService).listarMios(any());
+        verify(informeService, never()).obtenerPorId(any());
     }
 }

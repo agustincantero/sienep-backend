@@ -37,6 +37,25 @@ public class InformeAdjuntoController {
         return ResponseEntity.ok(informeService.listarPorEstudiante(idUsuario, pageable));
     }
 
+    @GetMapping("/mios")
+    @Operation(summary = "Ver mis informes",
+            description = "Solo el estudiante autenticado: sus propios informes activos. Los informes los sube " +
+                    "únicamente el personal (POST /informes-adjuntos, requiere ADJUNTAR_INFORME).")
+    @ApiResponse(responseCode = "200", description = "Página de informes del estudiante")
+    public ResponseEntity<Page<InformeAdjuntoResponseDTO>> listarMios(
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(informeService.listarMios(pageable));
+    }
+
+    @GetMapping("/mios/{id}/descargar")
+    @Operation(summary = "Descargar uno de mis informes",
+            description = "Solo el estudiante autenticado y solo si el informe es suyo (si no, 404).")
+    @ApiResponse(responseCode = "200", description = "Archivo descargado")
+    @ApiResponse(responseCode = "404", description = "Informe no encontrado o de otro estudiante")
+    public ResponseEntity<Resource> descargarMio(@PathVariable Integer id) {
+        return respuestaDeDescarga(informeService.descargarMio(id));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Obtener informe por ID")
     @ApiResponse(responseCode = "200", description = "Informe encontrado")
@@ -63,7 +82,10 @@ public class InformeAdjuntoController {
     @ApiResponse(responseCode = "200", description = "Archivo descargado")
     @ApiResponse(responseCode = "404", description = "Informe no encontrado")
     public ResponseEntity<Resource> descargar(@PathVariable Integer id) {
-        ArchivoDescargaDTO archivo = informeService.descargar(id);
+        return respuestaDeDescarga(informeService.descargar(id));
+    }
+
+    private ResponseEntity<Resource> respuestaDeDescarga(ArchivoDescargaDTO archivo) {
         return ResponseEntity.ok()
                 .contentType(archivo.contentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
