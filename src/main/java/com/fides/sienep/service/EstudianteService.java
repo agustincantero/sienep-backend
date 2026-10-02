@@ -5,6 +5,7 @@ import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.EstudianteUpdateDTO;
+import com.fides.sienep.dto.MiPerfilEstudianteDTO;
 import com.fides.sienep.dto.MisDatosRequestDTO;
 import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.EstadoLogico;
@@ -128,13 +129,7 @@ public class EstudianteService {
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE')")
     @Transactional(readOnly = true)
     public EstudianteResponseDTO obtenerPorId(Integer id) {
-        EstudianteResponseDTO dto = estudianteMapper.toDto(buscarOFallar(id));
-        if (!tienePermiso("VER_BLOQUE_CONFIDENCIAL")) {
-            dto.setInformacionSalud(null);
-            dto.setSistemaSalud(null);
-            dto.setMotivoDerivacion(null);
-        }
-        return dto;
+        return ocultarBloqueConfidencialSinPermiso(estudianteMapper.toDto(buscarOFallar(id)));
     }
 
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
@@ -193,22 +188,25 @@ public class EstudianteService {
         return estudianteMapper.toDto(estudianteRepository.save(estudiante));
     }
 
+    // Devuelve MiPerfilEstudianteDTO (no EstudianteResponseDTO): la ficha completa incluye el bloque
+    // confidencial y el motivo de derivación, que no se exponen por el autoservicio.
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional
-    public EstudianteResponseDTO editarMisDatos(Integer id, MisDatosRequestDTO dto) {
+    public MiPerfilEstudianteDTO editarMisDatos(Integer id, MisDatosRequestDTO dto) {
         if (!getIdUsuarioAutenticado().equals(id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes editar tus propios datos.");
         }
         Estudiante estudiante = buscarOFallar(id);
         aplicarCambiosContacto(estudiante, dto);
-        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
+        return estudianteMapper.toMiPerfilDto(estudianteRepository.save(estudiante));
     }
 
+    // Incluye la dirección (a diferencia del resumen): mis-datos es un PUT de reemplazo completo, así
+    // que el estudiante necesita leer su dirección actual para poder editar solo una parte.
     @PreAuthorize("hasRole('ESTUDIANTE')")
     @Transactional(readOnly = true)
-    public EstudianteResumenDTO verMiPerfil() {
-        Integer id = getIdUsuarioAutenticado();
-        return aResumen(buscarOFallar(id), true);
+    public MiPerfilEstudianteDTO verMiPerfil() {
+        return estudianteMapper.toMiPerfilDto(buscarOFallar(getIdUsuarioAutenticado()));
     }
 
     // La ruta de la foto solo se ofrece a quien puede pedirla: GET /estudiantes/{id}/foto exige
@@ -299,7 +297,9 @@ public class EstudianteService {
 
         try {
             Estudiante guardado = estudianteRepository.save(estudiante);
-            return estudianteMapper.toDto(guardado);
+            // Lo puede llamar el propio estudiante (o un funcionario sin VER_BLOQUE_CONFIDENCIAL):
+            // la respuesta no puede traer el bloque confidencial que obtenerPorId() le ocultaría.
+            return ocultarBloqueConfidencialSinPermiso(estudianteMapper.toDto(guardado));
         } catch (RuntimeException e) {
             estudiante.setFoto(rutaAnterior);
             fileStorageService.eliminarSiExiste(rutaNueva);
@@ -442,6 +442,18 @@ public class EstudianteService {
             grupos.add(grupo);
         }
         estudiante.setGrupos(grupos);
+    }
+
+    // El bloque de salud/motivo de derivación requiere VER_BLOQUE_CONFIDENCIAL (asignado junto con
+    // VER_ESTUDIANTE a PSICOPEDAGOGO y LEGALES). Se nulifica acá en vez de en el mapper para no
+    // acoplar MapStruct a SecurityContextHolder.
+    private EstudianteResponseDTO ocultarBloqueConfidencialSinPermiso(EstudianteResponseDTO dto) {
+        if (!tienePermiso("VER_BLOQUE_CONFIDENCIAL")) {
+            dto.setInformacionSalud(null);
+            dto.setSistemaSalud(null);
+            dto.setMotivoDerivacion(null);
+        }
+        return dto;
     }
 
     private boolean tienePermiso(String permiso) {

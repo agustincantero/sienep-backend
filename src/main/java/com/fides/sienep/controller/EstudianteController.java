@@ -118,18 +118,20 @@ public class EstudianteController {
                     "Permite editar dirección y teléfonos únicamente.")
     @ApiResponse(responseCode = "200", description = "Datos editados")
     @ApiResponse(responseCode = "403", description = "Intento de editar datos de otra cuenta")
-    public ResponseEntity<EstudianteResponseDTO> editarMisDatos(
+    public ResponseEntity<MiPerfilEstudianteDTO> editarMisDatos(
             @PathVariable Integer id,
             @Valid @RequestBody MisDatosRequestDTO dto) {
         return ResponseEntity.ok(estudianteService.editarMisDatos(id, dto));
     }
 
     @Operation(summary = "Ver mi perfil",
-            description = "Permite al estudiante autenticado ver su propio perfil resumido.")
+            description = "Permite al estudiante autenticado ver su propio perfil, incluida la dirección " +
+                    "(para poder editarla con PUT /{id}/mis-datos). Sin el bloque confidencial ni el " +
+                    "motivo de derivación.")
     @ApiResponse(responseCode = "200", description = "Perfil obtenido correctamente")
     @ApiResponse(responseCode = "403", description = "Acceso denegado")
     @GetMapping("/mi-perfil")
-    public ResponseEntity<EstudianteResumenDTO> verMiPerfil() {
+    public ResponseEntity<MiPerfilEstudianteDTO> verMiPerfil() {
         return ResponseEntity.ok(estudianteService.verMiPerfil());
     }
 

@@ -2,6 +2,7 @@ package com.fides.sienep.mapper;
 
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
+import com.fides.sienep.dto.MiPerfilEstudianteDTO;
 import com.fides.sienep.model.Estudiante;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,24 @@ class EstudianteMapperTest {
     void toDto_ConFoto_ArmaLaUrl() {
         EstudianteResponseDTO dto = mapper.toDto(estudiante("foto_7.png"));
 
+        assertEquals("/estudiantes/7/foto", dto.getUrlFoto());
+    }
+
+    @Test
+    @DisplayName("Mi perfil - Incluye la dirección y la urlFoto")
+    void toMiPerfilDto_IncluyeDireccionYFoto() {
+        Estudiante estudiante = estudiante("foto_7.png");
+        estudiante.setCiudad("Montevideo");
+        estudiante.setDepartamento("Montevideo");
+        estudiante.setCalle("Av. 18 de Julio");
+        estudiante.setNroPuerta(1234);
+
+        MiPerfilEstudianteDTO dto = mapper.toMiPerfilDto(estudiante);
+
+        assertEquals("Montevideo", dto.getCiudad());
+        assertEquals("Montevideo", dto.getDepartamento());
+        assertEquals("Av. 18 de Julio", dto.getCalle());
+        assertEquals(1234, dto.getNroPuerta());
         assertEquals("/estudiantes/7/foto", dto.getUrlFoto());
     }
 }
