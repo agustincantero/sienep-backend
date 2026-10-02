@@ -1,5 +1,6 @@
 package com.fides.sienep.controller;
 
+import com.fides.sienep.dto.ProcesosAbiertosDTO;
 import com.fides.sienep.dto.EstudianteRequestDTO;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
@@ -181,19 +182,52 @@ class EstudianteControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Desactivar - Existente responde 204")
+    @DisplayName("Desactivar - Existente responde 204 (sin confirmar = confirmar=false)")
     void desactivar_Existente_Responde204() throws Exception {
         mockMvc.perform(delete("/estudiantes/{id}", 5))
                 .andExpect(status().isNoContent());
+
+        org.mockito.Mockito.verify(estudianteService).desactivar(5, false);
     }
 
     @Test
     @DisplayName("Desactivar - Inexistente responde 404")
     void desactivar_Inexistente_Responde404() throws Exception {
         org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado: 99"))
-                .when(estudianteService).desactivar(99);
+                .when(estudianteService).desactivar(99, false);
 
         mockMvc.perform(delete("/estudiantes/{id}", 99))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Desactivar - Con procesos abiertos sin confirmar responde 409 (RF06)")
+    void desactivar_ProcesosAbiertos_Responde409() throws Exception {
+        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.CONFLICT,
+                        "El estudiante tiene 1 instancia agendada. Confirmá la baja para continuar."))
+                .when(estudianteService).desactivar(5, false);
+
+        mockMvc.perform(delete("/estudiantes/{id}", 5))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("Desactivar - confirmar=true llega al service")
+    void desactivar_Confirmado_PasaConfirmar() throws Exception {
+        mockMvc.perform(delete("/estudiantes/{id}", 5).param("confirmar", "true"))
+                .andExpect(status().isNoContent());
+
+        org.mockito.Mockito.verify(estudianteService).desactivar(5, true);
+    }
+
+    @Test
+    @DisplayName("Procesos abiertos - Responde los conteos")
+    void procesosAbiertos_Responde200() throws Exception {
+        when(estudianteService.procesosAbiertos(5)).thenReturn(new ProcesosAbiertosDTO(2, 1));
+
+        mockMvc.perform(get("/estudiantes/{id}/procesos-abiertos", 5))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.instanciasFuturas").value(2))
+                .andExpect(jsonPath("$.recordatoriosPendientes").value(1));
     }
 }

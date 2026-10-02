@@ -4,6 +4,7 @@ import com.fides.sienep.dto.*;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.EstudianteService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -179,13 +180,28 @@ public class EstudianteController {
      * DELETE semánticamente = sacar de la nómina activa.
      * Internamente cambia estado a INACTIVO — no borra datos.
      */
+    @GetMapping("/{id}/procesos-abiertos")
+    @Operation(summary = "Procesos abiertos de un estudiante (antes de darlo de baja)",
+            description = "Requiere DESACTIVAR_ESTUDIANTE. Cuenta las instancias agendadas a futuro y los recordatorios " +
+                    "pendientes, para avisarlos antes de la baja (RF06).")
+    @ApiResponse(responseCode = "200", description = "Conteo de procesos abiertos")
+    @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
+    public ResponseEntity<ProcesosAbiertosDTO> procesosAbiertos(@PathVariable Integer id) {
+        return ResponseEntity.ok(estudianteService.procesosAbiertos(id));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Desactivar un estudiante",
-            description = "Requiere DESACTIVAR_ESTUDIANTE. No elimina datos — estado pasa a INACTIVO.")
+            description = "Requiere DESACTIVAR_ESTUDIANTE. No elimina datos — estado pasa a INACTIVO. Si el estudiante " +
+                    "tiene procesos abiertos (ver GET /{id}/procesos-abiertos), hay que mandar confirmar=true.")
     @ApiResponse(responseCode = "204", description = "Estudiante desactivado")
     @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
-    public ResponseEntity<Void> desactivar(@PathVariable Integer id) {
-        estudianteService.desactivar(id);
+    @ApiResponse(responseCode = "409", description = "Tiene procesos abiertos y no se confirmó la baja")
+    public ResponseEntity<Void> desactivar(
+            @PathVariable Integer id,
+            @Parameter(description = "true para confirmar la baja aunque tenga procesos abiertos")
+            @RequestParam(defaultValue = "false") boolean confirmar) {
+        estudianteService.desactivar(id, confirmar);
         return ResponseEntity.noContent().build();
     }
 

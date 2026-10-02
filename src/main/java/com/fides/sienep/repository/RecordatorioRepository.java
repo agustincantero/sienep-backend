@@ -135,4 +135,14 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
             @Param("estado") EstadoLogico estado,
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
+
+    // RF06 — procesos abiertos antes de la baja de un estudiante: recordatorios activos, no cumplidos y desde hoy
+    // en adelante, de instancias del estudiante. Por fecha y no por estado_operativo: ese lo recalcula el trigger
+    // solo cuando se escribe el recordatorio, así que con los días queda desactualizado.
+    @Query("SELECT COUNT(r) FROM Recordatorio r " +
+            "WHERE r.instancia.estudiante.idUsuario = :idEstudiante AND r.estado = :estado " +
+            "AND r.cumplido = false AND r.fechaHora >= :desde")
+    long contarPendientesDelEstudiante(@Param("idEstudiante") int idEstudiante,
+                                       @Param("estado") EstadoLogico estado,
+                                       @Param("desde") LocalDateTime desde);
 }

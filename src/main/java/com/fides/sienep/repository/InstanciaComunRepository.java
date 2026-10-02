@@ -105,4 +105,11 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             @Param("estado") EstadoLogico estado,
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
+
+    // RF06 — procesos abiertos antes de la baja de un estudiante: instancias activas agendadas a futuro.
+    @Query("SELECT COUNT(i) FROM InstanciaComun i " +
+            "WHERE i.estudiante.idUsuario = :idEstudiante AND i.estado = :estado AND i.fechaHora > :desde")
+    long contarFuturasDelEstudiante(@Param("idEstudiante") int idEstudiante,
+                                    @Param("estado") EstadoLogico estado,
+                                    @Param("desde") LocalDateTime desde);
 }

@@ -8,6 +8,7 @@ import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.EstudianteUpdateDTO;
 import com.fides.sienep.dto.MiPerfilEstudianteDTO;
 import com.fides.sienep.dto.MisDatosRequestDTO;
+import com.fides.sienep.dto.ProcesosAbiertosDTO;
 import com.fides.sienep.mapper.EstudianteMapper;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.EstadoLogico;
@@ -18,6 +19,8 @@ import com.fides.sienep.model.Grupo;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.GrupoRepository;
+import com.fides.sienep.repository.InstanciaComunRepository;
+import com.fides.sienep.repository.RecordatorioRepository;
 import com.fides.sienep.repository.RolRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -46,6 +50,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -85,6 +90,12 @@ class EstudianteServiceTest {
 
     @Mock
     private FileStorageService fileStorageService;
+
+    @Mock
+    private InstanciaComunRepository instanciaComunRepository;
+
+    @Mock
+    private RecordatorioRepository recordatorioRepository;
 
     @InjectMocks
     private EstudianteService estudianteService;
@@ -980,18 +991,81 @@ class EstudianteServiceTest {
     // BAJA Y REACTIVACIÓN
     // =========================================================
 
+    private void stubProcesosAbiertos(long instanciasFuturas, long recordatoriosPendientes) {
+        when(instanciaComunRepository.contarFuturasDelEstudiante(eq(1), eq(EstadoLogico.ACTIVO), any()))
+                .thenReturn(instanciasFuturas);
+        when(recordatorioRepository.contarPendientesDelEstudiante(eq(1), eq(EstadoLogico.ACTIVO), any()))
+                .thenReturn(recordatoriosPendientes);
+    }
+
     @Test
-    @DisplayName("Desactivar - Estado pasa a INACTIVO")
+    @DisplayName("Desactivar - Sin procesos abiertos: pasa a INACTIVO sin pedir confirmación")
     void desactivar_DebePonerEstadoInactivo_YGuardar() {
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        stubProcesosAbiertos(0, 0);
         when(estudianteRepository.save(any(Estudiante.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        estudianteService.desactivar(1);
+        estudianteService.desactivar(1, false);
 
         assertEquals(EstadoLogico.INACTIVO, estudianteExistente.getEstado());
         verify(estudianteRepository).save(estudianteExistente);
         verify(estudianteRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("Desactivar - Con procesos abiertos y sin confirmar: 409 con el detalle, no da la baja (RF06)")
+    void desactivar_ConProcesosAbiertos_SinConfirmar_409() {
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        stubProcesosAbiertos(2, 1);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.desactivar(1, false));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("2 instancias agendadas y 1 recordatorio pendiente"));
+        assertEquals(EstadoLogico.ACTIVO, estudianteExistente.getEstado());
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Desactivar - Con procesos abiertos y confirmado: da la baja sin volver a contarlos")
+    void desactivar_ConProcesosAbiertos_Confirmado_DaLaBaja() {
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.save(any(Estudiante.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        estudianteService.desactivar(1, true);
+
+        assertEquals(EstadoLogico.INACTIVO, estudianteExistente.getEstado());
+        verifyNoInteractions(instanciaComunRepository, recordatorioRepository);
+    }
+
+    @Test
+    @DisplayName("Procesos abiertos - Cuenta instancias futuras y recordatorios desde el inicio del día de hoy")
+    void procesosAbiertos_DevuelveLosConteos() {
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        stubProcesosAbiertos(3, 0);
+
+        ProcesosAbiertosDTO procesos = estudianteService.procesosAbiertos(1);
+
+        assertEquals(3, procesos.instanciasFuturas());
+        assertEquals(0, procesos.recordatoriosPendientes());
+        assertTrue(procesos.hayProcesosAbiertos());
+        // Recordatorios: desde las 00:00 de hoy (uno de hoy a las 8 sigue pendiente aunque ya hayan pasado).
+        ArgumentCaptor<LocalDateTime> desde = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(recordatorioRepository).contarPendientesDelEstudiante(eq(1), eq(EstadoLogico.ACTIVO), desde.capture());
+        assertEquals(LocalDate.now().atStartOfDay(), desde.getValue());
+    }
+
+    @Test
+    @DisplayName("Procesos abiertos - Estudiante inexistente: 404")
+    void procesosAbiertos_NoEncontrado_404() {
+        when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.procesosAbiertos(99));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
