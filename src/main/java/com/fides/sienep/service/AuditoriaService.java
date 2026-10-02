@@ -10,6 +10,7 @@ import com.fides.sienep.mapper.AuditoriaMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,7 +36,8 @@ public class AuditoriaService {
     private final UsuarioRepository usuarioRepository;
     private final AuditoriaMapper mapper;
 
-    @Transactional
+    // REQUIRES_NEW: si la auditoría falla no debe dejar rollback-only la transacción de quien la llama (p. ej. logout, que invalida el token en esa misma transacción)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrarEventoManual(String entidad, TipoAccion accion, Integer idUsuario, String ip) {
         Usuario autor = usuarioRepository.findById(idUsuario).orElse(null);
         if (autor == null) {

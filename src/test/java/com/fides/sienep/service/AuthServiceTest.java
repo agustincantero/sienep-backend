@@ -370,6 +370,37 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Logout - Si falla la auditoría, el token igual queda invalidado y el logout no falla")
+    void logout_FallaAuditoria_InvalidaIgualYNoPropaga() {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getPrincipal()).thenReturn("2");
+        when(auth.getName()).thenReturn("2");
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        doThrow(new RuntimeException("falló la auditoría"))
+                .when(auditoriaService).registrarEventoManual(any(), any(), any(), any());
+
+        assertDoesNotThrow(() -> authService.logout(auth, IP));
+
+        verify(usuarioRepository).save(funcionario);
+    }
+
+    @Test
+    @DisplayName("Logout - Si no se puede invalidar el token, el error se propaga y no se audita")
+    void logout_FallaInvalidacion_Propaga() {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getPrincipal()).thenReturn("2");
+        when(auth.getName()).thenReturn("2");
+        when(usuarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(usuarioRepository.save(any(Usuario.class))).thenThrow(new RuntimeException("falló el guardado"));
+
+        assertThrows(RuntimeException.class, () -> authService.logout(auth, IP));
+
+        verifyNoInteractions(auditoriaService);
+    }
+
+    @Test
     @DisplayName("Logout - Usuario anónimo no registra auditoría ni toca el usuario")
     void logout_UsuarioAnonimo_NoRegistraAuditoria() {
         Authentication auth = mock(Authentication.class);
