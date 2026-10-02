@@ -26,6 +26,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
@@ -68,6 +69,7 @@ public class AuthService {
     private final LoginIpRateLimiter              loginIpRateLimiter;
     private final GoogleIdTokenVerifierService    googleIdTokenVerifierService;
     private final ActiveDirectoryVerifierService  activeDirectoryVerifierService;
+    private final TransactionTemplate             transactionTemplate;
 
     // Campo separado (no final): Lombok no copia @Value a los parámetros del
     // constructor generado por @RequiredArgsConstructor sin un lombok.config,
@@ -164,10 +166,10 @@ public class AuthService {
     // =========================================================
 
     // Mismo patrón que loginConGoogle(): el controlador de dominio prueba quién es la persona y SIENEP solo busca la cuenta existente por el atributo mail de AD y emite su propio token. Igual que con Google, una cuenta PENDIENTE_DE_ACTIVACION sigue pendiente: la contraseña temporal local sigue vigente y hay que forzar su cambio, no se puede dejar activa con ella.
-    @Transactional(noRollbackFor = ResponseStatusException.class)
+    // Sin @Transactional a propósito: la llamada a LDAP puede tardar hasta los timeouts del AD y dentro de una transacción retendría una conexión de BD mientras espera. Solo la parte que toca la base va en la transacción (TransactionTemplate); antes de escribir algo ahí no hay ningún throw que requiera noRollbackFor.
     public LoginResponseDTO loginConAd(AdLoginRequestDTO dto, String ip) {
         String email = activeDirectoryVerifierService.emailVerificado(dto.getUsuario(), dto.getContrasenia()).orElseThrow(() -> credencialesInvalidas(ip));
-        return loginConIdentidadExterna(email, ip, "AD");
+        return transactionTemplate.execute(status -> loginConIdentidadExterna(email, ip, "AD"));
     }
 
     // Compartido por loginConGoogle() y loginConAd(): ambos ya recibieron un email verificado por un proveedor externo, así que solo queda resolver la cuenta de SIENEP, validar que esté activa y no bloqueada y emitir el mismo JWT que el resto de los logins. Mismo criterio de activo que LoginUsuarioDetailsService.loadUserByUsername(), reimplementado acá porque este flujo no pasa por authManager.authenticate() (no hay contraseña que validar, el proveedor externo ya probó la identidad).

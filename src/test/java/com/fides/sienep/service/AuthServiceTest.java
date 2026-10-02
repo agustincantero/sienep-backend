@@ -38,6 +38,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -67,6 +69,7 @@ class AuthServiceTest {
     @Mock private LoginIpRateLimiter loginIpRateLimiter;
     @Mock private GoogleIdTokenVerifierService googleIdTokenVerifierService;
     @Mock private ActiveDirectoryVerifierService activeDirectoryVerifierService;
+    @Mock private TransactionTemplate transactionTemplate;
 
     @InjectMocks
     private AuthService authService;
@@ -80,6 +83,8 @@ class AuthServiceTest {
     void setUp() {
         ReflectionTestUtils.setField(authService, "frontendUrl", "http://localhost:3000");
         lenient().when(loginIpRateLimiter.registrarIntento(anyString())).thenReturn(true);
+        // El template real abriría una transacción; acá solo hace falta que ejecute el callback
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(inv -> inv.<TransactionCallback<?>>getArgument(0).doInTransaction(null));
 
         rol = new Rol("ADMINISTRADOR");
 
