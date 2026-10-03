@@ -339,6 +339,22 @@ class GrupoServiceTest {
     }
 
     @Test
+    @DisplayName("Reactivar - Conflicto si mientras estaba inactivo se creó otro grupo activo igual")
+    void reactivar_LanzaConflict_SiHayOtroActivoIgual() {
+        grupoMock.setEstado(EstadoLogico.INACTIVO);
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+        when(grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+                "Grupo A", 1, grupoMock.getGeneracion(), EstadoLogico.ACTIVO)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertEquals(EstadoLogico.INACTIVO, grupoMock.getEstado());
+        verify(grupoRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Reactivar - No encontrado → 404")
     void reactivar_LanzaExcepcion_NoEncontrado() {
         when(grupoRepository.findById(99)).thenReturn(Optional.empty());

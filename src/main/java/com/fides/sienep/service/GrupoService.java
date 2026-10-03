@@ -122,6 +122,12 @@ public class GrupoService {
         if (grupo.getEstado() == EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El grupo ya se encuentra activo");
         }
+        // Mientras estaba inactivo se pudo crear otro grupo igual (crear/editar solo miran los ACTIVOS): reactivarlo dejaría dos activos con el mismo nombre, carrera y generación.
+        if (grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+                grupo.getNomGrupo(), grupo.getCarrera().getIdCarrera(), grupo.getGeneracion(), EstadoLogico.ACTIVO)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede reactivar: ya existe un grupo activo con ese nombre para esa carrera y generación.");
+        }
         grupo.setEstado(EstadoLogico.ACTIVO);
         grupoRepository.save(grupo);
     }
