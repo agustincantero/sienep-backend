@@ -134,7 +134,7 @@ class InstanciaComunControllerTest extends AbstractControllerTest {
     @DisplayName("Listar - Sin filtros responde 200 con la página del service")
     void listar_SinFiltros_Responde200() throws Exception {
         Page<InstanciaComunResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
-        when(instanciaComunService.listar(any(), any())).thenReturn(pagina);
+        when(instanciaComunService.listar(any(), any(), any(), any(), any())).thenReturn(pagina);
 
         mockMvc.perform(get("/instancias"))
                 .andExpect(status().isOk())
@@ -142,12 +142,15 @@ class InstanciaComunControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Listar - Con idEstudiante delega en listarPorEstudiante")
-    void listar_ConIdEstudiante_DelegaEnListarPorEstudiante() throws Exception {
+    @DisplayName("Listar - Con varios filtros se los pasa todos al service, no solo el primero")
+    void listar_ConVariosFiltros_SePasanTodosAlService() throws Exception {
         Page<InstanciaComunResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
-        when(instanciaComunService.listarPorEstudiante(eq(5), any(), any())).thenReturn(pagina);
+        when(instanciaComunService.listar(eq(5), isNull(), eq(2), eq(EstadoLogico.INACTIVO), any())).thenReturn(pagina);
 
-        mockMvc.perform(get("/instancias").param("idEstudiante", "5"))
+        mockMvc.perform(get("/instancias")
+                        .param("idEstudiante", "5")
+                        .param("idCategoria", "2")
+                        .param("estado", "INACTIVO"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].codInstancia").value(1));
     }
