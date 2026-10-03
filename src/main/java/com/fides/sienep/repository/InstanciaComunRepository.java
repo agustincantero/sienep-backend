@@ -4,7 +4,10 @@ import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.InstanciaComun;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, Integer> {
+public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, Integer>, JpaSpecificationExecutor<InstanciaComun> {
 
     // JOIN FETCH de estudiante/funcionario/categoria: InstanciaComunMapper
     // accede a los tres en cada fila (nombreEstudiante, nombreFuncionario,
@@ -27,15 +30,13 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             "WHERE ic.estado = :estado")
     List<InstanciaComun> findByEstado(@Param("estado") EstadoLogico estado);
 
-    // Los 3 JOIN FETCH son todos @ManyToOne (a-uno), no colecciones, así que
-    // Hibernate pagina en SQL (LIMIT/OFFSET) sin caer al "in-memory paging"
-    // que sí ocurriría si alguno fuera una colección (@OneToMany/@ManyToMany).
-    @Query("SELECT ic FROM InstanciaComun ic " +
-            "JOIN FETCH ic.estudiante " +
-            "JOIN FETCH ic.funcionario " +
-            "JOIN FETCH ic.categoria " +
-            "WHERE ic.estado = :estado")
-    Page<InstanciaComun> findByEstado(@Param("estado") EstadoLogico estado, Pageable pageable);
+    // Listado con filtros combinables (InstanciaComunSpecs). El grafo trae estudiante, funcionario y categoria en la
+    // misma consulta, por lo mismo que los JOIN FETCH de arriba (el mapper los lee en cada fila); no se usa JOIN
+    // FETCH dentro de la Specification porque rompe el conteo de la página. Los 3 son @ManyToOne (a-uno), no
+    // colecciones, así que Hibernate pagina en SQL (LIMIT/OFFSET) sin caer al "in-memory paging".
+    @Override
+    @EntityGraph(attributePaths = {"estudiante", "funcionario", "categoria"})
+    Page<InstanciaComun> findAll(Specification<InstanciaComun> spec, Pageable pageable);
 
     Optional<InstanciaComun> findByCodInstanciaAndEstado(int codInstancia, EstadoLogico estado);
 
@@ -60,27 +61,9 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
             "JOIN FETCH ic.estudiante " +
             "JOIN FETCH ic.funcionario " +
             "JOIN FETCH ic.categoria " +
-            "WHERE ic.funcionario.idUsuario = :idFuncionario AND ic.estado = :estado")
-    Page<InstanciaComun> findByFuncionarioAndEstado(@Param("idFuncionario") int idFuncionario,
-                                                    @Param("estado") EstadoLogico estado,
-                                                    Pageable pageable);
-
-    @Query("SELECT ic FROM InstanciaComun ic " +
-            "JOIN FETCH ic.estudiante " +
-            "JOIN FETCH ic.funcionario " +
-            "JOIN FETCH ic.categoria " +
             "WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
     List<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
                                                   @Param("estado") EstadoLogico estado);
-
-    @Query("SELECT ic FROM InstanciaComun ic " +
-            "JOIN FETCH ic.estudiante " +
-            "JOIN FETCH ic.funcionario " +
-            "JOIN FETCH ic.categoria " +
-            "WHERE ic.categoria.idCategoria = :idCategoria AND ic.estado = :estado")
-    Page<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
-                                                  @Param("estado") EstadoLogico estado,
-                                                  Pageable pageable);
 
     // ── Queries para Reportes ─────────────────────────────────
     @Query("SELECT ic FROM InstanciaComun ic " +

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -514,60 +516,38 @@ class InstanciaComunServiceTest {
 
     // ── Listar ────────────────────────────────────────────────
 
+    // Qué devuelve cada combinación de filtros lo verifica InstanciaBusquedaIT contra Postgres: con Mockito solo se
+    // puede comprobar que el service arma la consulta y devuelve la página mapeada.
     @Test
-    @DisplayName("Listar - Sin estado, devuelve solo ACTIVAS, paginado")
-    void listar_SinEstado_DevuelveSoloActivas() {
+    @DisplayName("Listar - Sin filtros ni estado, devuelve la página mapeada")
+    void listar_SinFiltros_DevuelvePaginaMapeada() {
         Pageable pageable = PageRequest.of(0, 20);
-        when(instanciaComunRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
+        when(instanciaComunRepository.findAll(ArgumentMatchers.<Specification<InstanciaComun>>any(), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listar(null, pageable);
+        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listar(null, null, null, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
+        assertEquals(List.of(responseDTO), resultado.getContent());
     }
 
     @Test
-    @DisplayName("Listar por estudiante - Sin estado, devuelve solo ACTIVAS, paginado")
-    void listarPorEstudiante_Exito() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
-                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
+    @DisplayName("Listar - Con todos los filtros a la vez, hace una sola consulta paginada")
+    void listar_ConTodosLosFiltros_HaceUnaSolaConsulta() {
+        Pageable pageable = PageRequest.of(1, 10);
+        when(instanciaComunRepository.findAll(ArgumentMatchers.<Specification<InstanciaComun>>any(), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 11));
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorEstudiante(1, null, pageable);
+        Page<InstanciaComunResponseDTO> resultado =
+                instanciaComunService.listar(1, 2, 3, EstadoLogico.INACTIVO, pageable);
 
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalElements());
-    }
-
-    @Test
-    @DisplayName("Listar por funcionario - Sin estado, devuelve solo ACTIVAS, paginado")
-    void listarPorFuncionario_Exito() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(instanciaComunRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))
-                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
-        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
-
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorFuncionario(2, null, pageable);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalElements());
-    }
-
-    @Test
-    @DisplayName("Listar por categoría - Sin estado, devuelve solo ACTIVAS, paginado")
-    void listarPorCategoria_Exito() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(instanciaComunRepository.findByCategoriaAndEstado(1, EstadoLogico.ACTIVO, pageable))
-                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
-        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
-
-        Page<InstanciaComunResponseDTO> resultado = instanciaComunService.listarPorCategoria(1, null, pageable);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalElements());
+        assertEquals(11, resultado.getTotalElements());
+        verify(instanciaComunRepository, times(1))
+                .findAll(ArgumentMatchers.<Specification<InstanciaComun>>any(), eq(pageable));
+        verifyNoMoreInteractions(instanciaComunRepository);
     }
 
     @Test

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -30,6 +32,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -158,19 +161,37 @@ class IncidenciaServiceTest {
         verify(incidenciaRepository, never()).save(any());
     }
 
+    // Qué devuelve cada combinación de filtros lo verifica IncidenciaBusquedaIT contra Postgres: con Mockito solo se
+    // puede comprobar que el service arma la consulta y devuelve la página mapeada.
     @Test
-    @DisplayName("Listar - Sin estado, devuelve solo ACTIVAS, paginado")
-    void listar_SinEstado_DevuelveSoloActivas() {
+    @DisplayName("Listar - Sin filtros ni estado, devuelve la página mapeada")
+    void listar_SinFiltros_DevuelvePaginaMapeada() {
         Pageable pageable = PageRequest.of(0, 20);
-        when(incidenciaRepository.findByEstado(EstadoLogico.ACTIVO, pageable))
+        when(incidenciaRepository.findAll(ArgumentMatchers.<Specification<Incidencia>>any(), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        Page<IncidenciaResponseDTO> resultado = incidenciaService.listar(null, pageable);
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listar(null, null, null, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
-        assertEquals(1, resultado.getContent().size());
+        assertEquals(List.of(responseDTO), resultado.getContent());
+    }
+
+    @Test
+    @DisplayName("Listar - Con todos los filtros a la vez, hace una sola consulta paginada")
+    void listar_ConTodosLosFiltros_HaceUnaSolaConsulta() {
+        Pageable pageable = PageRequest.of(1, 10);
+        when(incidenciaRepository.findAll(ArgumentMatchers.<Specification<Incidencia>>any(), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 11));
+        when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
+
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listar(1, 2, EstadoLogico.INACTIVO, pageable);
+
+        assertEquals(11, resultado.getTotalElements());
+        verify(incidenciaRepository, times(1))
+                .findAll(ArgumentMatchers.<Specification<Incidencia>>any(), eq(pageable));
+        verifyNoMoreInteractions(incidenciaRepository);
     }
 
     @Test
@@ -330,34 +351,6 @@ class IncidenciaServiceTest {
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(incidenciaRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Listar por estudiante - Sin estado, devuelve solo ACTIVAS, paginado")
-    void listarPorEstudiante_Exito() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
-                .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
-        when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
-
-        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorEstudiante(1, null, pageable);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalElements());
-    }
-
-    @Test
-    @DisplayName("Listar por funcionario - Sin estado, devuelve solo ACTIVAS, paginado")
-    void listarPorFuncionario_Exito() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(incidenciaRepository.findByFuncionarioAndEstado(2, EstadoLogico.ACTIVO, pageable))
-                .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
-        when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
-
-        Page<IncidenciaResponseDTO> resultado = incidenciaService.listarPorFuncionario(2, null, pageable);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test

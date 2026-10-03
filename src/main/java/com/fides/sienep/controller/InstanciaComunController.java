@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,7 +54,8 @@ public class InstanciaComunController {
     }
 
     @Operation(summary = "Listar instancias con filtros opcionales",
-            description = "Sin el parámetro estado, devuelve solo las ACTIVAS.")
+            description = "Los filtros idEstudiante, idFuncionario, idCategoria y estado son opcionales y se combinan " +
+                    "entre sí (todos los que se indiquen deben cumplirse). Sin el parámetro estado, devuelve solo las ACTIVAS.")
     @ApiResponse(responseCode = "200", description = "Página de instancias")
     @GetMapping
     public ResponseEntity<Page<InstanciaComunResponseDTO>> listar(
@@ -62,18 +64,9 @@ public class InstanciaComunController {
             @RequestParam(required = false) Integer idCategoria,
             @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
             @RequestParam(required = false) EstadoLogico estado,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-
-        if (idEstudiante != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorEstudiante(idEstudiante, estado, pageable));
-        }
-        if (idFuncionario != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorFuncionario(idFuncionario, estado, pageable));
-        }
-        if (idCategoria != null) {
-            return ResponseEntity.ok(instanciaComunService.listarPorCategoria(idCategoria, estado, pageable));
-        }
-        return ResponseEntity.ok(instanciaComunService.listar(estado, pageable));
+            @ParameterObject @PageableDefault(size = 20, sort = {"fechaHora", "codInstancia"}, direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(
+                instanciaComunService.listar(idEstudiante, idFuncionario, idCategoria, estado, pageable));
     }
 
     @Operation(summary = "Editar una instancia")
