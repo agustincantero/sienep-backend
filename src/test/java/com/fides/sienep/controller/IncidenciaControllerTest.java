@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -108,9 +109,23 @@ class IncidenciaControllerTest extends AbstractControllerTest {
     @DisplayName("Listar - Sin filtros responde 200 con la página del service")
     void listar_SinFiltros_Responde200() throws Exception {
         Page<IncidenciaResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
-        when(incidenciaService.listar(any(), any())).thenReturn(pagina);
+        when(incidenciaService.listar(any(), any(), any(), any())).thenReturn(pagina);
 
         mockMvc.perform(get("/incidencias"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].codInstancia").value(1));
+    }
+
+    @Test
+    @DisplayName("Listar - Con varios filtros se los pasa todos al service, no solo el primero")
+    void listar_ConVariosFiltros_SePasanTodosAlService() throws Exception {
+        Page<IncidenciaResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
+        when(incidenciaService.listar(eq(5), eq(2), eq(EstadoLogico.INACTIVO), any())).thenReturn(pagina);
+
+        mockMvc.perform(get("/incidencias")
+                        .param("idEstudiante", "5")
+                        .param("idFuncionario", "2")
+                        .param("estado", "INACTIVO"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].codInstancia").value(1));
     }

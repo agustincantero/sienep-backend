@@ -43,10 +43,10 @@ public class IncidenciaController {
         return ResponseEntity.ok(incidenciaService.obtenerPorId(id));
     }
 
-    @Operation(summary = "Listar incidencias, con filtro opcional por estudiante o funcionario",
-            description = "Sin el parámetro estado, devuelve solo las ACTIVAS.")
+    @Operation(summary = "Listar incidencias, con filtros opcionales por estudiante y funcionario",
+            description = "Los filtros idEstudiante, idFuncionario y estado son opcionales y se combinan entre sí " +
+                    "(todos los que se indiquen deben cumplirse). Sin el parámetro estado, devuelve solo las ACTIVAS.")
     @ApiResponse(responseCode = "200", description = "Página de incidencias")
-    @ApiResponse(responseCode = "400", description = "Debe indicarse solo un filtro a la vez")
     @GetMapping
     public ResponseEntity<Page<IncidenciaResponseDTO>> listar(
             @RequestParam(required = false) Integer idEstudiante,
@@ -54,14 +54,7 @@ public class IncidenciaController {
             @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
             @RequestParam(required = false) EstadoLogico estado,
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-
-        if (idEstudiante != null) {
-            return ResponseEntity.ok(incidenciaService.listarPorEstudiante(idEstudiante, estado, pageable));
-        }
-        if (idFuncionario != null) {
-            return ResponseEntity.ok(incidenciaService.listarPorFuncionario(idFuncionario, estado, pageable));
-        }
-        return ResponseEntity.ok(incidenciaService.listar(estado, pageable));
+        return ResponseEntity.ok(incidenciaService.listar(idEstudiante, idFuncionario, estado, pageable));
     }
 
     @Operation(summary = "Editar una incidencia")

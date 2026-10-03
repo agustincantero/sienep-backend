@@ -10,12 +10,14 @@ import com.fides.sienep.model.Incidencia;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.IncidenciaRepository;
+import com.fides.sienep.repository.IncidenciaSpecs;
 import com.fides.sienep.utils.InstanciaIdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -83,11 +85,20 @@ public class IncidenciaService {
         return incidenciaMapper.toDto(guardada);
     }
 
+    // Todos los filtros que lleguen se combinan (AND). Antes había un método por filtro (listarPorEstudiante,
+    // listarPorFuncionario) y el controller usaba solo el primero presente: estudiante + funcionario devolvía
+    // todas las incidencias del estudiante, sin filtrar por funcionario.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public Page<IncidenciaResponseDTO> listar(EstadoLogico estado, Pageable pageable) {
+    public Page<IncidenciaResponseDTO> listar(Integer idEstudiante, Integer idFuncionario, EstadoLogico estado,
+                                              Pageable pageable) {
         EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
-        Page<Incidencia> pagina = incidenciaRepository.findByEstado(estadoEfectivo, pageable);
+
+        Specification<Incidencia> spec = IncidenciaSpecs.estado(estadoEfectivo);
+        if (idEstudiante != null) spec = spec.and(IncidenciaSpecs.estudiante(idEstudiante));
+        if (idFuncionario != null) spec = spec.and(IncidenciaSpecs.funcionario(idFuncionario));
+
+        Page<Incidencia> pagina = incidenciaRepository.findAll(spec, pageable);
         List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
@@ -96,26 +107,6 @@ public class IncidenciaService {
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
     public IncidenciaResponseDTO obtenerPorId(int id) {
         return incidenciaMapper.toDto(buscarActivaOFallar(id));
-    }
-
-    @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public Page<IncidenciaResponseDTO> listarPorEstudiante(int idEstudiante, EstadoLogico estado, Pageable pageable) {
-        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
-        Page<Incidencia> pagina = incidenciaRepository.findByEstudianteAndEstado(
-                idEstudiante, estadoEfectivo, pageable);
-        List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
-        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
-    }
-
-    @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public Page<IncidenciaResponseDTO> listarPorFuncionario(int idFuncionario, EstadoLogico estado, Pageable pageable) {
-        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
-        Page<Incidencia> pagina = incidenciaRepository.findByFuncionarioAndEstado(
-                idFuncionario, estadoEfectivo, pageable);
-        List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
-        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
     @PreAuthorize("hasRole('ESTUDIANTE')")
