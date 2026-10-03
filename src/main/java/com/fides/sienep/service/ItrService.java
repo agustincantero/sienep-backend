@@ -12,6 +12,7 @@ import com.fides.sienep.repository.ItrRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,8 @@ import java.util.List;
  *       Cuando ocurre un alta, baja o modificación, esta anotación vacía la caja "itrs" de la memoria RAM.
  *       Esto obliga al sistema a volver a consultar la base de datos la próxima vez, garantizando 
  *       que nunca se le muestren datos viejos a los usuarios.</li>
+ *   <li>Las escrituras vacían también la caja "carreras": {@code GET /carreras} incluye los ITRs de cada
+ *       carrera, así que asociar o desvincular carreras, o renombrar/desactivar un ITR, deja desactualizado ese listado.</li>
  * </ul>
  */
 @Service
@@ -48,7 +51,10 @@ public class ItrService {
      * en memoria para garantizar que el próximo GET traiga este nuevo registro.
      */
     @PreAuthorize("hasAuthority('CREAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public ItrResponseDTO crear(ItrRequestDTO dto) {
         if (itrRepository.existsByNomItr(dto.getNomItr())) {
@@ -95,7 +101,10 @@ public class ItrService {
      * sigan viendo datos viejos en el listado.
      */
     @PreAuthorize("hasAuthority('EDITAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public ItrResponseDTO editar(Integer id, ItrRequestDTO dto) {
         Itr itr = buscarOFallar(id);
@@ -118,7 +127,10 @@ public class ItrService {
      * Da de baja lógica un ITR. Evict de caché requerido para actualizar catálogo.
      */
     @PreAuthorize("hasAuthority('DESACTIVAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public void desactivar(Integer id) {
         Itr itr = buscarOFallar(id);
@@ -133,7 +145,10 @@ public class ItrService {
      * Reactiva un ITR inactivo. Evict de caché requerido para actualizar catálogo.
      */
     @PreAuthorize("hasAuthority('REACTIVAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public void reactivar(Integer id) {
         Itr itr = buscarOFallar(id);
