@@ -12,5 +12,5 @@ public interface CarreraRepository extends JpaRepository<Carrera, Integer> {
 
     List<Carrera> findByEstado(EstadoLogico estado);
 
-    boolean existsByNomCarrera(String nomCarrera);
+    boolean existsByNomCarreraIgnoreCase(String nomCarrera);
 }

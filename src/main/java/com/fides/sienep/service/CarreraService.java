@@ -48,11 +48,12 @@ public class CarreraService {
             @CacheEvict(value = "itrs", allEntries = true)
     })
     public CarreraResponseDTO crear(CarreraRequestDTO dto) {
-        if (carreraRepository.existsByNomCarrera(dto.getNomCarrera())) {
+        String nombre = dto.getNomCarrera().trim();
+        if (carreraRepository.existsByNomCarreraIgnoreCase(nombre)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una carrera con ese nombre.");
         }
         Carrera carrera = new Carrera();
-        carrera.setNomCarrera(dto.getNomCarrera());
+        carrera.setNomCarrera(nombre);
         return carreraMapper.toDto(carreraRepository.save(carrera));
     }
 
@@ -82,7 +83,12 @@ public class CarreraService {
         if (carrera.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede editar una carrera que no está ACTIVA.");
         }
-        carrera.setNomCarrera(dto.getNomCarrera());
+        String nombre = dto.getNomCarrera().trim();
+        // Si solo cambian mayúsculas/minúsculas del propio nombre no es un duplicado.
+        if (!carrera.getNomCarrera().equalsIgnoreCase(nombre) && carreraRepository.existsByNomCarreraIgnoreCase(nombre)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una carrera con ese nombre.");
+        }
+        carrera.setNomCarrera(nombre);
         return carreraMapper.toDto(carreraRepository.save(carrera));
     }
 

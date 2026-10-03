@@ -57,11 +57,12 @@ public class ItrService {
     })
     @Transactional
     public ItrResponseDTO crear(ItrRequestDTO dto) {
-        if (itrRepository.existsByNomItr(dto.getNomItr())) {
+        String nombre = dto.getNomItr().trim();
+        if (itrRepository.existsByNomItrIgnoreCase(nombre)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un ITR con ese nombre.");
         }
 
-        Itr itr = new Itr(dto.getNomItr());
+        Itr itr = new Itr(nombre);
 
         // Si no hay carreras a asociar, se guarda una sola vez y listo.
         if (dto.getCarrerasIds() == null || dto.getCarrerasIds().isEmpty()) {
@@ -113,11 +114,12 @@ public class ItrService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede modificar ni asociar carreras a un ITR inactivo.");
         }
 
-        if (!itr.getNomItr().equalsIgnoreCase(dto.getNomItr()) && itrRepository.existsByNomItr(dto.getNomItr())) {
+        String nombre = dto.getNomItr().trim();
+        if (!itr.getNomItr().equalsIgnoreCase(nombre) && itrRepository.existsByNomItrIgnoreCase(nombre)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre del ITR ya está en uso.");
         }
 
-        itr.setNomItr(dto.getNomItr());
+        itr.setNomItr(nombre);
         asociarCarreras(itr, dto.getCarrerasIds());
 
         return itrMapper.toDto(itrRepository.save(itr));
