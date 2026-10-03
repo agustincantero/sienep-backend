@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -191,6 +193,21 @@ class InstanciaBusquedaIT {
         Page<InstanciaComunResponseDTO> resultado = listar(estudiante2, funcionarioB, null, null);
 
         assertEquals(0, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Con el orden por defecto del controller (fecha y código descendentes) las páginas no repiten ni saltean filas")
+    void ordenPorDefecto_PaginasEstables() {
+        Sort orden = Sort.by(Sort.Direction.DESC, "fechaHora", "codInstancia");
+
+        Page<InstanciaComunResponseDTO> pagina1 = listar(estudiante1, null, null, null, PageRequest.of(0, 2, orden));
+        Page<InstanciaComunResponseDTO> pagina2 = listar(estudiante1, null, null, null, PageRequest.of(1, 2, orden));
+
+        // Se crearon en orden IT-1, IT-2, IT-3 (fecha y código crecientes): de la más nueva a la más vieja.
+        List<String> recorridas = new ArrayList<>();
+        pagina1.getContent().forEach(i -> recorridas.add(i.getTitulo()));
+        pagina2.getContent().forEach(i -> recorridas.add(i.getTitulo()));
+        assertEquals(List.of("IT-3", "IT-2", "IT-1"), recorridas);
     }
 
     @Test

@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -63,7 +64,7 @@ public class InstanciaComunController {
             @RequestParam(required = false) Integer idCategoria,
             @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
             @RequestParam(required = false) EstadoLogico estado,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = {"fechaHora", "codInstancia"}, direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(
                 instanciaComunService.listar(idEstudiante, idFuncionario, idCategoria, estado, pageable));
     }
