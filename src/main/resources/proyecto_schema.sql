@@ -127,6 +127,10 @@ CREATE TRIGGER trg_actualizar_carreras
     BEFORE UPDATE ON proyecto.carreras
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+-- uk_nombre_carrera compara exacto: "Analista en TI" y "analista en ti " pasarían como distintas.
+-- Este índice aplica la misma regla que CarreraService (sin distinguir mayúsculas ni espacios de los bordes).
+CREATE UNIQUE INDEX uk_nombre_carrera_normalizado ON proyecto.carreras (LOWER(TRIM(nom_carrera)));
+
 -- =====================================================
 -- TABLA: roles
 -- =====================================================
@@ -159,6 +163,9 @@ CREATE TABLE proyecto.itrs (
 CREATE TRIGGER trg_actualizar_itrs
     BEFORE UPDATE ON proyecto.itrs
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+-- Mismo criterio que uk_nombre_carrera_normalizado (ver ItrService).
+CREATE UNIQUE INDEX uk_nom_itr_normalizado ON proyecto.itrs (LOWER(TRIM(nom_itr)));
 
 -- =====================================================
 -- TABLA: permisos  ← CORREGIDO: antes sin prefijo proyecto.
