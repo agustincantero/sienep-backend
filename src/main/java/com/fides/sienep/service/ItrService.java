@@ -166,9 +166,13 @@ public class ItrService {
             nuevasCarrerasIds = Collections.emptyList();
         }
 
+        // Los vínculos con una carrera INACTIVA no se tocan: GET /itrs no las muestra (ItrMapper.mapCarrerasActivas),
+        // así que ningún cliente puede reenviar su id, y desvincularlas acá hacía que al reactivar la carrera
+        // ya no apareciera en el ITR. Para sacarla del ITR hay que reactivarla primero.
         for (ItrCarrera itrCarrera : itr.getCarreras()) {
-            if (itrCarrera.getEstado() == EstadoLogico.ACTIVO && 
-                !nuevasCarrerasIds.contains(itrCarrera.getCarrera().getIdCarrera())) {
+            if (itrCarrera.getEstado() == EstadoLogico.ACTIVO
+                    && itrCarrera.getCarrera().getEstado() != EstadoLogico.INACTIVO
+                    && !nuevasCarrerasIds.contains(itrCarrera.getCarrera().getIdCarrera())) {
                 itrCarrera.setEstado(EstadoLogico.INACTIVO);
             }
         }

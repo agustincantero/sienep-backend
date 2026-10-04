@@ -289,6 +289,40 @@ class ItrServiceTest {
     }
 
     @Test
+    @DisplayName("editar: Conserva el vínculo con una carrera INACTIVA aunque no venga en carrerasIds")
+    void editar_ConservaVinculoConCarreraInactiva() {
+        Itr itr = new Itr("Norte");
+        itr.setIdItr(1);
+
+        Carrera carreraInactiva = new Carrera();
+        carreraInactiva.setIdCarrera(1);
+        carreraInactiva.setEstado(EstadoLogico.INACTIVO);
+        Carrera carreraActiva = new Carrera();
+        carreraActiva.setIdCarrera(2);
+        carreraActiva.setEstado(EstadoLogico.ACTIVO);
+
+        ItrCarrera vinculoConInactiva = new ItrCarrera(itr, carreraInactiva);
+        vinculoConInactiva.setEstado(EstadoLogico.ACTIVO);
+        ItrCarrera vinculoConActiva = new ItrCarrera(itr, carreraActiva);
+        vinculoConActiva.setEstado(EstadoLogico.ACTIVO);
+        itr.getCarreras().add(vinculoConInactiva);
+        itr.getCarreras().add(vinculoConActiva);
+
+        when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
+        when(itrRepository.save(itr)).thenReturn(itr);
+        when(itrMapper.toDto(itr)).thenReturn(ItrResponseDTO.builder().build());
+
+        // El cliente solo ve la carrera activa (GET /itrs filtra las inactivas) y la saca del ITR.
+        ItrRequestDTO dto = new ItrRequestDTO();
+        dto.setNomItr("Norte");
+        dto.setCarrerasIds(List.of());
+        itrService.editar(1, dto);
+
+        assertEquals(EstadoLogico.ACTIVO, vinculoConInactiva.getEstado(), "el vínculo con la carrera inactiva se tiene que conservar");
+        assertEquals(EstadoLogico.INACTIVO, vinculoConActiva.getEstado());
+    }
+
+    @Test
     @DisplayName("editar: Lanza 422 al reactivar un vínculo si la carrera ya no está ACTIVA")
     void editar_LanzaUnprocessable_AlReactivarVinculoConCarreraInactiva() {
         Itr itr = new Itr("Norte");
