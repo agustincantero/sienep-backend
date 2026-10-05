@@ -196,6 +196,16 @@ class InstanciaBusquedaIT {
     }
 
     @Test
+    @DisplayName("La respuesta incluye el documento del estudiante y del funcionario")
+    void respuesta_IncluyeLosDocumentos() {
+        Page<InstanciaComunResponseDTO> resultado = listar(estudiante1, funcionarioA, categoriaX, null);
+
+        assertEquals(1, resultado.getNumberOfElements());
+        assertEquals("90000211", resultado.getContent().get(0).getDocumentoEstudiante());
+        assertEquals("90000221", resultado.getContent().get(0).getDocumentoFuncionario());
+    }
+
+    @Test
     @DisplayName("Con el orden por defecto del controller (fecha y código descendentes) las páginas no repiten ni saltean filas")
     void ordenPorDefecto_PaginasEstables() {
         Sort orden = Sort.by(Sort.Direction.DESC, "fechaHora", "codInstancia");

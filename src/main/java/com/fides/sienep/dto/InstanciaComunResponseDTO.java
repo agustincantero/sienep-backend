@@ -19,8 +19,10 @@ public class InstanciaComunResponseDTO {
     private String canal;
     private int idEstudiante;
     private String nombreEstudiante;
+    private String documentoEstudiante;
     private int idFuncionario;
     private String nombreFuncionario;
+    private String documentoFuncionario;
     private int idCategoria;
     private String nombreCategoria;
     private EstadoLogico estado;

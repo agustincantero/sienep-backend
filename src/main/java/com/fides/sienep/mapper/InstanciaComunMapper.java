@@ -10,7 +10,9 @@ public interface InstanciaComunMapper {
 
     @Mapping(target = "idEstudiante", source = "estudiante.idUsuario")
     @Mapping(target = "nombreEstudiante", expression = "java(entidad.getEstudiante().getNombre() + \" \" + entidad.getEstudiante().getApellido())")
+    @Mapping(target = "documentoEstudiante", source = "estudiante.documento")
     @Mapping(target = "idFuncionario", source = "funcionario.idUsuario")
+    @Mapping(target = "documentoFuncionario", source = "funcionario.documento")
     @Mapping(target = "nombreFuncionario", expression = "java(entidad.getFuncionario().getNombre() + \" \" + entidad.getFuncionario().getApellido())")
     @Mapping(target = "idCategoria", source = "categoria.idCategoria")
     @Mapping(target = "nombreCategoria", source = "categoria.nomCategoria")

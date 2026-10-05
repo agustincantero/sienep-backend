@@ -17,8 +17,10 @@ public class IncidenciaResponseDTO {
     private LocalDateTime fechaHora;
     private int idEstudiante;
     private String nombreEstudiante;
+    private String documentoEstudiante;
     private int idFuncionario;
     private String nombreFuncionario;
+    private String documentoFuncionario;
     private String canal;
     private String idNegInstancia;
     private String lugar;
