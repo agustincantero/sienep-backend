@@ -116,6 +116,8 @@ public class IncidenciaService {
         Page<Incidencia> pagina = incidenciaRepository.findByEstudianteAndEstado(
                 idEstudiante, EstadoLogico.ACTIVO, pageable);
         List<IncidenciaResponseDTO> dtos = incidenciaMapper.toDtoList(pagina.getContent());
+        // El estudiante ve su propio documento, pero no el del funcionario responsable: es un dato del personal.
+        dtos.forEach(dto -> dto.setDocumentoFuncionario(null));
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 

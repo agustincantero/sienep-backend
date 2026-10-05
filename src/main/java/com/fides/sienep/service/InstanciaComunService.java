@@ -298,6 +298,8 @@ public class InstanciaComunService {
         Page<InstanciaComun> pagina = instanciaComunRepository.findByEstudianteAndEstado(
                 idEstudiante, EstadoLogico.ACTIVO, pageable);
         List<InstanciaComunResponseDTO> dtos = instanciaComunMapper.toDtoList(pagina.getContent());
+        // El estudiante ve su propio documento, pero no el del funcionario responsable: es un dato del personal.
+        dtos.forEach(dto -> dto.setDocumentoFuncionario(null));
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 

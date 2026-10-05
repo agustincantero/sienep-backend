@@ -567,6 +567,24 @@ class InstanciaComunServiceTest {
         assertEquals(1, resultado.getTotalElements());
     }
 
+    @Test
+    @DisplayName("Listar mis instancias - El estudiante ve su documento pero no el del funcionario")
+    void listarMisInstancias_OcultaElDocumentoDelFuncionario() {
+        mockSecurityContext(1);
+        Pageable pageable = PageRequest.of(0, 10);
+        responseDTO.setDocumentoEstudiante("43867154");
+        responseDTO.setDocumentoFuncionario("11111111");
+
+        when(instanciaComunRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(instancia), pageable, 1));
+        when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
+
+        InstanciaComunResponseDTO dto = instanciaComunService.listarMisInstancias(pageable).getContent().get(0);
+
+        assertEquals("43867154", dto.getDocumentoEstudiante());
+        assertNull(dto.getDocumentoFuncionario());
+    }
+
     // ── Buscar por ID ─────────────────────────────────────────
 
     @Test
