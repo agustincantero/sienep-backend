@@ -369,4 +369,22 @@ class IncidenciaServiceTest {
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
     }
+
+    @Test
+    @DisplayName("Listar mis incidencias - El estudiante ve su documento pero no el del funcionario")
+    void listarMisIncidencias_OcultaElDocumentoDelFuncionario() {
+        mockSecurityContext(1);
+        Pageable pageable = PageRequest.of(0, 10);
+        responseDTO.setDocumentoEstudiante("43867154");
+        responseDTO.setDocumentoFuncionario("11111111");
+
+        when(incidenciaRepository.findByEstudianteAndEstado(1, EstadoLogico.ACTIVO, pageable))
+                .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 1));
+        when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
+
+        IncidenciaResponseDTO dto = incidenciaService.listarMisIncidencias(pageable).getContent().get(0);
+
+        assertEquals("43867154", dto.getDocumentoEstudiante());
+        assertNull(dto.getDocumentoFuncionario());
+    }
 }
