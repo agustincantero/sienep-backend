@@ -3,11 +3,14 @@ package com.fides.sienep.mapper;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.MiPerfilEstudianteDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
+import com.fides.sienep.model.Telefono;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -67,5 +70,19 @@ class EstudianteMapperTest {
         assertEquals("Av. 18 de Julio", dto.getCalle());
         assertEquals(1234, dto.getNroPuerta());
         assertEquals("/estudiantes/7/foto", dto.getUrlFoto());
+    }
+
+    @Test
+    @DisplayName("Teléfonos - Solo se devuelven los ACTIVOS, no los dados de baja al reemplazarlos")
+    void mapTelefonos_ExcluyeLosEliminados() {
+        Estudiante estudiante = estudiante(null);
+        Telefono viejo = new Telefono(estudiante, "099123456");
+        viejo.setEstado(EstadoLogico.ELIMINADO);
+        estudiante.getTelefonos().add(viejo);
+        estudiante.getTelefonos().add(new Telefono(estudiante, "091555444"));
+
+        assertEquals(List.of("091555444"), mapper.toMiPerfilDto(estudiante).getTelefonos());
+        assertEquals(List.of("091555444"), mapper.toDto(estudiante).getTelefonos());
+        assertEquals(List.of("091555444"), mapper.toResumenDto(estudiante).getTelefonos());
     }
 }

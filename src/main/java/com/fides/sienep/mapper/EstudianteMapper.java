@@ -3,6 +3,7 @@ package com.fides.sienep.mapper;
 import com.fides.sienep.dto.EstudianteResponseDTO;
 import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.MiPerfilEstudianteDTO;
+import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
 import com.fides.sienep.model.Grupo;
 import com.fides.sienep.model.Telefono;
@@ -42,11 +43,15 @@ public interface EstudianteMapper {
         return entidad.getFoto() != null ? "/estudiantes/" + entidad.getIdUsuario() + "/foto" : null;
     }
 
+    // Solo los ACTIVOS: al reemplazar un teléfono, asignarTelefonos() deja el anterior como ELIMINADO (baja lógica),
+    // pero la colección los trae a todos. Sin este filtro la ficha y "Mi perfil" seguían mostrando el número viejo.
     default List<String> mapTelefonos(List<Telefono> telefonos) {
         if (telefonos == null) return new ArrayList<>();
         List<String> numeros = new ArrayList<>();
         for (Telefono t : telefonos) {
-            numeros.add(t.getId().getNumero());
+            if (t.getEstado() == EstadoLogico.ACTIVO) {
+                numeros.add(t.getId().getNumero());
+            }
         }
         return numeros;
     }
