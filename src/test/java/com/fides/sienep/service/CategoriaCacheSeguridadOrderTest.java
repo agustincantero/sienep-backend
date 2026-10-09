@@ -7,6 +7,8 @@ import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaInstanciaRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
@@ -85,6 +87,37 @@ class CategoriaCacheSeguridadOrderTest {
         autenticarCon("ALGUN_OTRO_PERMISO");
         assertThrows(AccessDeniedException.class,
                 () -> categoriaInstanciaService.listar(null, null));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"VER_CATEGORIAS_INSTANCIA", "VER_INSTANCIAS", "CREAR_INSTANCIA", "EDITAR_INSTANCIA"})
+    void cualquieraDeLosPermisosDeInstancia_PuedeListarLasCategorias(String permiso) {
+        CategoriaInstancia categoria = new CategoriaInstancia();
+        categoria.setIdCategoria(1);
+        categoria.setEstado(EstadoLogico.ACTIVO);
+        CategoriaInstanciaResponseDTO dto = new CategoriaInstanciaResponseDTO();
+        dto.setIdCategoria(1);
+        when(categoriaRepository.buscarConFiltros(null, EstadoLogico.ACTIVO)).thenReturn(List.of(categoria));
+        when(categoriaMapper.toDtoList(List.of(categoria))).thenReturn(List.of(dto));
+
+        autenticarCon(permiso);
+
+        assertEquals(1, categoriaInstanciaService.listar(null, null).size());
+    }
+
+    @Test
+    void sinNingunPermisoDeInstancia_NoPuedeListarLasCategorias() {
+        autenticarCon("VER_RECORDATORIOS");
+
+        assertThrows(AccessDeniedException.class, () -> categoriaInstanciaService.listar(null, null));
+    }
+
+    @Test
+    void obtenerPorId_SigueExigiendoElPermisoDeCategorias() {
+        // El permiso ampliado es solo para listar: el detalle de una categoría sigue siendo de quien las administra.
+        autenticarCon("CREAR_INSTANCIA");
+
+        assertThrows(AccessDeniedException.class, () -> categoriaInstanciaService.obtenerPorId(1));
     }
 
     private void autenticarCon(String permiso) {
