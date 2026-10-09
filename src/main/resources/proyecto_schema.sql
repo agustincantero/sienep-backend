@@ -349,6 +349,11 @@ CREATE TRIGGER trg_actualizar_grupos
 
 CREATE INDEX idx_grupos_carrera ON proyecto.grupos(id_carrera);
 
+-- uk_grupo_carrera_grupo_generacion compara exacto: "Grupo A" y "grupo a " pasarían como distintos.
+-- Este índice aplica la regla de GrupoService (sin distinguir mayúsculas ni espacios de los bordes, solo entre grupos ACTIVOS).
+CREATE UNIQUE INDEX uk_grupo_normalizado_activo ON proyecto.grupos (id_carrera, LOWER(TRIM(nom_grupo)), generacion)
+    WHERE estado = 'ACTIVO';
+
 -- =====================================================
 -- TABLA: itr_carrera
 -- =====================================================
