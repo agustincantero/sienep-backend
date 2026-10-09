@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -73,9 +74,24 @@ public class InstanciaComunService {
         return false;
     }
 
+    // Una instancia se agenda: no puede quedar en el pasado. Se compara al minuto porque el input del front no manda segundos.
+    private void validarFechaNoPasada(LocalDateTime fechaHora) {
+        if (fechaHora.isBefore(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES))) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "La fecha y hora de la instancia no puede estar en el pasado");
+        }
+    }
+
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INSTANCIA')")
     public InstanciaComunResponseDTO crear(InstanciaComunRequestDTO dto) {
+        validarFechaNoPasada(dto.getFechaHora());
+        return guardar(dto);
+    }
+
+    // Aparte de crear() para que crearDesdeRecordatorio() no valide una fecha que arma el propio sistema (now() puede caer un instante antes del corte del minuto).
+    private InstanciaComunResponseDTO guardar(InstanciaComunRequestDTO dto) {
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -251,12 +267,12 @@ public class InstanciaComunService {
         instanciaDto.setCanal(dto.getCanal());
         instanciaDto.setIdCategoria(dto.getIdCategoria());
 
-        // Self-invocation intencional: this.crear() no pasa por el proxy de Spring, así que
-        // su propio @Transactional/@PreAuthorize no se re-evalúan acá — corre como método
+        // Self-invocation intencional: this.guardar() no pasa por el proxy de Spring, así que
+        // el @Transactional/@PreAuthorize de crear() no se re-evalúan acá — corre como método
         // plano, dentro de la misma transacción que ya abrió crearDesdeRecordatorio(), y la
         // autorización ya se validó arriba. Es el comportamiento buscado, no un bug: si
         // alguna vez esto se refactoriza a una clase separada, hay que revisar este detalle.
-        InstanciaComunResponseDTO nuevaInstancia = this.crear(instanciaDto);
+        InstanciaComunResponseDTO nuevaInstancia = this.guardar(instanciaDto);
 
         // Se marca cumplido recién después de que la instancia se creó con éxito: si crear()
         // lanza una excepción, el rollback de @Transactional deshace todo y el recordatorio
@@ -307,6 +323,11 @@ public class InstanciaComunService {
     @PreAuthorize("hasAuthority('EDITAR_INSTANCIA')")
     public InstanciaComunResponseDTO editar(int codInstancia, InstanciaComunUpdateDTO dto) {
         InstanciaComun instancia = buscarActivaOFallar(codInstancia);
+
+        // Solo si la fecha cambia: una instancia ya vencida se puede seguir editando (título, canal) sin tocar su fecha.
+        if (!dto.getFechaHora().truncatedTo(ChronoUnit.MINUTES).equals(instancia.getFechaHora().truncatedTo(ChronoUnit.MINUTES))) {
+            validarFechaNoPasada(dto.getFechaHora());
+        }
 
         CategoriaInstancia categoria = categoriaInstanciaRepository.findById(dto.getIdCategoria())
                 .orElseThrow(() -> new ResponseStatusException(

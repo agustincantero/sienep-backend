@@ -40,7 +40,8 @@ public class CategoriaInstanciaService {
     private final CategoriaInstanciaMapper mapper;
 
     // --- Métodos CRUD ---
-    @PreAuthorize("hasAuthority('VER_CATEGORIAS_INSTANCIA')")
+    // Quien crea o edita una instancia necesita el listado para elegir la categoría, aunque no tenga el permiso de administrar categorías.
+    @PreAuthorize("hasAnyAuthority('VER_CATEGORIAS_INSTANCIA','VER_INSTANCIAS','CREAR_INSTANCIA','EDITAR_INSTANCIA')")
     @Transactional(readOnly = true)
     @Cacheable("categoriasInstancia")
     public List<CategoriaInstanciaResponseDTO> listar(String nombre, EstadoLogico estado) {
