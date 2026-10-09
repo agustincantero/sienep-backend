@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Slf4j
@@ -44,9 +46,20 @@ public class IncidenciaService {
         return Integer.parseInt(auth.getName());
     }
 
+    // Una incidencia registra algo que ya ocurrió: no puede quedar en el futuro.
+    private void validarFechaNoFutura(LocalDateTime fechaHora) {
+        if (fechaHora.isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "La fecha y hora de la incidencia no puede estar en el futuro");
+        }
+    }
+
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_INCIDENCIA')")
     public IncidenciaResponseDTO crear(IncidenciaRequestDTO dto) {
+        validarFechaNoFutura(dto.getFechaHora());
+
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -125,6 +138,11 @@ public class IncidenciaService {
     @PreAuthorize("hasAuthority('EDITAR_INCIDENCIA')")
     public IncidenciaResponseDTO editar(int id, IncidenciaRequestDTO dto) {
         Incidencia incidencia = buscarActivaOFallar(id);
+
+        // Solo si la fecha cambia, para no rechazar la edición de otros campos de una incidencia ya guardada.
+        if (!dto.getFechaHora().truncatedTo(ChronoUnit.MINUTES).equals(incidencia.getFechaHora().truncatedTo(ChronoUnit.MINUTES))) {
+            validarFechaNoFutura(dto.getFechaHora());
+        }
 
         Estudiante estudiante = estudianteRepository.findById(dto.getIdEstudiante())
                 .orElseThrow(() -> new ResponseStatusException(

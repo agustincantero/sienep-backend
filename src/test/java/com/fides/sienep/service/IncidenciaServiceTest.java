@@ -27,6 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -116,6 +117,34 @@ class IncidenciaServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodInstancia());
+        verify(incidenciaRepository).save(any(Incidencia.class));
+    }
+
+    @Test
+    @DisplayName("Crear incidencia - Fecha en el futuro (422), no consulta nada")
+    void crear_FechaFutura_LanzaUnprocessable() {
+        requestDTO.setFechaHora(LocalDateTime.now().plusMinutes(5));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> incidenciaService.crear(requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        assertEquals("La fecha y hora de la incidencia no puede estar en el futuro", ex.getReason());
+        verifyNoInteractions(estudianteRepository, incidenciaRepository);
+    }
+
+    @Test
+    @DisplayName("Crear incidencia - Fecha en el pasado es válida")
+    void crear_FechaPasada_Exito() {
+        mockSecurityContext(2);
+        requestDTO.setFechaHora(LocalDateTime.now().minusDays(2));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(incidenciaRepository.save(any(Incidencia.class))).thenReturn(incidencia);
+        when(incidenciaMapper.toDto(incidencia)).thenReturn(responseDTO);
+
+        assertNotNull(incidenciaService.crear(requestDTO));
         verify(incidenciaRepository).save(any(Incidencia.class));
     }
 
@@ -231,6 +260,38 @@ class IncidenciaServiceTest {
         IncidenciaResponseDTO resultado = incidenciaService.editar(1, requestDTO);
 
         assertNotNull(resultado);
+        verify(incidenciaRepository).save(incidencia);
+    }
+
+    @Test
+    @DisplayName("Editar incidencia - Cambiar la fecha a una futura (422)")
+    void editar_FechaNuevaEnElFuturo_LanzaUnprocessable() {
+        requestDTO.setFechaHora(LocalDateTime.now().plusDays(1));
+        when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(incidencia));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> incidenciaService.editar(1, requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        assertEquals("La fecha y hora de la incidencia no puede estar en el futuro", ex.getReason());
+        verify(incidenciaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar incidencia - Sin cambiar la fecha se puede editar el resto, aunque la guardada fuera futura")
+    void editar_FechaSinCambios_Exito() {
+        LocalDateTime fechaGuardada = LocalDateTime.now().plusDays(1).withSecond(42);
+        incidencia.setFechaHora(fechaGuardada);
+        // El front manda la fecha sin segundos: igual cuenta como "sin cambios".
+        requestDTO.setFechaHora(fechaGuardada.truncatedTo(ChronoUnit.MINUTES));
+        when(incidenciaRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(incidencia));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(incidenciaRepository.save(any(Incidencia.class))).thenReturn(incidencia);
+        when(incidenciaMapper.toDto(incidencia)).thenReturn(responseDTO);
+
+        assertNotNull(incidenciaService.editar(1, requestDTO));
         verify(incidenciaRepository).save(incidencia);
     }
 

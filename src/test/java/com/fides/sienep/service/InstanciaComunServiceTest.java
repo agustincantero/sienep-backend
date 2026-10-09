@@ -38,6 +38,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -104,7 +105,7 @@ class InstanciaComunServiceTest {
 
         requestDTO = new InstanciaComunRequestDTO();
         requestDTO.setTitulo("Reunión de seguimiento");
-        requestDTO.setFechaHora(LocalDateTime.now());
+        requestDTO.setFechaHora(LocalDateTime.now().plusHours(1));
         requestDTO.setIdEstudiante(1);
         requestDTO.setIdCategoria(1);
 
@@ -148,6 +149,35 @@ class InstanciaComunServiceTest {
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodInstancia());
+        verify(instanciaComunRepository).save(any(InstanciaComun.class));
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Fecha en el pasado (422), no consulta nada")
+    void crear_FechaPasada_LanzaUnprocessable() {
+        requestDTO.setFechaHora(LocalDateTime.now().minusMinutes(5));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        assertEquals("La fecha y hora de la instancia no puede estar en el pasado", ex.getReason());
+        verifyNoInteractions(estudianteRepository, instanciaComunRepository);
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Un instante dentro del minuto actual es válido")
+    void crear_FechaDelMinutoActual_Exito() {
+        mockSecurityContext(2);
+        requestDTO.setFechaHora(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES));
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        assertNotNull(instanciaComunService.crear(requestDTO));
         verify(instanciaComunRepository).save(any(InstanciaComun.class));
     }
 
@@ -631,6 +661,47 @@ class InstanciaComunServiceTest {
         InstanciaComunResponseDTO resultado = instanciaComunService.editar(1, updateDTO);
 
         assertNotNull(resultado);
+        verify(instanciaComunRepository).save(instancia);
+    }
+
+    @Test
+    @DisplayName("Editar instancia común - Cambiar la fecha a una pasada (422)")
+    void editar_FechaNuevaEnElPasado_LanzaUnprocessable() {
+        instancia.setFechaHora(LocalDateTime.now().plusDays(2));
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        updateDTO.setFechaHora(LocalDateTime.now().minusDays(1));
+        updateDTO.setIdCategoria(1);
+
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> instanciaComunService.editar(1, updateDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        assertEquals("La fecha y hora de la instancia no puede estar en el pasado", ex.getReason());
+        verify(instanciaComunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar instancia común - Ya vencida, sin cambiar la fecha se puede editar el resto")
+    void editar_InstanciaVencida_FechaSinCambios_Exito() {
+        LocalDateTime fechaVencida = LocalDateTime.now().minusDays(3).withSecond(42);
+        instancia.setFechaHora(fechaVencida);
+        InstanciaComunUpdateDTO updateDTO = new InstanciaComunUpdateDTO();
+        updateDTO.setTitulo("Nuevo título");
+        // El front manda la fecha sin segundos: igual cuenta como "sin cambios".
+        updateDTO.setFechaHora(fechaVencida.truncatedTo(ChronoUnit.MINUTES));
+        updateDTO.setIdCategoria(1);
+
+        when(instanciaComunRepository.findByCodInstanciaAndEstado(1, EstadoLogico.ACTIVO))
+                .thenReturn(Optional.of(instancia));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+
+        assertNotNull(instanciaComunService.editar(1, updateDTO));
         verify(instanciaComunRepository).save(instancia);
     }
 
