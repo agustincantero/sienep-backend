@@ -60,7 +60,7 @@ class CarreraServiceTest {
     @Test
     @DisplayName("Crear carrera - Éxito")
     void crear_Exito() {
-        when(carreraRepository.existsByNomCarrera(anyString())).thenReturn(false);
+        when(carreraRepository.existsByNomCarreraIgnoreCase(anyString())).thenReturn(false);
         when(carreraRepository.save(any(Carrera.class))).thenReturn(carreraMock);
         when(carreraMapper.toDto(any(Carrera.class))).thenReturn(responseDTO);
 
@@ -68,14 +68,14 @@ class CarreraServiceTest {
 
         assertNotNull(result);
         assertEquals(responseDTO.getNomCarrera(), result.getNomCarrera());
-        verify(carreraRepository).existsByNomCarrera(requestDTO.getNomCarrera());
+        verify(carreraRepository).existsByNomCarreraIgnoreCase(requestDTO.getNomCarrera());
         verify(carreraRepository).save(any(Carrera.class));
     }
 
     @Test
     @DisplayName("Crear carrera - Conflicto si ya existe")
     void crear_LanzaExcepcion_SiYaExiste() {
-        when(carreraRepository.existsByNomCarrera(anyString())).thenReturn(true);
+        when(carreraRepository.existsByNomCarreraIgnoreCase(anyString())).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> carreraService.crear(requestDTO));
         
@@ -162,6 +162,48 @@ class CarreraServiceTest {
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(carreraRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear carrera - Guarda el nombre sin espacios al principio ni al final")
+    void crear_RecortaEspacios() {
+        when(carreraRepository.existsByNomCarreraIgnoreCase("Analista en TI")).thenReturn(false);
+        when(carreraRepository.save(any(Carrera.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(carreraMapper.toDto(any(Carrera.class))).thenReturn(responseDTO);
+
+        requestDTO.setNomCarrera("  Analista en TI  ");
+        carreraService.crear(requestDTO);
+
+        verify(carreraRepository).save(argThat(c -> c.getNomCarrera().equals("Analista en TI")));
+    }
+
+    @Test
+    @DisplayName("Editar carrera - Conflicto si el nuevo nombre ya lo usa otra carrera")
+    void editar_LanzaConflicto_NombreRepetido() {
+        when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
+        when(carreraRepository.existsByNomCarreraIgnoreCase("Analista en TI")).thenReturn(true);
+
+        requestDTO.setNomCarrera("Analista en TI");
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> carreraService.editar(1, requestDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertEquals("Ya existe una carrera con ese nombre.", ex.getReason());
+        verify(carreraRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar carrera - Cambiar solo mayúsculas del propio nombre no es un duplicado")
+    void editar_PermiteCambiarSoloMayusculas() {
+        when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
+        when(carreraRepository.save(any(Carrera.class))).thenReturn(carreraMock);
+        when(carreraMapper.toDto(any(Carrera.class))).thenReturn(responseDTO);
+
+        requestDTO.setNomCarrera("INGENIERÍA EN SISTEMAS");
+        carreraService.editar(1, requestDTO);
+
+        assertEquals("INGENIERÍA EN SISTEMAS", carreraMock.getNomCarrera());
+        verify(carreraRepository, never()).existsByNomCarreraIgnoreCase(anyString());
     }
 
     @Test

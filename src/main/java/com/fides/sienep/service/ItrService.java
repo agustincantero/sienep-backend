@@ -12,6 +12,7 @@ import com.fides.sienep.repository.ItrRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,8 @@ import java.util.List;
  *       Cuando ocurre un alta, baja o modificación, esta anotación vacía la caja "itrs" de la memoria RAM.
  *       Esto obliga al sistema a volver a consultar la base de datos la próxima vez, garantizando 
  *       que nunca se le muestren datos viejos a los usuarios.</li>
+ *   <li>Las escrituras vacían también la caja "carreras": {@code GET /carreras} incluye los ITRs de cada
+ *       carrera, así que asociar o desvincular carreras, o renombrar/desactivar un ITR, deja desactualizado ese listado.</li>
  * </ul>
  */
 @Service
@@ -48,14 +51,18 @@ public class ItrService {
      * en memoria para garantizar que el próximo GET traiga este nuevo registro.
      */
     @PreAuthorize("hasAuthority('CREAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public ItrResponseDTO crear(ItrRequestDTO dto) {
-        if (itrRepository.existsByNomItr(dto.getNomItr())) {
+        String nombre = dto.getNomItr().trim();
+        if (itrRepository.existsByNomItrIgnoreCase(nombre)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un ITR con ese nombre.");
         }
 
-        Itr itr = new Itr(dto.getNomItr());
+        Itr itr = new Itr(nombre);
 
         // Si no hay carreras a asociar, se guarda una sola vez y listo.
         if (dto.getCarrerasIds() == null || dto.getCarrerasIds().isEmpty()) {
@@ -95,7 +102,10 @@ public class ItrService {
      * sigan viendo datos viejos en el listado.
      */
     @PreAuthorize("hasAuthority('EDITAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public ItrResponseDTO editar(Integer id, ItrRequestDTO dto) {
         Itr itr = buscarOFallar(id);
@@ -104,11 +114,12 @@ public class ItrService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede modificar ni asociar carreras a un ITR inactivo.");
         }
 
-        if (!itr.getNomItr().equalsIgnoreCase(dto.getNomItr()) && itrRepository.existsByNomItr(dto.getNomItr())) {
+        String nombre = dto.getNomItr().trim();
+        if (!itr.getNomItr().equalsIgnoreCase(nombre) && itrRepository.existsByNomItrIgnoreCase(nombre)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre del ITR ya está en uso.");
         }
 
-        itr.setNomItr(dto.getNomItr());
+        itr.setNomItr(nombre);
         asociarCarreras(itr, dto.getCarrerasIds());
 
         return itrMapper.toDto(itrRepository.save(itr));
@@ -118,7 +129,10 @@ public class ItrService {
      * Da de baja lógica un ITR. Evict de caché requerido para actualizar catálogo.
      */
     @PreAuthorize("hasAuthority('DESACTIVAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public void desactivar(Integer id) {
         Itr itr = buscarOFallar(id);
@@ -133,7 +147,10 @@ public class ItrService {
      * Reactiva un ITR inactivo. Evict de caché requerido para actualizar catálogo.
      */
     @PreAuthorize("hasAuthority('REACTIVAR_ITR')")
-    @CacheEvict(value = "itrs", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "itrs", allEntries = true),
+            @CacheEvict(value = "carreras", allEntries = true)
+    })
     @Transactional
     public void reactivar(Integer id) {
         Itr itr = buscarOFallar(id);
@@ -149,9 +166,13 @@ public class ItrService {
             nuevasCarrerasIds = Collections.emptyList();
         }
 
+        // Los vínculos con una carrera INACTIVA no se tocan: GET /itrs no las muestra (ItrMapper.mapCarrerasActivas),
+        // así que ningún cliente puede reenviar su id, y desvincularlas acá hacía que al reactivar la carrera
+        // ya no apareciera en el ITR. Para sacarla del ITR hay que reactivarla primero.
         for (ItrCarrera itrCarrera : itr.getCarreras()) {
-            if (itrCarrera.getEstado() == EstadoLogico.ACTIVO && 
-                !nuevasCarrerasIds.contains(itrCarrera.getCarrera().getIdCarrera())) {
+            if (itrCarrera.getEstado() == EstadoLogico.ACTIVO
+                    && itrCarrera.getCarrera().getEstado() != EstadoLogico.INACTIVO
+                    && !nuevasCarrerasIds.contains(itrCarrera.getCarrera().getIdCarrera())) {
                 itrCarrera.setEstado(EstadoLogico.INACTIVO);
             }
         }

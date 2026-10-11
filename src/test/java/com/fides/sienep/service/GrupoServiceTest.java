@@ -85,7 +85,7 @@ class GrupoServiceTest {
     @DisplayName("Crear grupo - Éxito")
     void crear_Exito() {
         when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
-        when(grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
                 any(), any(), any(), any())).thenReturn(false);
         when(grupoRepository.save(any(Grupo.class))).thenReturn(grupoMock);
         when(grupoMapper.toDto(any(Grupo.class))).thenReturn(responseDTO);
@@ -143,7 +143,7 @@ class GrupoServiceTest {
     @DisplayName("Crear grupo - Nombre duplicado en misma carrera y generación → 409")
     void crear_LanzaExcepcion_NombreDuplicado() {
         when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
-        when(grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
                 any(), any(), any(), any())).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(
@@ -231,8 +231,8 @@ class GrupoServiceTest {
         updateDTO.setGeneracion(LocalDate.now().getYear());
 
         when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
-        when(grupoRepository.findByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
-                any(), any(), any(), any())).thenReturn(Optional.empty());
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstadoAndIdGrupoNot(
+                any(), any(), any(), any(), any())).thenReturn(false);
         when(grupoRepository.save(any(Grupo.class))).thenReturn(grupoMock);
         when(grupoMapper.toDto(any(Grupo.class))).thenReturn(responseDTO);
 
@@ -241,6 +241,39 @@ class GrupoServiceTest {
         assertNotNull(result);
         assertEquals("Grupo B", grupoMock.getNomGrupo());
         verify(grupoRepository).save(grupoMock);
+    }
+
+    @Test
+    @DisplayName("Crear grupo - Guarda el nombre sin espacios en los bordes y busca duplicados sin distinguir mayúsculas")
+    void crear_RecortaNombre() {
+        requestDTO.setNomGrupo("  grupo a  ");
+        when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                "grupo a", 1, requestDTO.getGeneracion(), EstadoLogico.ACTIVO)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.crear(requestDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(grupoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar grupo - Rechaza un nombre que ya usa otro grupo activo, con otras mayúsculas")
+    void editar_LanzaConflicto_DuplicadoConOtrasMayusculas() {
+        GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
+        updateDTO.setNomGrupo(" GRUPO B ");
+        updateDTO.setGeneracion(grupoMock.getGeneracion());
+
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstadoAndIdGrupoNot(
+                "GRUPO B", 1, grupoMock.getGeneracion(), EstadoLogico.ACTIVO, 1)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.editar(1, updateDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(grupoRepository, never()).save(any());
     }
 
     @Test
@@ -336,6 +369,22 @@ class GrupoServiceTest {
 
         assertEquals(EstadoLogico.ACTIVO, grupoMock.getEstado());
         verify(grupoRepository).save(grupoMock);
+    }
+
+    @Test
+    @DisplayName("Reactivar - Conflicto si mientras estaba inactivo se creó otro grupo activo igual")
+    void reactivar_LanzaConflict_SiHayOtroActivoIgual() {
+        grupoMock.setEstado(EstadoLogico.INACTIVO);
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                "Grupo A", 1, grupoMock.getGeneracion(), EstadoLogico.ACTIVO)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.reactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertEquals(EstadoLogico.INACTIVO, grupoMock.getEstado());
+        verify(grupoRepository, never()).save(any());
     }
 
     @Test

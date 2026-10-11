@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 
 import java.util.List;
 
@@ -29,6 +30,8 @@ import java.util.List;
  *       Cuando ocurre un alta, baja o modificación, esta anotación vacía la caja "carreras" de la memoria RAM.
  *       Esto obliga al sistema a volver a consultar la base de datos la próxima vez, garantizando 
  *       que nunca se le muestren datos viejos a los usuarios.</li>
+ *   <li>Las escrituras vacían también la caja "itrs": {@code GET /itrs} incluye el nombre de las carreras
+ *       de cada ITR, así que renombrar o desactivar una carrera deja desactualizado ese listado.</li>
  * </ul>
  */
 @Service
@@ -40,13 +43,17 @@ public class CarreraService {
 
     @PreAuthorize("hasAuthority('CREAR_CARRERA')")
     @Transactional
-    @CacheEvict(value = "carreras", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "carreras", allEntries = true),
+            @CacheEvict(value = "itrs", allEntries = true)
+    })
     public CarreraResponseDTO crear(CarreraRequestDTO dto) {
-        if (carreraRepository.existsByNomCarrera(dto.getNomCarrera())) {
+        String nombre = dto.getNomCarrera().trim();
+        if (carreraRepository.existsByNomCarreraIgnoreCase(nombre)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una carrera con ese nombre.");
         }
         Carrera carrera = new Carrera();
-        carrera.setNomCarrera(dto.getNomCarrera());
+        carrera.setNomCarrera(nombre);
         return carreraMapper.toDto(carreraRepository.save(carrera));
     }
 
@@ -67,19 +74,30 @@ public class CarreraService {
 
     @PreAuthorize("hasAuthority('EDITAR_CARRERA')")
     @Transactional
-    @CacheEvict(value = "carreras", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "carreras", allEntries = true),
+            @CacheEvict(value = "itrs", allEntries = true)
+    })
     public CarreraResponseDTO editar(Integer id, CarreraRequestDTO dto) {
         Carrera carrera = buscarOFallar(id);
         if (carrera.getEstado() != EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede editar una carrera que no está ACTIVA.");
         }
-        carrera.setNomCarrera(dto.getNomCarrera());
+        String nombre = dto.getNomCarrera().trim();
+        // Si solo cambian mayúsculas/minúsculas del propio nombre no es un duplicado.
+        if (!carrera.getNomCarrera().equalsIgnoreCase(nombre) && carreraRepository.existsByNomCarreraIgnoreCase(nombre)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una carrera con ese nombre.");
+        }
+        carrera.setNomCarrera(nombre);
         return carreraMapper.toDto(carreraRepository.save(carrera));
     }
 
     @PreAuthorize("hasAuthority('DESACTIVAR_CARRERA')")
     @Transactional
-    @CacheEvict(value = "carreras", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "carreras", allEntries = true),
+            @CacheEvict(value = "itrs", allEntries = true)
+    })
     public void desactivar(Integer id) {
         Carrera carrera = buscarOFallar(id);
         if (carrera.getEstado() == EstadoLogico.INACTIVO) {
@@ -91,7 +109,10 @@ public class CarreraService {
 
     @PreAuthorize("hasAuthority('REACTIVAR_CARRERA')")
     @Transactional
-    @CacheEvict(value = "carreras", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "carreras", allEntries = true),
+            @CacheEvict(value = "itrs", allEntries = true)
+    })
     public void reactivar(Integer id) {
         Carrera carrera = buscarOFallar(id);
         if (carrera.getEstado() == EstadoLogico.ACTIVO) {

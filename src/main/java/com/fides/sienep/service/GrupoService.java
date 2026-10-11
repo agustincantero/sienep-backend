@@ -18,7 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -41,13 +40,14 @@ public class GrupoService {
 
         validarGeneracion(dto.getGeneracion());
 
-        if (grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
-                dto.getNomGrupo(), dto.getIdCarrera(), dto.getGeneracion(), EstadoLogico.ACTIVO)) {
+        String nombre = dto.getNomGrupo().trim();
+        if (grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                nombre, dto.getIdCarrera(), dto.getGeneracion(), EstadoLogico.ACTIVO)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un grupo activo con ese nombre para esa carrera y generación.");
         }
 
         Grupo grupo = Grupo.builder()
-                .nomGrupo(dto.getNomGrupo())
+                .nomGrupo(nombre)
                 .carrera(carrera)
                 .generacion(dto.getGeneracion())
                 .build();
@@ -92,14 +92,13 @@ public class GrupoService {
 
         validarGeneracion(dto.getGeneracion());
 
-        Optional<Grupo> grupoExistente = grupoRepository.findByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
-                dto.getNomGrupo(), grupo.getCarrera().getIdCarrera(),
-                dto.getGeneracion(), EstadoLogico.ACTIVO);
-        if (grupoExistente.isPresent() && !grupoExistente.get().getIdGrupo().equals(id)) {
+        String nombre = dto.getNomGrupo().trim();
+        if (grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstadoAndIdGrupoNot(
+                nombre, grupo.getCarrera().getIdCarrera(), dto.getGeneracion(), EstadoLogico.ACTIVO, id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe otro grupo activo con ese nombre para esa carrera y generación.");
         }
 
-        grupo.setNomGrupo(dto.getNomGrupo());
+        grupo.setNomGrupo(nombre);
         grupo.setGeneracion(dto.getGeneracion());
         return grupoMapper.toDto(grupoRepository.save(grupo));
     }
@@ -121,6 +120,12 @@ public class GrupoService {
         Grupo grupo = buscarOFallar(id);
         if (grupo.getEstado() == EstadoLogico.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El grupo ya se encuentra activo");
+        }
+        // Mientras estaba inactivo se pudo crear otro grupo igual (crear/editar solo miran los ACTIVOS): reactivarlo dejaría dos activos con el mismo nombre, carrera y generación.
+        if (grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                grupo.getNomGrupo().trim(), grupo.getCarrera().getIdCarrera(), grupo.getGeneracion(), EstadoLogico.ACTIVO)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede reactivar: ya existe un grupo activo con ese nombre para esa carrera y generación.");
         }
         grupo.setEstado(EstadoLogico.ACTIVO);
         grupoRepository.save(grupo);

@@ -127,6 +127,10 @@ CREATE TRIGGER trg_actualizar_carreras
     BEFORE UPDATE ON proyecto.carreras
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+-- uk_nombre_carrera compara exacto: "Analista en TI" y "analista en ti " pasarían como distintas.
+-- Este índice aplica la misma regla que CarreraService (sin distinguir mayúsculas ni espacios de los bordes).
+CREATE UNIQUE INDEX uk_nombre_carrera_normalizado ON proyecto.carreras (LOWER(TRIM(nom_carrera)));
+
 -- =====================================================
 -- TABLA: roles
 -- =====================================================
@@ -159,6 +163,9 @@ CREATE TABLE proyecto.itrs (
 CREATE TRIGGER trg_actualizar_itrs
     BEFORE UPDATE ON proyecto.itrs
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+-- Mismo criterio que uk_nombre_carrera_normalizado (ver ItrService).
+CREATE UNIQUE INDEX uk_nom_itr_normalizado ON proyecto.itrs (LOWER(TRIM(nom_itr)));
 
 -- =====================================================
 -- TABLA: permisos  ← CORREGIDO: antes sin prefijo proyecto.
@@ -341,6 +348,11 @@ CREATE TRIGGER trg_actualizar_grupos
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
 CREATE INDEX idx_grupos_carrera ON proyecto.grupos(id_carrera);
+
+-- uk_grupo_carrera_grupo_generacion compara exacto: "Grupo A" y "grupo a " pasarían como distintos.
+-- Este índice aplica la regla de GrupoService (sin distinguir mayúsculas ni espacios de los bordes, solo entre grupos ACTIVOS).
+CREATE UNIQUE INDEX uk_grupo_normalizado_activo ON proyecto.grupos (id_carrera, LOWER(TRIM(nom_grupo)), generacion)
+    WHERE estado = 'ACTIVO';
 
 -- =====================================================
 -- TABLA: itr_carrera

@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,12 +47,27 @@ class ItrServiceTest {
         ItrRequestDTO dto = new ItrRequestDTO();
         dto.setNomItr("Suroeste");
 
-        when(itrRepository.existsByNomItr("Suroeste")).thenReturn(true);
+        when(itrRepository.existsByNomItrIgnoreCase("Suroeste")).thenReturn(true);
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> itrService.crear(dto));
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         assertEquals("Ya existe un ITR con ese nombre.", exception.getReason());
         verify(itrRepository, never()).save(any(Itr.class));
+    }
+
+    @Test
+    @DisplayName("crear: Guarda el nombre sin espacios al principio ni al final")
+    void crear_RecortaEspacios() {
+        ItrRequestDTO dto = new ItrRequestDTO();
+        dto.setNomItr("  Norte ");
+
+        when(itrRepository.existsByNomItrIgnoreCase("Norte")).thenReturn(false);
+        when(itrRepository.save(any(Itr.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(itrMapper.toDto(any(Itr.class))).thenReturn(ItrResponseDTO.builder().build());
+
+        itrService.crear(dto);
+
+        verify(itrRepository).save(argThat(itr -> itr.getNomItr().equals("Norte")));
     }
 
     @Test
@@ -73,7 +89,7 @@ class ItrServiceTest {
                 .nomItr("Centro-Sur")
                 .build();
 
-        when(itrRepository.existsByNomItr("Centro-Sur")).thenReturn(false);
+        when(itrRepository.existsByNomItrIgnoreCase("Centro-Sur")).thenReturn(false);
         // Primer save (guarda ITR vacio)
         when(itrRepository.save(any(Itr.class))).thenReturn(itrGuardado1);
         when(carreraRepository.findById(1)).thenReturn(Optional.of(carrera));
@@ -97,7 +113,7 @@ class ItrServiceTest {
         itrGuardado.setIdItr(1);
         ItrResponseDTO responseDTO = ItrResponseDTO.builder().idItr(1).nomItr("Norte").build();
 
-        when(itrRepository.existsByNomItr("Norte")).thenReturn(false);
+        when(itrRepository.existsByNomItrIgnoreCase("Norte")).thenReturn(false);
         when(itrRepository.save(any(Itr.class))).thenReturn(itrGuardado);
         when(itrMapper.toDto(any(Itr.class))).thenReturn(responseDTO);
 
@@ -182,7 +198,7 @@ class ItrServiceTest {
         itr.setIdItr(1);
 
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
-        when(itrRepository.existsByNomItr("Suroeste")).thenReturn(true);
+        when(itrRepository.existsByNomItrIgnoreCase("Suroeste")).thenReturn(true);
 
         ItrRequestDTO dto = new ItrRequestDTO();
         dto.setNomItr("Suroeste");
@@ -207,7 +223,7 @@ class ItrServiceTest {
 
         when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
         // Vamos a cambiarle el nombre a "Suroeste" (no en uso)
-        when(itrRepository.existsByNomItr("Suroeste")).thenReturn(false);
+        when(itrRepository.existsByNomItrIgnoreCase("Suroeste")).thenReturn(false);
         // Vamos a pedir que asocie la carrera 2 (nueva) y quite la 1 (baja lógica)
         when(carreraRepository.findById(2)).thenReturn(Optional.of(c2));
         
@@ -270,6 +286,40 @@ class ItrServiceTest {
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(itrRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("editar: Conserva el vínculo con una carrera INACTIVA aunque no venga en carrerasIds")
+    void editar_ConservaVinculoConCarreraInactiva() {
+        Itr itr = new Itr("Norte");
+        itr.setIdItr(1);
+
+        Carrera carreraInactiva = new Carrera();
+        carreraInactiva.setIdCarrera(1);
+        carreraInactiva.setEstado(EstadoLogico.INACTIVO);
+        Carrera carreraActiva = new Carrera();
+        carreraActiva.setIdCarrera(2);
+        carreraActiva.setEstado(EstadoLogico.ACTIVO);
+
+        ItrCarrera vinculoConInactiva = new ItrCarrera(itr, carreraInactiva);
+        vinculoConInactiva.setEstado(EstadoLogico.ACTIVO);
+        ItrCarrera vinculoConActiva = new ItrCarrera(itr, carreraActiva);
+        vinculoConActiva.setEstado(EstadoLogico.ACTIVO);
+        itr.getCarreras().add(vinculoConInactiva);
+        itr.getCarreras().add(vinculoConActiva);
+
+        when(itrRepository.findById(1)).thenReturn(Optional.of(itr));
+        when(itrRepository.save(itr)).thenReturn(itr);
+        when(itrMapper.toDto(itr)).thenReturn(ItrResponseDTO.builder().build());
+
+        // El cliente solo ve la carrera activa (GET /itrs filtra las inactivas) y la saca del ITR.
+        ItrRequestDTO dto = new ItrRequestDTO();
+        dto.setNomItr("Norte");
+        dto.setCarrerasIds(List.of());
+        itrService.editar(1, dto);
+
+        assertEquals(EstadoLogico.ACTIVO, vinculoConInactiva.getEstado(), "el vínculo con la carrera inactiva se tiene que conservar");
+        assertEquals(EstadoLogico.INACTIVO, vinculoConActiva.getEstado());
     }
 
     @Test

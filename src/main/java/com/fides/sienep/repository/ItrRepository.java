@@ -12,5 +12,5 @@ public interface ItrRepository extends JpaRepository<Itr, Integer> {
 
     List<Itr> findByEstado(EstadoLogico estado);
 
-    boolean existsByNomItr(String nomItr);
+    boolean existsByNomItrIgnoreCase(String nomItr);
 }
