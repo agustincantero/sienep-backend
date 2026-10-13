@@ -140,7 +140,7 @@ class InstanciaBusquedaIT {
                 estudiante != null ? estudiante.getIdUsuario() : null,
                 funcionario != null ? funcionario.getIdUsuario() : null,
                 categoria != null ? categoria.getIdCategoria() : null,
-                estado, pageable);
+                estado != null ? List.of(estado) : null, pageable);
     }
 
     private List<String> titulos(Page<InstanciaComunResponseDTO> pagina) {

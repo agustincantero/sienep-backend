@@ -572,7 +572,7 @@ class InstanciaComunServiceTest {
         when(instanciaComunMapper.toDtoList(List.of(instancia))).thenReturn(List.of(responseDTO));
 
         Page<InstanciaComunResponseDTO> resultado =
-                instanciaComunService.listar(1, 2, 3, EstadoLogico.INACTIVO, pageable);
+                instanciaComunService.listar(1, 2, 3, List.of(EstadoLogico.INACTIVO), pageable);
 
         assertEquals(11, resultado.getTotalElements());
         verify(instanciaComunRepository, times(1))

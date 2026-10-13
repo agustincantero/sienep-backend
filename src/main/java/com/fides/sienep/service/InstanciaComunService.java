@@ -288,10 +288,11 @@ public class InstanciaComunService {
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INSTANCIAS')")
     public Page<InstanciaComunResponseDTO> listar(Integer idEstudiante, Integer idFuncionario, Integer idCategoria,
-                                                  EstadoLogico estado, Pageable pageable) {
-        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+                                                  List<EstadoLogico> estados, Pageable pageable) {
+        List<EstadoLogico> estadosEfectivos =
+                estados != null && !estados.isEmpty() ? estados : List.of(EstadoLogico.ACTIVO);
 
-        Specification<InstanciaComun> spec = InstanciaComunSpecs.estado(estadoEfectivo);
+        Specification<InstanciaComun> spec = InstanciaComunSpecs.estados(estadosEfectivos);
         if (idEstudiante != null) spec = spec.and(InstanciaComunSpecs.estudiante(idEstudiante));
         if (idFuncionario != null) spec = spec.and(InstanciaComunSpecs.funcionario(idFuncionario));
         if (idCategoria != null) spec = spec.and(InstanciaComunSpecs.categoria(idCategoria));

@@ -19,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/incidencias")
 @RequiredArgsConstructor
@@ -46,14 +48,15 @@ public class IncidenciaController {
 
     @Operation(summary = "Listar incidencias, con filtros opcionales por estudiante y funcionario",
             description = "Los filtros idEstudiante, idFuncionario y estado son opcionales y se combinan entre sí " +
-                    "(todos los que se indiquen deben cumplirse). Sin el parámetro estado, devuelve solo las ACTIVAS.")
+                    "(todos los que se indiquen deben cumplirse). Sin el parámetro estado, devuelve solo las ACTIVAS; " +
+                    "admite varios estados separados por coma (estado=ACTIVO,INACTIVO) para listarlas juntas.")
     @ApiResponse(responseCode = "200", description = "Página de incidencias")
     @GetMapping
     public ResponseEntity<Page<IncidenciaResponseDTO>> listar(
             @RequestParam(required = false) Integer idEstudiante,
             @RequestParam(required = false) Integer idFuncionario,
-            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
-            @RequestParam(required = false) EstadoLogico estado,
+            @Parameter(description = "Estado o estados para filtrar, separados por coma (ej. ACTIVO o ACTIVO,INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) List<EstadoLogico> estado,
             @ParameterObject @PageableDefault(size = 20, sort = {"fechaHora", "codInstancia"}, direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(incidenciaService.listar(idEstudiante, idFuncionario, estado, pageable));
     }

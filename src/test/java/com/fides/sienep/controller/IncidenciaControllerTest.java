@@ -24,6 +24,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -146,10 +147,22 @@ class IncidenciaControllerTest extends AbstractControllerTest {
     }
 
     @Test
+    @DisplayName("Listar - Con varios estados separados por coma se los pasa todos al service")
+    void listar_ConVariosEstados_SePasanTodosAlService() throws Exception {
+        Page<IncidenciaResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
+        when(incidenciaService.listar(isNull(), isNull(),
+                eq(List.of(EstadoLogico.ACTIVO, EstadoLogico.INACTIVO)), any())).thenReturn(pagina);
+
+        mockMvc.perform(get("/incidencias").param("estado", "ACTIVO,INACTIVO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].codInstancia").value(1));
+    }
+
+    @Test
     @DisplayName("Listar - Con varios filtros se los pasa todos al service, no solo el primero")
     void listar_ConVariosFiltros_SePasanTodosAlService() throws Exception {
         Page<IncidenciaResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
-        when(incidenciaService.listar(eq(5), eq(2), eq(EstadoLogico.INACTIVO), any())).thenReturn(pagina);
+        when(incidenciaService.listar(eq(5), eq(2), eq(List.of(EstadoLogico.INACTIVO)), any())).thenReturn(pagina);
 
         mockMvc.perform(get("/incidencias")
                         .param("idEstudiante", "5")
