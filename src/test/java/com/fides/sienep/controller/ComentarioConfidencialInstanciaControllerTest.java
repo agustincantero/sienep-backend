@@ -105,8 +105,8 @@ class ComentarioConfidencialInstanciaControllerTest {
     void listar_ConPermiso_Responde200() throws Exception {
         String token = tokenConPermisos("VER_COMENTARIO_CONFIDENCIAL_INSTANCIA");
         when(instanciaRepository.findById(COD_INSTANCIA)).thenReturn(Optional.of(mock(Instancia.class)));
-        when(comentarioRepository.findByInstancia_CodInstanciaAndEstado(
-                eq(COD_INSTANCIA), eq(EstadoLogico.ACTIVO), any()))
+        when(comentarioRepository.findByInstancia_CodInstanciaAndEstadoIn(
+                eq(COD_INSTANCIA), any(), any()))
                 .thenReturn(Page.empty());
 
         mockMvc.perform(get(basePath()).header("Authorization", "Bearer " + token))

@@ -114,8 +114,8 @@ class ComentarioConfidencialInstanciaIT {
         assertEquals("Observación confidencial de integración (M15)", recargado.get().getContenido());
 
         Page<ComentarioConfidencialInstancia> porInstancia = comentarioRepository
-                .findByInstancia_CodInstanciaAndEstado(instancia.getCodInstancia(), EstadoLogico.ACTIVO,
-                        PageRequest.of(0, 20));
+                .findByInstancia_CodInstanciaAndEstadoIn(instancia.getCodInstancia(),
+                        List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), PageRequest.of(0, 20));
         assertEquals(1, porInstancia.getTotalElements());
     }
 }
