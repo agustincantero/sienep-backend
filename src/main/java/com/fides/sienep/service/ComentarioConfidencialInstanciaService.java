@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -32,6 +33,10 @@ public class ComentarioConfidencialInstanciaService {
     private final InstanciaRepository instanciaRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final ComentarioConfidencialInstanciaMapper comentarioMapper;
+
+    // Mismo margen que ComentarioNormalInstanciaService: al crear, created_at y updated_at pueden diferir en
+    // una fracción de segundo; recién por encima de este margen se considera que el comentario fue editado.
+    private static final Duration MARGEN_EDITADO = Duration.ofSeconds(1);
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -64,16 +69,19 @@ public class ComentarioConfidencialInstanciaService {
         comentario.setContenido(dto.getContenido());
         comentario.setAutor(autor);
 
-        return comentarioMapper.toDto(comentarioRepository.save(comentario));
+        return aDto(comentarioRepository.save(comentario));
     }
 
+    // Incluye los ELIMINADO, sin su contenido: quedan como marca en el seguimiento, igual que en los
+    // comentarios normales (ver ComentarioNormalInstanciaService.listarPorInstancia).
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
     public Page<ComentarioConfidencialInstanciaResponseDTO> listarPorInstancia(int codInstancia, Pageable pageable) {
         buscarInstanciaOFallar(codInstancia);
         Page<ComentarioConfidencialInstancia> pagina = comentarioRepository
-                .findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO, pageable);
-        List<ComentarioConfidencialInstanciaResponseDTO> dtos = comentarioMapper.toDtoList(pagina.getContent());
+                .findByInstancia_CodInstanciaAndEstadoIn(codInstancia,
+                        List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable);
+        List<ComentarioConfidencialInstanciaResponseDTO> dtos = pagina.getContent().stream().map(this::aDto).toList();
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
@@ -82,7 +90,7 @@ public class ComentarioConfidencialInstanciaService {
     public ComentarioConfidencialInstanciaResponseDTO obtenerPorId(int codInstancia, int idComConfidencial) {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
         validarPerteneceAInstancia(comentario, codInstancia);
-        return comentarioMapper.toDto(comentario);
+        return aDto(comentario);
     }
 
     // El path es anidado (/instancias/{codInstancia}/comentarios-confidenciales/{id}):
@@ -97,7 +105,8 @@ public class ComentarioConfidencialInstanciaService {
         ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
         validarPerteneceAInstancia(comentario, codInstancia);
         comentario.setContenido(dto.getContenido());
-        return comentarioMapper.toDto(comentarioRepository.save(comentario));
+        // saveAndFlush: el UPDATE sale acá, así updatedAt ya viene con la fecha de esta edición.
+        return aDto(comentarioRepository.saveAndFlush(comentario));
     }
 
     // ELIMINADO (no INACTIVO): unificado con el estado que ya usan los
@@ -112,6 +121,17 @@ public class ComentarioConfidencialInstanciaService {
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
+
+    private ComentarioConfidencialInstanciaResponseDTO aDto(ComentarioConfidencialInstancia comentario) {
+        ComentarioConfidencialInstanciaResponseDTO dto = comentarioMapper.toDto(comentario);
+        if (comentario.getEstado() == EstadoLogico.ELIMINADO) {
+            dto.setContenido(null);
+            return dto;
+        }
+        dto.setEditado(comentario.getCreatedAt() != null && comentario.getUpdatedAt() != null
+                && comentario.getUpdatedAt().isAfter(comentario.getCreatedAt().plus(MARGEN_EDITADO)));
+        return dto;
+    }
 
     private void validarPerteneceAInstancia(ComentarioConfidencialInstancia comentario, int codInstancia) {
         if (comentario.getInstancia().getCodInstancia() != codInstancia) {

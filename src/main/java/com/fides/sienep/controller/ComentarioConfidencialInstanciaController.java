@@ -40,7 +40,7 @@ public class ComentarioConfidencialInstanciaController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar comentarios confidenciales", description = "Lista todos los comentarios confidenciales activos de una instancia.")
+    @Operation(summary = "Listar comentarios confidenciales", description = "Lista los comentarios confidenciales de una instancia en orden cronológico. Los eliminados se incluyen como marca: estado ELIMINADO y sin contenido.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página obtenida"),
             @ApiResponse(responseCode = "404", description = "Instancia no encontrada"),
@@ -48,7 +48,7 @@ public class ComentarioConfidencialInstanciaController {
     })
     public ResponseEntity<Page<ComentarioConfidencialInstanciaResponseDTO>> listar(
             @PathVariable int codInstancia,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         return ResponseEntity.ok(comentarioService.listarPorInstancia(codInstancia, pageable));
     }
 

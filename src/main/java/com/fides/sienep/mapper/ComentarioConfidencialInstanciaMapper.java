@@ -13,6 +13,8 @@ public interface ComentarioConfidencialInstanciaMapper {
     @Mapping(target = "idComConfidencial", source = "id.idComConfidencial")
     @Mapping(target = "codInstancia", source = "id.codInstancia")
     @Mapping(target = "idAutor", source = "autor.idUsuario")
+    // editado lo calcula el service (ComentarioConfidencialInstanciaService.aDto), no sale de una columna.
+    @Mapping(target = "editado", ignore = true)
     @Mapping(target = "nombreAutor", expression = "java(entidad.getAutor().getNombre() + \" \" + entidad.getAutor().getApellido())")
     ComentarioConfidencialInstanciaResponseDTO toDto(ComentarioConfidencialInstancia entidad);
 

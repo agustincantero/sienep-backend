@@ -25,6 +25,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -173,15 +174,74 @@ class ComentarioConfidencialInstanciaServiceTest {
     void listarPorInstancia_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
-        when(comentarioRepository.findByInstancia_CodInstanciaAndEstado(1, EstadoLogico.ACTIVO, pageable))
+        when(comentarioRepository.findByInstancia_CodInstanciaAndEstadoIn(
+                1, List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable))
                 .thenReturn(new PageImpl<>(List.of(comentario), pageable, 1));
-        when(comentarioMapper.toDtoList(List.of(comentario))).thenReturn(List.of(responseDTO));
+        when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
 
         Page<ComentarioConfidencialInstanciaResponseDTO> resultado =
                 comentarioService.listarPorInstancia(1, pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
+        assertEquals("Comentario confidencial de prueba", resultado.getContent().get(0).getContenido());
+        assertFalse(resultado.getContent().get(0).isEditado());
+    }
+
+    @Test
+    @DisplayName("Listar por instancia - Un comentario eliminado se lista como marca, sin contenido")
+    void listarPorInstancia_EliminadoSinContenido() {
+        Pageable pageable = PageRequest.of(0, 20);
+        comentario.setEstado(EstadoLogico.ELIMINADO);
+        comentario.setCreatedAt(LocalDateTime.of(2026, 10, 1, 10, 0));
+        comentario.setUpdatedAt(LocalDateTime.of(2026, 10, 2, 10, 0));
+        responseDTO.setEstado(EstadoLogico.ELIMINADO);
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(comentarioRepository.findByInstancia_CodInstanciaAndEstadoIn(
+                1, List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable))
+                .thenReturn(new PageImpl<>(List.of(comentario), pageable, 1));
+        when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
+
+        ComentarioConfidencialInstanciaResponseDTO dto =
+                comentarioService.listarPorInstancia(1, pageable).getContent().get(0);
+
+        assertEquals(EstadoLogico.ELIMINADO, dto.getEstado());
+        assertNull(dto.getContenido());
+        assertFalse(dto.isEditado());
+    }
+
+    @Test
+    @DisplayName("Listar por instancia - Un comentario modificado después de creado sale como editado")
+    void listarPorInstancia_MarcaEditado() {
+        Pageable pageable = PageRequest.of(0, 20);
+        comentario.setCreatedAt(LocalDateTime.of(2026, 10, 1, 10, 0));
+        comentario.setUpdatedAt(LocalDateTime.of(2026, 10, 1, 10, 5));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(comentarioRepository.findByInstancia_CodInstanciaAndEstadoIn(
+                1, List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable))
+                .thenReturn(new PageImpl<>(List.of(comentario), pageable, 1));
+        when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
+
+        ComentarioConfidencialInstanciaResponseDTO dto =
+                comentarioService.listarPorInstancia(1, pageable).getContent().get(0);
+
+        assertTrue(dto.isEditado());
+        assertEquals("Comentario confidencial de prueba", dto.getContenido());
+    }
+
+    @Test
+    @DisplayName("Listar por instancia - Recién creado no sale como editado aunque las fechas difieran en milisegundos")
+    void listarPorInstancia_RecienCreadoNoEsEditado() {
+        Pageable pageable = PageRequest.of(0, 20);
+        comentario.setCreatedAt(LocalDateTime.of(2026, 10, 1, 10, 0, 0, 1_000_000));
+        comentario.setUpdatedAt(LocalDateTime.of(2026, 10, 1, 10, 0, 0, 3_000_000));
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(comentarioRepository.findByInstancia_CodInstanciaAndEstadoIn(
+                1, List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable))
+                .thenReturn(new PageImpl<>(List.of(comentario), pageable, 1));
+        when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
+
+        assertFalse(comentarioService.listarPorInstancia(1, pageable).getContent().get(0).isEditado());
     }
 
     @Test
@@ -238,14 +298,14 @@ class ComentarioConfidencialInstanciaServiceTest {
     void editar_Exito() {
         when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
-        when(comentarioRepository.save(any(ComentarioConfidencialInstancia.class))).thenReturn(comentario);
+        when(comentarioRepository.saveAndFlush(any(ComentarioConfidencialInstancia.class))).thenReturn(comentario);
         when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
 
         ComentarioConfidencialInstanciaResponseDTO resultado =
                 comentarioService.editar(1, 1, requestDTO);
 
         assertNotNull(resultado);
-        verify(comentarioRepository).save(comentario);
+        verify(comentarioRepository).saveAndFlush(comentario);
     }
 
     @Test
@@ -258,7 +318,7 @@ class ComentarioConfidencialInstanciaServiceTest {
                 () -> comentarioService.editar(1, 99, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioRepository, never()).save(any());
+        verify(comentarioRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -271,7 +331,7 @@ class ComentarioConfidencialInstanciaServiceTest {
                 () -> comentarioService.editar(2, 1, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioRepository, never()).save(any());
+        verify(comentarioRepository, never()).saveAndFlush(any());
     }
 
     @Test
