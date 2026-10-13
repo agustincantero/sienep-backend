@@ -103,11 +103,12 @@ public class IncidenciaService {
     // todas las incidencias del estudiante, sin filtrar por funcionario.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_INCIDENCIAS')")
-    public Page<IncidenciaResponseDTO> listar(Integer idEstudiante, Integer idFuncionario, EstadoLogico estado,
-                                              Pageable pageable) {
-        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
+    public Page<IncidenciaResponseDTO> listar(Integer idEstudiante, Integer idFuncionario,
+                                              List<EstadoLogico> estados, Pageable pageable) {
+        List<EstadoLogico> estadosEfectivos =
+                estados != null && !estados.isEmpty() ? estados : List.of(EstadoLogico.ACTIVO);
 
-        Specification<Incidencia> spec = IncidenciaSpecs.estado(estadoEfectivo);
+        Specification<Incidencia> spec = IncidenciaSpecs.estados(estadosEfectivos);
         if (idEstudiante != null) spec = spec.and(IncidenciaSpecs.estudiante(idEstudiante));
         if (idFuncionario != null) spec = spec.and(IncidenciaSpecs.funcionario(idFuncionario));
 

@@ -20,6 +20,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/instancias")
 @RequiredArgsConstructor
@@ -55,15 +57,16 @@ public class InstanciaComunController {
 
     @Operation(summary = "Listar instancias con filtros opcionales",
             description = "Los filtros idEstudiante, idFuncionario, idCategoria y estado son opcionales y se combinan " +
-                    "entre sí (todos los que se indiquen deben cumplirse). Sin el parámetro estado, devuelve solo las ACTIVAS.")
+                    "entre sí (todos los que se indiquen deben cumplirse). Sin el parámetro estado, devuelve solo las ACTIVAS; " +
+                    "admite varios estados separados por coma (estado=ACTIVO,INACTIVO) para listarlas juntas.")
     @ApiResponse(responseCode = "200", description = "Página de instancias")
     @GetMapping
     public ResponseEntity<Page<InstanciaComunResponseDTO>> listar(
             @RequestParam(required = false) Integer idEstudiante,
             @RequestParam(required = false) Integer idFuncionario,
             @RequestParam(required = false) Integer idCategoria,
-            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
-            @RequestParam(required = false) EstadoLogico estado,
+            @Parameter(description = "Estado o estados para filtrar, separados por coma (ej. ACTIVO o ACTIVO,INACTIVO). Por defecto: ACTIVO", required = false)
+            @RequestParam(required = false) List<EstadoLogico> estado,
             @ParameterObject @PageableDefault(size = 20, sort = {"fechaHora", "codInstancia"}, direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(
                 instanciaComunService.listar(idEstudiante, idFuncionario, idCategoria, estado, pageable));

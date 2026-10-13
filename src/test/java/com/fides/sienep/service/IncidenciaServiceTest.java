@@ -215,7 +215,7 @@ class IncidenciaServiceTest {
                 .thenReturn(new PageImpl<>(List.of(incidencia), pageable, 11));
         when(incidenciaMapper.toDtoList(List.of(incidencia))).thenReturn(List.of(responseDTO));
 
-        Page<IncidenciaResponseDTO> resultado = incidenciaService.listar(1, 2, EstadoLogico.INACTIVO, pageable);
+        Page<IncidenciaResponseDTO> resultado = incidenciaService.listar(1, 2, List.of(EstadoLogico.INACTIVO), pageable);
 
         assertEquals(11, resultado.getTotalElements());
         verify(incidenciaRepository, times(1))

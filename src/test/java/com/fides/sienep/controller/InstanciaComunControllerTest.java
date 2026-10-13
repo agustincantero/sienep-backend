@@ -171,10 +171,22 @@ class InstanciaComunControllerTest extends AbstractControllerTest {
     }
 
     @Test
+    @DisplayName("Listar - Con varios estados separados por coma se los pasa todos al service")
+    void listar_ConVariosEstados_SePasanTodosAlService() throws Exception {
+        Page<InstanciaComunResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
+        when(instanciaComunService.listar(isNull(), isNull(), isNull(),
+                eq(List.of(EstadoLogico.ACTIVO, EstadoLogico.INACTIVO)), any())).thenReturn(pagina);
+
+        mockMvc.perform(get("/instancias").param("estado", "ACTIVO,INACTIVO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].codInstancia").value(1));
+    }
+
+    @Test
     @DisplayName("Listar - Con varios filtros se los pasa todos al service, no solo el primero")
     void listar_ConVariosFiltros_SePasanTodosAlService() throws Exception {
         Page<InstanciaComunResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
-        when(instanciaComunService.listar(eq(5), isNull(), eq(2), eq(EstadoLogico.INACTIVO), any())).thenReturn(pagina);
+        when(instanciaComunService.listar(eq(5), isNull(), eq(2), eq(List.of(EstadoLogico.INACTIVO)), any())).thenReturn(pagina);
 
         mockMvc.perform(get("/instancias")
                         .param("idEstudiante", "5")
