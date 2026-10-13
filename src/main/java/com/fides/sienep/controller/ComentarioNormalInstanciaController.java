@@ -40,14 +40,14 @@ public class ComentarioNormalInstanciaController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar comentarios normales", description = "Lista todos los comentarios normales activos de una instancia.")
+    @Operation(summary = "Listar comentarios normales", description = "Lista los comentarios normales de una instancia en orden cronológico. Los eliminados se incluyen como marca: estado ELIMINADO y sin contenido.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página obtenida"),
             @ApiResponse(responseCode = "404", description = "Instancia no encontrada")
     })
     public ResponseEntity<Page<ComentarioNormalInstanciaResponseDTO>> listar(
             @PathVariable int codInstancia,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         return ResponseEntity.ok(comentarioService.listarPorInstancia(codInstancia, pageable));
     }
 

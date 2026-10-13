@@ -12,6 +12,8 @@ public interface ComentarioNormalInstanciaMapper {
 
     @Mapping(target = "codInstancia", source = "instancia.codInstancia")
     @Mapping(target = "idAutor", source = "autor.idUsuario")
+    // editado lo calcula el service (ComentarioNormalInstanciaService.aDto), no sale de una columna.
+    @Mapping(target = "editado", ignore = true)
     @Mapping(target = "nombreAutor", expression = "java(entidad.getAutor().getNombre() + \" \" + entidad.getAutor().getApellido())")
     ComentarioNormalInstanciaResponseDTO toDto(ComentarioNormalInstancia entidad);
 
