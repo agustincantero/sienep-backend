@@ -45,6 +45,8 @@ public class GrupoService {
                 nombre, dto.getIdCarrera(), dto.getGeneracion(), EstadoLogico.ACTIVO)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un grupo activo con ese nombre para esa carrera y generación.");
         }
+        validarSinInactivoIgual(nombre, dto.getIdCarrera(), dto.getGeneracion(),
+                "Ya existe un grupo inactivo con ese nombre para esa carrera y generación. Se puede reactivar en lugar de crear otro.");
 
         Grupo grupo = Grupo.builder()
                 .nomGrupo(nombre)
@@ -97,6 +99,8 @@ public class GrupoService {
                 nombre, grupo.getCarrera().getIdCarrera(), dto.getGeneracion(), EstadoLogico.ACTIVO, id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe otro grupo activo con ese nombre para esa carrera y generación.");
         }
+        validarSinInactivoIgual(nombre, grupo.getCarrera().getIdCarrera(), dto.getGeneracion(),
+                "Ya existe un grupo inactivo con ese nombre para esa carrera y generación.");
 
         grupo.setNomGrupo(nombre);
         grupo.setGeneracion(dto.getGeneracion());
@@ -129,6 +133,16 @@ public class GrupoService {
         }
         grupo.setEstado(EstadoLogico.ACTIVO);
         grupoRepository.save(grupo);
+    }
+
+    // uk_grupo_carrera_grupo_generacion no distingue activos de inactivos: sin este chequeo, repetir el nombre
+    // de un grupo INACTIVO llegaba hasta la base y volvía como un "conflicto con datos existentes" genérico.
+    // Compara sin distinguir mayúsculas, igual que el chequeo contra los ACTIVOS.
+    private void validarSinInactivoIgual(String nombre, Integer idCarrera, Integer generacion, String mensaje) {
+        if (grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                nombre, idCarrera, generacion, EstadoLogico.INACTIVO)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, mensaje);
+        }
     }
 
     private void validarGeneracion(Integer generacion) {

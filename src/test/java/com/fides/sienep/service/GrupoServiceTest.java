@@ -154,6 +154,24 @@ class GrupoServiceTest {
         verify(grupoRepository, never()).save(any());
     }
 
+    @Test
+    @DisplayName("Crear grupo - Ya existe uno inactivo igual → 409 que indica reactivarlo")
+    void crear_LanzaConflicto_ExisteInactivoIgual() {
+        when(carreraRepository.findById(1)).thenReturn(Optional.of(carreraMock));
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                any(), any(), any(), eq(EstadoLogico.ACTIVO))).thenReturn(false);
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                any(), any(), any(), eq(EstadoLogico.INACTIVO))).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> grupoService.crear(requestDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("grupo inactivo"));
+        verify(grupoRepository, never()).save(any());
+    }
+
     // =========================================================
     // OBTENER POR ID
     // =========================================================
@@ -273,6 +291,25 @@ class GrupoServiceTest {
                 () -> grupoService.editar(1, updateDTO));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(grupoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar grupo - Rechaza un nombre que ya usa un grupo inactivo, con otras mayúsculas")
+    void editar_LanzaConflicto_ExisteInactivoIgual() {
+        GrupoUpdateDTO updateDTO = new GrupoUpdateDTO();
+        updateDTO.setNomGrupo(" GRUPO B ");
+        updateDTO.setGeneracion(grupoMock.getGeneracion());
+
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoMock));
+        when(grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
+                "GRUPO B", 1, grupoMock.getGeneracion(), EstadoLogico.INACTIVO)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> grupoService.editar(1, updateDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("grupo inactivo"));
         verify(grupoRepository, never()).save(any());
     }
 
