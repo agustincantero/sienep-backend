@@ -137,8 +137,9 @@ public class GrupoService {
 
     // uk_grupo_carrera_grupo_generacion no distingue activos de inactivos: sin este chequeo, repetir el nombre
     // de un grupo INACTIVO llegaba hasta la base y volvía como un "conflicto con datos existentes" genérico.
+    // Compara sin distinguir mayúsculas, igual que el chequeo contra los ACTIVOS.
     private void validarSinInactivoIgual(String nombre, Integer idCarrera, Integer generacion, String mensaje) {
-        if (grupoRepository.existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+        if (grupoRepository.existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstado(
                 nombre, idCarrera, generacion, EstadoLogico.INACTIVO)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, mensaje);
         }
