@@ -6,13 +6,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.Optional;
 
 public interface ComentarioNormalInstanciaRepository
         extends JpaRepository<ComentarioNormalInstancia, Integer> {
 
-    Page<ComentarioNormalInstancia> findByInstancia_CodInstanciaAndEstado(
-            int codInstancia, EstadoLogico estado, Pageable pageable);
+    Page<ComentarioNormalInstancia> findByInstancia_CodInstanciaAndEstadoIn(
+            int codInstancia, Collection<EstadoLogico> estados, Pageable pageable);
 
     Optional<ComentarioNormalInstancia> findByIdComentarioAndEstado(
             int idComentario, EstadoLogico estado);

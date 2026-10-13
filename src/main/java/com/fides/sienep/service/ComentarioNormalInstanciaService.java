@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -32,6 +33,10 @@ public class ComentarioNormalInstanciaService {
     private final InstanciaRepository instanciaRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final ComentarioNormalInstanciaMapper comentarioMapper;
+
+    // Al crear, Hibernate genera created_at y updated_at por separado y pueden diferir en una fracción de
+    // segundo: recién por encima de este margen se considera que el comentario fue editado.
+    private static final Duration MARGEN_EDITADO = Duration.ofSeconds(1);
 
     private Integer getIdUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -63,16 +68,19 @@ public class ComentarioNormalInstanciaService {
         comentario.setInstancia(instancia);
         comentario.setAutor(autor);
 
-        return comentarioMapper.toDto(comentarioRepository.save(comentario));
+        return aDto(comentarioRepository.save(comentario));
     }
 
+    // Incluye los ELIMINADO, sin su contenido: quedan como marca en el seguimiento, para que quien lo lee
+    // sepa que ahí hubo un comentario (y pueda pedir la auditoría) en vez de encontrarse con un hueco.
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_INSTANCIA')")
     public Page<ComentarioNormalInstanciaResponseDTO> listarPorInstancia(int codInstancia, Pageable pageable) {
         buscarInstanciaOFallar(codInstancia);
         Page<ComentarioNormalInstancia> pagina = comentarioRepository
-                .findByInstancia_CodInstanciaAndEstado(codInstancia, EstadoLogico.ACTIVO, pageable);
-        List<ComentarioNormalInstanciaResponseDTO> dtos = comentarioMapper.toDtoList(pagina.getContent());
+                .findByInstancia_CodInstanciaAndEstadoIn(codInstancia,
+                        List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable);
+        List<ComentarioNormalInstanciaResponseDTO> dtos = pagina.getContent().stream().map(this::aDto).toList();
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
@@ -81,7 +89,7 @@ public class ComentarioNormalInstanciaService {
     public ComentarioNormalInstanciaResponseDTO obtenerPorId(int codInstancia, int idComentario) {
         ComentarioNormalInstancia comentario = buscarActivoOFallar(idComentario);
         validarPerteneceAInstancia(comentario, codInstancia);
-        return comentarioMapper.toDto(comentario);
+        return aDto(comentario);
     }
 
     // El path es anidado (/instancias/{codInstancia}/comentarios-normales/{id}):
@@ -96,7 +104,8 @@ public class ComentarioNormalInstanciaService {
         ComentarioNormalInstancia comentario = buscarActivoOFallar(idComentario);
         validarPerteneceAInstancia(comentario, codInstancia);
         comentario.setContenido(dto.getContenido());
-        return comentarioMapper.toDto(comentarioRepository.save(comentario));
+        // saveAndFlush: el UPDATE sale acá, así updatedAt ya viene con la fecha de esta edición.
+        return aDto(comentarioRepository.saveAndFlush(comentario));
     }
 
     // ELIMINADO (no INACTIVO): a diferencia de los catálogos (Carrera, Grupo,
@@ -113,6 +122,19 @@ public class ComentarioNormalInstanciaService {
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
+
+    private ComentarioNormalInstanciaResponseDTO aDto(ComentarioNormalInstancia comentario) {
+        ComentarioNormalInstanciaResponseDTO dto = comentarioMapper.toDto(comentario);
+        if (comentario.getEstado() == EstadoLogico.ELIMINADO) {
+            dto.setContenido(null);
+            return dto;
+        }
+        // Un comentario ACTIVO solo se actualiza al editarlo, así que updated_at posterior a created_at
+        // alcanza para saber que fue editado, sin una columna aparte.
+        dto.setEditado(comentario.getCreatedAt() != null && comentario.getUpdatedAt() != null
+                && comentario.getUpdatedAt().isAfter(comentario.getCreatedAt().plus(MARGEN_EDITADO)));
+        return dto;
+    }
 
     private void validarPerteneceAInstancia(ComentarioNormalInstancia comentario, int codInstancia) {
         if (comentario.getInstancia().getCodInstancia() != codInstancia) {
