@@ -42,11 +42,15 @@ public class InformeAdjuntoService {
     private final InformeAdjuntoMapper informeMapper;
     private final FileStorageService fileStorageService;
 
+    // Incluye los ELIMINADO, sin urlDescarga (ver InformeAdjuntoMapper): quedan como marca, para que quien ve
+    // la ficha sepa que hubo un informe (y pueda pedir la auditoría) en vez de que desaparezca sin rastro.
+    // Mismo criterio que los comentarios de instancia. El listado del propio estudiante (listarMios) no cambia.
     @PreAuthorize("hasAuthority('VER_INFORME')")
     @Transactional(readOnly = true)
     public Page<InformeAdjuntoResponseDTO> listarPorEstudiante(Integer idUsuario, Pageable pageable) {
         Page<InformeAdjunto> pagina = informeRepository
-                .findByEstudianteIdUsuarioAndEstado(idUsuario, EstadoLogico.ACTIVO, pageable);
+                .findByEstudianteIdUsuarioAndEstadoIn(idUsuario,
+                        List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable);
         List<InformeAdjuntoResponseDTO> dtos = informeMapper.toDtoList(pagina.getContent());
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }

@@ -39,6 +39,8 @@ class InformeAdjuntoServiceSecurityTest {
             InformeAdjuntoRepository repo = mock(InformeAdjuntoRepository.class);
             when(repo.findByEstudianteIdUsuarioAndEstado(anyInt(), eq(EstadoLogico.ACTIVO), any()))
                     .thenReturn(Page.empty());
+            when(repo.findByEstudianteIdUsuarioAndEstadoIn(anyInt(), any(), any()))
+                    .thenReturn(Page.empty());
             return new InformeAdjuntoService(repo, mock(EstudianteRepository.class),
                     mock(InformeAdjuntoMapper.class), mock(FileStorageService.class));
         }

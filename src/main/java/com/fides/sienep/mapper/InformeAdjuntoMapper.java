@@ -11,9 +11,11 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface InformeAdjuntoMapper {
 
+    // Un informe ELIMINADO se lista como marca (nombre y fechas) y no lleva urlDescarga: su archivo ya no se
+    // puede descargar (el endpoint responde 404).
     @Mapping(target = "idUsuario", source = "estudiante.idUsuario")
     @Mapping(target = "urlDescarga",
-            expression = "java(\"/informes-adjuntos/\" + entidad.getIdInforme() + \"/descargar\")")
+            expression = "java(entidad.getEstado() == com.fides.sienep.model.EstadoLogico.ELIMINADO ? null : \"/informes-adjuntos/\" + entidad.getIdInforme() + \"/descargar\")")
     InformeAdjuntoResponseDTO toDto(InformeAdjunto entidad);
 
     List<InformeAdjuntoResponseDTO> toDtoList(List<InformeAdjunto> entidades);
