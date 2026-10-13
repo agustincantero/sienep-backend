@@ -351,7 +351,8 @@ class InformeAdjuntoServiceTest {
     @DisplayName("Listar por estudiante - Éxito, paginado (H18)")
     void listarPorEstudiante_Exito() {
         Pageable pageable = PageRequest.of(0, 20);
-        when(informeRepository.findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable))
+        when(informeRepository.findByEstudianteIdUsuarioAndEstadoIn(
+                1, List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable))
                 .thenReturn(new PageImpl<>(List.of(informeMock), pageable, 1));
         when(informeMapper.toDtoList(List.of(informeMock))).thenReturn(List.of(responseDTO));
 
@@ -359,7 +360,9 @@ class InformeAdjuntoServiceTest {
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        verify(informeRepository).findByEstudianteIdUsuarioAndEstado(1, EstadoLogico.ACTIVO, pageable);
+        // Los ELIMINADO también se listan, como marca de que existieron.
+        verify(informeRepository).findByEstudianteIdUsuarioAndEstadoIn(
+                1, List.of(EstadoLogico.ACTIVO, EstadoLogico.ELIMINADO), pageable);
     }
 
     // ── Autoservicio del estudiante ───────────────────────────

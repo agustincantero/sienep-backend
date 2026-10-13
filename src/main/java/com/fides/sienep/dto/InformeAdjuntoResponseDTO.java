@@ -16,10 +16,12 @@ public class InformeAdjuntoResponseDTO {
     private String nombre;
     @Schema(description = "Ruta relativa para descargar el archivo (requiere autenticación y permiso VER_INFORME)",
             example = "/informes-adjuntos/1/descargar")
+    // null si el informe está ELIMINADO.
     private String urlDescarga;
 
     @Schema(description = "Estado actual del informe", example = "ACTIVO")
     private EstadoLogico estado;
     private LocalDateTime createdAt;
+    // Si está ELIMINADO, fecha de la eliminación.
     private LocalDateTime updatedAt;
 }

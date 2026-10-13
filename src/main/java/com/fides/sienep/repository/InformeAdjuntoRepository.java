@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.Optional;
 
 @Repository
@@ -14,6 +15,9 @@ public interface InformeAdjuntoRepository extends JpaRepository<InformeAdjunto, 
 
     Page<InformeAdjunto> findByEstudianteIdUsuarioAndEstado(
             Integer idUsuario, EstadoLogico estado, Pageable pageable);
+
+    Page<InformeAdjunto> findByEstudianteIdUsuarioAndEstadoIn(
+            Integer idUsuario, Collection<EstadoLogico> estados, Pageable pageable);
 
     boolean existsByEstudianteIdUsuarioAndNombre(Integer idUsuario, String nombre);
 

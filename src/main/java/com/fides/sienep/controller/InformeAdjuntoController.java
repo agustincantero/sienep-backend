@@ -30,11 +30,12 @@ public class InformeAdjuntoController {
     private final InformeAdjuntoService informeService;
 
     @GetMapping
-    @Operation(summary = "Listar informes de un estudiante")
+    @Operation(summary = "Listar informes de un estudiante",
+            description = "En orden de carga. Los eliminados se incluyen como marca: estado ELIMINADO y sin urlDescarga.")
     @ApiResponse(responseCode = "200", description = "Página de informes")
     public ResponseEntity<Page<InformeAdjuntoResponseDTO>> listar(
             @RequestParam Integer idUsuario,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         return ResponseEntity.ok(informeService.listarPorEstudiante(idUsuario, pageable));
     }
 
