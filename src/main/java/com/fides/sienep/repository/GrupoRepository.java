@@ -25,4 +25,9 @@ public interface GrupoRepository extends JpaRepository<Grupo, Integer> {
     // Para editar: el mismo chequeo, sin contar al propio grupo.
     boolean existsByNomGrupoIgnoreCaseAndCarreraIdCarreraAndGeneracionAndEstadoAndIdGrupoNot(
             String nomGrupo, Integer idCarrera, Integer generacion, EstadoLogico estado, Integer idGrupo);
+
+    // Comparación exacta, igual que uk_grupo_carrera_grupo_generacion: sirve para anticipar el rechazo de esa
+    // restricción (que no distingue activos de inactivos) y responder con un mensaje claro.
+    boolean existsByNomGrupoAndCarreraIdCarreraAndGeneracionAndEstado(
+            String nomGrupo, Integer idCarrera, Integer generacion, EstadoLogico estado);
 }
