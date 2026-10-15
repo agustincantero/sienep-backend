@@ -62,13 +62,8 @@ class ComentarioConfidencialInstanciaServiceTest {
         autor.setApellido("García");
         autor.setEstado(EstadoLogico.ACTIVO);
 
-        ComentarioConfidencialInstancia.ComentarioConfidencialInstanciaId id =
-                new ComentarioConfidencialInstancia.ComentarioConfidencialInstanciaId();
-        id.setIdComConfidencial(1);
-        id.setCodInstancia(1);
-
         comentario = new ComentarioConfidencialInstancia();
-        comentario.setId(id);
+        comentario.setIdComConfidencial(1);
         comentario.setContenido("Comentario confidencial de prueba");
         comentario.setInstancia(instancia);
         comentario.setAutor(autor);
@@ -259,7 +254,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Obtener por ID - Éxito")
     void obtenerPorId_Exito() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
         when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
 
@@ -272,7 +267,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Obtener por ID - No encontrado (404)")
     void obtenerPorId_LanzaNotFound() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -284,7 +279,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Obtener por ID - Pertenece a otra instancia (404)")
     void obtenerPorId_LanzaNotFound_PerteneceAOtraInstancia() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -296,7 +291,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Editar comentario confidencial - Éxito")
     void editar_Exito() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
         when(comentarioRepository.saveAndFlush(any(ComentarioConfidencialInstancia.class))).thenReturn(comentario);
         when(comentarioMapper.toDto(comentario)).thenReturn(responseDTO);
@@ -311,7 +306,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Editar comentario confidencial - No encontrado (404)")
     void editar_LanzaNotFound() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -324,7 +319,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Editar comentario confidencial - Pertenece a otra instancia (404)")
     void editar_LanzaNotFound_PerteneceAOtraInstancia() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -337,7 +332,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Eliminar comentario confidencial - Éxito")
     void eliminar_Exito() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
         comentarioService.eliminar(1, 1);
@@ -349,7 +344,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Eliminar comentario confidencial - No encontrado (404)")
     void eliminar_LanzaNotFound() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(99, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -361,7 +356,7 @@ class ComentarioConfidencialInstanciaServiceTest {
     @Test
     @DisplayName("Eliminar comentario confidencial - Pertenece a otra instancia (404, M14)")
     void eliminar_LanzaNotFound_PerteneceAOtraInstancia() {
-        when(comentarioRepository.findById_IdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
+        when(comentarioRepository.findByIdComConfidencialAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(comentario));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,

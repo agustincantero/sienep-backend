@@ -11,15 +11,13 @@ import java.time.LocalDateTime;
  * Mapea la tabla proyecto.estu_obs_confidenciales.
  *
  * Tabla:
- *   id_obs_confidencial  SERIAL  ← parte de PK
- *   id_estudiante        INT FK -> estudiantes  ← parte de PK
+ *   id_obs_confidencial  SERIAL  ← PK
+ *   id_estudiante        INT FK -> estudiantes
  *   obs_confidencial     TEXT NOT NULL
  *   estado               estado_logico
  *   created_at           TIMESTAMP
  *   updated_at           TIMESTAMP
  *   id_autor             INT FK -> funcionarios
- *
- *   PRIMARY KEY (id_obs_confidencial, id_estudiante)
  *
  * NOTA DE SEGURIDAD (RD01):
  * --------------------------------------------------

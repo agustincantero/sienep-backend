@@ -10,11 +10,11 @@ import java.util.Collection;
 import java.util.Optional;
 
 public interface ComentarioConfidencialInstanciaRepository
-        extends JpaRepository<ComentarioConfidencialInstancia, ComentarioConfidencialInstancia.ComentarioConfidencialInstanciaId> {
+        extends JpaRepository<ComentarioConfidencialInstancia, Integer> {
 
     Page<ComentarioConfidencialInstancia> findByInstancia_CodInstanciaAndEstadoIn(
             int codInstancia, Collection<EstadoLogico> estados, Pageable pageable);
 
-    Optional<ComentarioConfidencialInstancia> findById_IdComConfidencialAndEstado(
+    Optional<ComentarioConfidencialInstancia> findByIdComConfidencialAndEstado(
             int idComConfidencial, EstadoLogico estado);
 }

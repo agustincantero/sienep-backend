@@ -10,8 +10,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ComentarioConfidencialInstanciaMapper {
 
-    @Mapping(target = "idComConfidencial", source = "id.idComConfidencial")
-    @Mapping(target = "codInstancia", source = "id.codInstancia")
+    @Mapping(target = "codInstancia", source = "instancia.codInstancia")
     @Mapping(target = "idAutor", source = "autor.idUsuario")
     // editado lo calcula el service (ComentarioConfidencialInstanciaService.aDto), no sale de una columna.
     @Mapping(target = "editado", ignore = true)

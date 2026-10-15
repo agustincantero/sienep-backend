@@ -40,11 +40,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 //   docker compose up -d
 //   JAVA_HOME=<jdk21+> ./mvnw test -Dtest=ComentarioConfidencialInstanciaIT -Dspring.profiles.active=integration
 //
-// Motivo del test: ComentarioConfidencialInstancia usa @EmbeddedId + @MapsId (clave
-// compuesta id_com_confidencial + cod_instancia, ver el modelo) — una zona de JPA/
-// Hibernate más propensa a bugs sutiles de mapeo (ID no generado, mapeo de la FK
-// compartida roto, etc.) que los tests unitarios con Mockito no pueden detectar
-// porque nunca llegan a golpear un EntityManager real.
+// Motivo del test: ComentarioConfidencialInstancia usaba @EmbeddedId + @MapsId (clave
+// compuesta id_com_confidencial + cod_instancia), que tuvo bugs sutiles de mapeo (ID no
+// generado, INSERT que nunca salía) que los tests unitarios con Mockito no pueden detectar
+// porque nunca llegan a golpear un EntityManager real. Hoy la PK es solo
+// id_com_confidencial; el test queda para cubrir el alta y las consultas contra Postgres.
 @SpringBootTest
 @ActiveProfiles("integration")
 class ComentarioConfidencialInstanciaIT {
@@ -94,22 +94,19 @@ class ComentarioConfidencialInstanciaIT {
         instancia = instanciaComunRepository.save(instancia);
 
         ComentarioConfidencialInstancia comentario = new ComentarioConfidencialInstancia();
-        comentario.setId(new ComentarioConfidencialInstancia.ComentarioConfidencialInstanciaId());
         comentario.setInstancia(instancia);
         comentario.setContenido("Observación confidencial de integración (M15)");
         comentario.setAutor(autor);
 
         ComentarioConfidencialInstancia guardado = comentarioRepository.save(comentario);
 
-        // La clave compuesta se generó y quedó mapeada a la instancia correcta
-        assertNotNull(guardado.getId());
-        assertNotNull(guardado.getId().getIdComConfidencial());
-        assertEquals(instancia.getCodInstancia(), guardado.getId().getCodInstancia());
+        // El id se generó y el comentario quedó asociado a la instancia correcta
+        assertNotNull(guardado.getIdComConfidencial());
         assertEquals(instancia.getCodInstancia(), guardado.getInstancia().getCodInstancia());
 
         // Se puede recuperar de nuevo por su clave real (no solo por la referencia en memoria)
         Optional<ComentarioConfidencialInstancia> recargado = comentarioRepository
-                .findById_IdComConfidencialAndEstado(guardado.getId().getIdComConfidencial(), EstadoLogico.ACTIVO);
+                .findByIdComConfidencialAndEstado(guardado.getIdComConfidencial(), EstadoLogico.ACTIVO);
         assertTrue(recargado.isPresent());
         assertEquals("Observación confidencial de integración (M15)", recargado.get().getContenido());
 

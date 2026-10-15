@@ -458,7 +458,12 @@ public class EstudianteService {
             if (grupo.getEstado() != EstadoLogico.ACTIVO) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "No se puede asignar un grupo que no está ACTIVO: " + idGrupo);
             }
-            
+            // Desactivar una carrera no desactiva sus grupos: sin esto se podía seguir
+            // inscribiendo estudiantes en grupos de una carrera dada de baja.
+            if (grupo.getCarrera().getEstado() != EstadoLogico.ACTIVO) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "No se puede asignar un grupo de una carrera que no está ACTIVA: " + idGrupo);
+            }
+
             grupos.add(grupo);
         }
         estudiante.setGrupos(grupos);

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -145,4 +146,11 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
     long contarPendientesDelEstudiante(@Param("idEstudiante") int idEstudiante,
                                        @Param("estado") EstadoLogico estado,
                                        @Param("desde") LocalDateTime desde);
+
+    // Devuelve cuántos recordatorios cambiaron de estado (ver proyecto.recalcular_estados_operativos).
+    // @Transactional explícito: la función hace un UPDATE, y los métodos de consulta del
+    // repositorio son readOnly por defecto.
+    @Transactional
+    @Query(value = "SELECT proyecto.recalcular_estados_operativos()", nativeQuery = true)
+    int recalcularEstadosOperativos();
 }
