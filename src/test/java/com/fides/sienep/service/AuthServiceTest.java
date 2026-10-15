@@ -248,6 +248,21 @@ class AuthServiceTest {
                 () -> authService.login(loginDto, IP));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+        assertEquals("Demasiados intentos de inicio de sesión fallidos. Intentá nuevamente más tarde.", ex.getReason());
+    }
+
+    @Test
+    @DisplayName("Login - Con la IP bloqueada responde 429 aunque las credenciales sean correctas")
+    void login_IpBloqueada_CredencialesCorrectas_LanzaTooManyRequests() {
+        when(loginIpRateLimiter.estaBloqueada(IP)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.login(loginDto, IP));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+        verify(authManager, never()).authenticate(any());
+        verify(jwtTokenUtil, never()).generateToken(anyInt(), anyString());
+        verify(logIntentoRepository, never()).save(any());
     }
 
     // ── Login con Google ─────────────────────────────────────────
@@ -357,6 +372,32 @@ class AuthServiceTest {
     }
 
     // ── Login con Active Directory ───────────────────────────────
+
+    @Test
+    @DisplayName("Login con Google - Con la IP bloqueada responde 429 sin verificar el token")
+    void loginConGoogle_IpBloqueada_LanzaTooManyRequests() {
+        when(loginIpRateLimiter.estaBloqueada(IP)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConGoogle(googleDto(), IP));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+        verifyNoInteractions(googleIdTokenVerifierService);
+        verify(jwtTokenUtil, never()).generateToken(anyInt(), anyString());
+    }
+
+    @Test
+    @DisplayName("Login con AD - Con la IP bloqueada responde 429 sin consultar al controlador de dominio")
+    void loginConAd_IpBloqueada_LanzaTooManyRequests() {
+        when(loginIpRateLimiter.estaBloqueada(IP)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.loginConAd(adDto(), IP));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+        verifyNoInteractions(activeDirectoryVerifierService);
+        verify(jwtTokenUtil, never()).generateToken(anyInt(), anyString());
+    }
 
     private AdLoginRequestDTO adDto() {
         AdLoginRequestDTO dto = new AdLoginRequestDTO();

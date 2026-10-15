@@ -45,8 +45,29 @@ public class LoginIpRateLimiter {
             return true;
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
-        LocalDateTime limiteVentana = ahora.minusMinutes(VENTANA_MINUTOS);
+        List<LocalDateTime> fallos = fallosVigentes(ip);
+        if (fallos.size() >= MAX_INTENTOS_FALLIDOS) {
+            return false;
+        }
+        fallos.add(LocalDateTime.now());
+        return true;
+    }
+
+    // Indica si la IP ya alcanzó el máximo de fallos dentro de la ventana, sin
+    // registrar nada. AuthService lo consulta ANTES de validar las credenciales:
+    // si solo se mirara al fallar, un atacante que acierta una contraseña después
+    // de superar el límite igual entraría, y el bloqueo no frenaría el spraying.
+    public synchronized boolean estaBloqueada(String ip) {
+        if (ip == null) {
+            return false;
+        }
+        return fallosVigentes(ip).size() >= MAX_INTENTOS_FALLIDOS;
+    }
+
+    // Devuelve la lista de fallos de la IP dentro de la ventana (creándola si no
+    // existe), después de descartar los que ya quedaron fuera de ella.
+    private List<LocalDateTime> fallosVigentes(String ip) {
+        LocalDateTime limiteVentana = LocalDateTime.now().minusMinutes(VENTANA_MINUTOS);
 
         List<LocalDateTime> fallos = fallosPorIp.get(ip);
         if (fallos == null) {
@@ -60,12 +81,7 @@ public class LoginIpRateLimiter {
                 it.remove();
             }
         }
-
-        if (fallos.size() >= MAX_INTENTOS_FALLIDOS) {
-            return false;
-        }
-        fallos.add(ahora);
-        return true;
+        return fallos;
     }
 
     // Housekeeping: purga IPs sin fallos recientes para no acumular memoria

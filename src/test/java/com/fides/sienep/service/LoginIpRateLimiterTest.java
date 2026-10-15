@@ -90,4 +90,48 @@ class LoginIpRateLimiterTest {
 
         assertFalse(fallosPorIp.containsKey("200.10.5.1"));
     }
+
+    @Test
+    @DisplayName("Está bloqueada - Falso mientras no se alcanza el límite, verdadero al llegar a 20 fallos")
+    void estaBloqueada_RecienAlAlcanzarElLimite() {
+        for (int i = 0; i < 19; i++) {
+            rateLimiter.registrarIntento(IP);
+        }
+        assertFalse(rateLimiter.estaBloqueada(IP));
+
+        rateLimiter.registrarIntento(IP);
+
+        assertTrue(rateLimiter.estaBloqueada(IP));
+    }
+
+    @Test
+    @DisplayName("Está bloqueada - Consultar no registra fallos")
+    void estaBloqueada_NoRegistraIntentos() {
+        for (int i = 0; i < 30; i++) {
+            assertFalse(rateLimiter.estaBloqueada(IP));
+        }
+
+        assertTrue(rateLimiter.registrarIntento(IP));
+    }
+
+    @Test
+    @DisplayName("Está bloqueada - Los fallos fuera de la ventana no la bloquean")
+    @SuppressWarnings("unchecked")
+    void estaBloqueada_IgnoraFallosFueraDeLaVentana() {
+        Map<String, List<LocalDateTime>> fallosPorIp =
+                (Map<String, List<LocalDateTime>>) ReflectionTestUtils.getField(rateLimiter, "fallosPorIp");
+        List<LocalDateTime> viejos = new ArrayList<>();
+        for (int i = 0; i < 25; i++) {
+            viejos.add(LocalDateTime.now().minusMinutes(15));
+        }
+        fallosPorIp.put(IP, viejos);
+
+        assertFalse(rateLimiter.estaBloqueada(IP));
+    }
+
+    @Test
+    @DisplayName("Está bloqueada - IP null nunca está bloqueada")
+    void estaBloqueada_IpNull_NoBloquea() {
+        assertFalse(rateLimiter.estaBloqueada(null));
+    }
 }
