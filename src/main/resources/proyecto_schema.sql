@@ -948,10 +948,31 @@ BEGIN
         v_valor_nuevo := NULL;
     END IF;
 
-    -- Los campos confidenciales (salud y motivo de derivación del estudiante, contenido de
-    -- los comentarios confidenciales) se guardan completos para no perder la trazabilidad:
-    -- la auditoría solo la consulta el ADMINISTRADOR (VER_AUDITORIA), que ya tiene acceso
-    -- a toda esa información.
+    -- Los datos confidenciales no deben quedar en la auditoría (RD01, RNF01): se omiten el
+    -- contenido de las observaciones/comentarios confidenciales y el bloque de salud y
+    -- motivo de derivación del estudiante.
+    IF TG_TABLE_NAME = 'estu_obs_confidenciales' THEN
+        IF v_valor_anterior IS NOT NULL THEN
+            v_valor_anterior := v_valor_anterior - 'obs_confidencial';
+        END IF;
+        IF v_valor_nuevo IS NOT NULL THEN
+            v_valor_nuevo := v_valor_nuevo - 'obs_confidencial';
+        END IF;
+    ELSIF TG_TABLE_NAME = 'inst_com_confidenciales' THEN
+        IF v_valor_anterior IS NOT NULL THEN
+            v_valor_anterior := v_valor_anterior - 'comentario';
+        END IF;
+        IF v_valor_nuevo IS NOT NULL THEN
+            v_valor_nuevo := v_valor_nuevo - 'comentario';
+        END IF;
+    ELSIF TG_TABLE_NAME = 'estudiantes' THEN
+        IF v_valor_anterior IS NOT NULL THEN
+            v_valor_anterior := v_valor_anterior - ARRAY['inf_esta_salud', 'sis_salud', 'motivo'];
+        END IF;
+        IF v_valor_nuevo IS NOT NULL THEN
+            v_valor_nuevo := v_valor_nuevo - ARRAY['inf_esta_salud', 'sis_salud', 'motivo'];
+        END IF;
+    END IF;
 
     -- Insertar en la tabla de auditoría (registrando también el usuario_bd)
     INSERT INTO proyecto.auditoria (entidad, accion, id_usuario, ip, usuario_bd, valor_anterior, valor_nuevo)
