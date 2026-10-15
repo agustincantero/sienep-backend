@@ -64,7 +64,6 @@ public class ComentarioConfidencialInstanciaService {
         }
 
         ComentarioConfidencialInstancia comentario = new ComentarioConfidencialInstancia();
-        comentario.setId(new ComentarioConfidencialInstancia.ComentarioConfidencialInstanciaId());
         comentario.setInstancia(instancia);
         comentario.setContenido(dto.getContenido());
         comentario.setAutor(autor);
@@ -136,7 +135,7 @@ public class ComentarioConfidencialInstanciaService {
     private void validarPerteneceAInstancia(ComentarioConfidencialInstancia comentario, int codInstancia) {
         if (comentario.getInstancia().getCodInstancia() != codInstancia) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No se encontró el comentario " + comentario.getId().getIdComConfidencial()
+                    "No se encontró el comentario " + comentario.getIdComConfidencial()
                             + " en la instancia " + codInstancia);
         }
     }
@@ -149,7 +148,7 @@ public class ComentarioConfidencialInstanciaService {
     }
 
     private ComentarioConfidencialInstancia buscarActivoOFallar(int idComConfidencial) {
-        return comentarioRepository.findById_IdComConfidencialAndEstado(idComConfidencial, EstadoLogico.ACTIVO)
+        return comentarioRepository.findByIdComConfidencialAndEstado(idComConfidencial, EstadoLogico.ACTIVO)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No se encontró un comentario confidencial activo con el id " + idComConfidencial));

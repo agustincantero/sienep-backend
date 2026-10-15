@@ -17,21 +17,9 @@ import lombok.*;
  *   updated_at     TIMESTAMP
  *   id_autor       INT FK -> funcionarios
  *
- *   PRIMARY KEY (id_comentario, id_usuario)
- *
- * DECISIÓN DE DISEÑO — PK COMPUESTA vs. PK SIMPLE:
- * --------------------------------------------------
- * La DB define PK (id_comentario, id_usuario). Sin embargo, id_comentario
- * es SERIAL (auto-incremental), lo que garantiza su unicidad a nivel de tabla
- * sin necesidad del segundo campo.
- *
- * En JPA usamos SOLO id_comentario como @Id por estas razones:
- *  1. Es técnicamente suficiente para identificar cualquier fila.
- *  2. Evita @IdClass o @EmbeddedId que complicarían el código innecesariamente.
- *  3. La constraint compuesta sigue existiendo a nivel DB para la integridad.
- *
- * Tradeoff: JPA no "conoce" la parte id_usuario de la PK, pero eso no afecta
- * ninguna operación normal (CRUD, queries, relaciones).
+ * La PK era (id_comentario, id_usuario), pero id_comentario es SERIAL y ya es
+ * único por sí solo: la base y JPA usan solo id_comentario. La consulta por
+ * estudiante la cubre idx_estu_obs_comentarios_usuario.
  *
  * @AttributeOverrides:
  * --------------------------------------------------

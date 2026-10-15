@@ -15,6 +15,7 @@ import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.PaisDocumento;
 import com.fides.sienep.model.Rol;
 import com.fides.sienep.model.Telefono;
+import com.fides.sienep.model.Carrera;
 import com.fides.sienep.model.Grupo;
 import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
@@ -614,6 +615,34 @@ class EstudianteServiceTest {
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
         when(grupoRepository.findById(1)).thenReturn(Optional.of(grupoInactivo));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> estudianteService.editar(1, dto));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar - Rechaza asignar un grupo activo de una carrera inactiva")
+    void editar_LanzaExcepcion_CarreraDelGrupoNoActiva() {
+        Carrera carreraInactiva = new Carrera();
+        carreraInactiva.setEstado(EstadoLogico.INACTIVO);
+
+        Grupo grupo = new Grupo();
+        grupo.setIdGrupo(1);
+        grupo.setEstado(EstadoLogico.ACTIVO);
+        grupo.setCarrera(carreraInactiva);
+
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("ana.garcia@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+        dto.setIdGrupos(List.of(1));
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(grupoRepository.findById(1)).thenReturn(Optional.of(grupo));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> estudianteService.editar(1, dto));

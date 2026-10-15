@@ -57,16 +57,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION proyecto.calcular_estado_operativo(p_fec_hora TIMESTAMP)
+RETURNS proyecto.estado_operativo AS $$
+    SELECT CASE
+        WHEN p_fec_hora::date < CURRENT_DATE THEN 'VENCIDO'
+        WHEN p_fec_hora::date = CURRENT_DATE THEN 'HOY'
+        ELSE 'FUTURO'
+    END::proyecto.estado_operativo;
+$$ LANGUAGE sql STABLE;
+
 CREATE OR REPLACE FUNCTION proyecto.actualizar_estado_recordatorio()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.fec_hora::date < CURRENT_DATE THEN
-        NEW.estado_operativo := 'VENCIDO';
-    ELSIF NEW.fec_hora::date = CURRENT_DATE THEN
-        NEW.estado_operativo := 'HOY';
-    ELSE
-        NEW.estado_operativo := 'FUTURO';
-    END IF;
+    NEW.estado_operativo := proyecto.calcular_estado_operativo(NEW.fec_hora);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -398,6 +401,55 @@ CREATE TRIGGER trg_actualizar_rol_permisos
     BEFORE UPDATE ON proyecto.rol_permisos
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+-- ADMINISTRADOR y ESTUDIANTE son roles base (ver RolService.ROLES_PROTEGIDOS): RolService
+-- ya los bloquea desde la API, esto lo garantiza también por fuera de ella. No pueden
+-- renombrarse, editarse, desactivarse ni borrarse, ni quitárseles permisos. Agregarles
+-- permisos (INSERT en rol_permisos) sí se permite: es como se le dan al ADMINISTRADOR
+-- los permisos nuevos que se incorporen al script.
+CREATE OR REPLACE FUNCTION proyecto.proteger_roles_base()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_nom_rol VARCHAR(50);
+BEGIN
+    IF TG_TABLE_NAME = 'roles' THEN
+        v_nom_rol := OLD.nom_rol;
+        IF TG_OP = 'UPDATE'
+                AND NEW.id_rol = OLD.id_rol
+                AND NEW.nom_rol = OLD.nom_rol
+                AND NEW.rol_descripcion IS NOT DISTINCT FROM OLD.rol_descripcion
+                AND NEW.estado = OLD.estado THEN
+            RETURN NEW;
+        END IF;
+    ELSE
+        IF TG_OP = 'UPDATE'
+                AND NEW.id_rol = OLD.id_rol
+                AND NEW.id_permiso = OLD.id_permiso
+                AND NEW.estado = OLD.estado THEN
+            RETURN NEW;
+        END IF;
+        SELECT nom_rol INTO v_nom_rol FROM proyecto.roles WHERE id_rol = OLD.id_rol;
+    END IF;
+
+    IF v_nom_rol IN ('ADMINISTRADOR', 'ESTUDIANTE') THEN
+        RAISE EXCEPTION 'El rol base % no puede modificarse ni eliminarse', v_nom_rol
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_proteger_roles_base
+    BEFORE UPDATE OR DELETE ON proyecto.roles
+    FOR EACH ROW EXECUTE FUNCTION proyecto.proteger_roles_base();
+
+CREATE TRIGGER trg_proteger_rol_permisos_base
+    BEFORE UPDATE OR DELETE ON proyecto.rol_permisos
+    FOR EACH ROW EXECUTE FUNCTION proyecto.proteger_roles_base();
+
 -- =====================================================
 -- TABLA: instancias
 -- =====================================================
@@ -485,7 +537,10 @@ CREATE TABLE proyecto.recordatorios (
     notificado_proximidad BOOLEAN                    NOT NULL DEFAULT FALSE,
     cumplido              BOOLEAN                    NOT NULL DEFAULT FALSE,
     CONSTRAINT chk_rec_titulo_valido   CHECK (TRIM(titulo) <> ''),
-    CONSTRAINT chk_fec_hora_futura     CHECK (fec_hora > CURRENT_TIMESTAMP),
+    -- Mismo formato que genera RecordatorioIdGenerator (REC-AAAA-NNNNNN).
+    CONSTRAINT chk_id_neg_recordatorio_valido
+        CHECK (id_neg_recordatorio IS NULL OR id_neg_recordatorio ~ '^REC-[0-9]{4}-[0-9]{6}$'),
+    CONSTRAINT uk_id_neg_recordatorio UNIQUE (id_neg_recordatorio),
     CONSTRAINT chk_recurrencia_fec_fin CHECK (
         (id_frecuencia IS NOT NULL AND (fec_fin IS NOT NULL OR nro_ocurrencias IS NOT NULL))
             OR id_frecuencia IS NULL
@@ -511,6 +566,42 @@ CREATE TRIGGER trg_actualizar_recordatorios
 CREATE TRIGGER trg_actualizar_estado_recordatorio
     BEFORE INSERT OR UPDATE ON proyecto.recordatorios
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_estado_recordatorio();
+
+-- Reemplaza al viejo CHECK chk_fec_hora_futura: un CHECK se reevalúa en cada UPDATE,
+-- así que una vez pasada la fecha la base rechazaba cualquier cambio del recordatorio
+-- (marcarCumplido, RF27, darlo de baja). Acá la fecha futura solo se exige al crearlo
+-- o cuando se le cambia la fecha.
+CREATE OR REPLACE FUNCTION proyecto.validar_fec_hora_futura()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT' OR NEW.fec_hora IS DISTINCT FROM OLD.fec_hora)
+            AND NEW.fec_hora <= CURRENT_TIMESTAMP THEN
+        RAISE EXCEPTION 'La fecha y hora del recordatorio debe ser futura'
+            USING ERRCODE = 'check_violation', CONSTRAINT = 'chk_fec_hora_futura';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validar_fec_hora_futura
+    BEFORE INSERT OR UPDATE ON proyecto.recordatorios
+    FOR EACH ROW EXECUTE FUNCTION proyecto.validar_fec_hora_futura();
+
+-- trg_actualizar_estado_recordatorio solo corre cuando se escribe la fila: sin esto, un
+-- recordatorio que nadie toca se queda en FUTURO para siempre. EstadoOperativoScheduler
+-- la llama cada medianoche y al arrancar; solo actualiza las filas cuyo estado cambió.
+CREATE OR REPLACE FUNCTION proyecto.recalcular_estados_operativos()
+RETURNS INT AS $$
+DECLARE
+    v_actualizados INT;
+BEGIN
+    UPDATE proyecto.recordatorios
+    SET estado_operativo = proyecto.calcular_estado_operativo(fec_hora)
+    WHERE estado_operativo <> proyecto.calcular_estado_operativo(fec_hora);
+    GET DIAGNOSTICS v_actualizados = ROW_COUNT;
+    RETURN v_actualizados;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE INDEX idx_recordatorios_responsable ON proyecto.recordatorios(responsable);
 CREATE INDEX idx_recordatorios_instancia   ON proyecto.recordatorios(cod_instancia);
@@ -600,14 +691,13 @@ CREATE TRIGGER trg_actualizar_estu_telefonos
 -- TABLA: estu_obs_comentarios
 -- =====================================================
 CREATE TABLE proyecto.estu_obs_comentarios (
+    id_comentario SERIAL                 PRIMARY KEY,
     id_usuario    INT                    NOT NULL,
-    id_comentario SERIAL                 NOT NULL,
     comentario    TEXT                   NOT NULL,
     estado        proyecto.estado_logico NOT NULL DEFAULT 'ACTIVO',
     created_at    TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     id_autor      INT                    NOT NULL,
-    PRIMARY KEY (id_comentario, id_usuario),
     CONSTRAINT chk_comentario_no_vacio CHECK (TRIM(comentario) <> ''),
     CONSTRAINT fk_estu_obs_comentarios_estudiante FOREIGN KEY (id_usuario)
         REFERENCES proyecto.estudiantes(id_usuario)
@@ -621,26 +711,24 @@ CREATE TRIGGER trg_actualizar_estu_obs_comentarios
     BEFORE UPDATE ON proyecto.estu_obs_comentarios
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
--- La PK (id_comentario, id_usuario) no cubre "comentarios de este estudiante"
--- (id_usuario no es la columna líder) — esta es la consulta real más usada.
+-- "Comentarios de este estudiante" es la consulta real más usada.
 CREATE INDEX idx_estu_obs_comentarios_usuario ON proyecto.estu_obs_comentarios(id_usuario);
 
 -- =====================================================
 -- TABLA: estu_obs_confidenciales
 -- =====================================================
 CREATE TABLE proyecto.estu_obs_confidenciales (
+    id_obs_confidencial SERIAL                 PRIMARY KEY,
     id_estudiante       INT                    NOT NULL,
-    id_obs_confidencial SERIAL                 NOT NULL,
     obs_confidencial    TEXT                   NOT NULL,
     estado              proyecto.estado_logico NOT NULL DEFAULT 'ACTIVO',
     created_at          TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     id_autor            INT                    NOT NULL,
-    PRIMARY KEY (id_obs_confidencial, id_estudiante),
     CONSTRAINT chk_obs_confidencial_no_vacio CHECK (TRIM(obs_confidencial) <> ''),
     CONSTRAINT fk_estu_obs_confidenciales_estudiante FOREIGN KEY (id_estudiante)
         REFERENCES proyecto.estudiantes(id_usuario)
-        ON UPDATE CASCADE ON DELETE CASCADE,
+        ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_estu_obs_confidenciales_autor FOREIGN KEY (id_autor)
         REFERENCES proyecto.funcionarios(id_usuario)
         ON UPDATE CASCADE ON DELETE RESTRICT
@@ -650,8 +738,7 @@ CREATE TRIGGER trg_actualizar_estu_obs_confidenciales
     BEFORE UPDATE ON proyecto.estu_obs_confidenciales
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
--- Mismo motivo que estu_obs_comentarios: la PK (id_obs_confidencial, id_estudiante)
--- no cubre "comentarios confidenciales de este estudiante".
+-- Mismo motivo que estu_obs_comentarios: "comentarios confidenciales de este estudiante".
 CREATE INDEX idx_estu_obs_confidenciales_estudiante ON proyecto.estu_obs_confidenciales(id_estudiante);
 
 -- =====================================================
@@ -715,7 +802,7 @@ CREATE TABLE proyecto.inst_comentarios (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_inst_id_autor FOREIGN KEY (id_autor)
         REFERENCES proyecto.funcionarios(id_usuario)
-        ON UPDATE CASCADE ON DELETE CASCADE
+        ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TRIGGER trg_actualizar_ins_comentarios
@@ -728,29 +815,27 @@ CREATE INDEX idx_inst_comentarios_instancia ON proyecto.inst_comentarios(cod_ins
 -- TABLA: inst_com_confidenciales
 -- =====================================================
 CREATE TABLE proyecto.inst_com_confidenciales (
+    id_com_confidencial SERIAL                 PRIMARY KEY,
     cod_instancia       INT                    NOT NULL,
-    id_com_confidencial SERIAL                 NOT NULL,
     comentario          TEXT                   NOT NULL,
     estado              proyecto.estado_logico NOT NULL DEFAULT 'ACTIVO',
     created_at          TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     id_autor            INT                    NOT NULL,
-    PRIMARY KEY (id_com_confidencial, cod_instancia),
     CONSTRAINT chk_inst_com_conf_valido CHECK (TRIM(comentario) <> ''),
     CONSTRAINT fk_inst_com_confidencial_instancia FOREIGN KEY (cod_instancia)
         REFERENCES proyecto.instancias(cod_instancia)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_inst_com_conf_autor FOREIGN KEY (id_autor)
         REFERENCES proyecto.funcionarios(id_usuario)
-        ON UPDATE CASCADE ON DELETE CASCADE
+        ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TRIGGER trg_actualizar_inst_com_confidenciales
     BEFORE UPDATE ON proyecto.inst_com_confidenciales
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
--- La PK (id_com_confidencial, cod_instancia) no cubre "comentarios
--- confidenciales de esta instancia", que es la consulta real.
+-- "Comentarios confidenciales de esta instancia" es la consulta real.
 CREATE INDEX idx_inst_com_confidenciales_instancia ON proyecto.inst_com_confidenciales(cod_instancia);
 
 -- =====================================================
@@ -863,8 +948,9 @@ BEGIN
         v_valor_nuevo := NULL;
     END IF;
 
-    -- Las observaciones/comentarios confidenciales no deben quedar legibles en la auditoría
-    -- para quien solo tiene VER_AUDITORIA (sin los permisos de confidencialidad específicos)
+    -- Los datos confidenciales no deben quedar en la auditoría (RD01, RNF01): se omiten el
+    -- contenido de las observaciones/comentarios confidenciales y el bloque de salud y
+    -- motivo de derivación del estudiante.
     IF TG_TABLE_NAME = 'estu_obs_confidenciales' THEN
         IF v_valor_anterior IS NOT NULL THEN
             v_valor_anterior := v_valor_anterior - 'obs_confidencial';
@@ -878,6 +964,13 @@ BEGIN
         END IF;
         IF v_valor_nuevo IS NOT NULL THEN
             v_valor_nuevo := v_valor_nuevo - 'comentario';
+        END IF;
+    ELSIF TG_TABLE_NAME = 'estudiantes' THEN
+        IF v_valor_anterior IS NOT NULL THEN
+            v_valor_anterior := v_valor_anterior - ARRAY['inf_esta_salud', 'sis_salud', 'motivo'];
+        END IF;
+        IF v_valor_nuevo IS NOT NULL THEN
+            v_valor_nuevo := v_valor_nuevo - ARRAY['inf_esta_salud', 'sis_salud', 'motivo'];
         END IF;
     END IF;
 
