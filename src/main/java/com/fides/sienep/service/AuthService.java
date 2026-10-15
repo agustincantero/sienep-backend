@@ -83,6 +83,7 @@ public class AuthService {
 
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public LoginResponseDTO login(LoginRequestDTO dto, String ip) {
+        verificarIpNoBloqueada(ip);
 
         // Mismo criterio que olvideMiContrasenia(): el trigger de BD normaliza el
         // email a minúsculas al guardar, así que la búsqueda tiene que normalizar
@@ -156,6 +157,7 @@ public class AuthService {
     // reemplaza la contraseña como factor de login, no el proceso de alta.
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public LoginResponseDTO loginConGoogle(GoogleLoginRequestDTO dto, String ip) {
+        verificarIpNoBloqueada(ip);
         String email = googleIdTokenVerifierService.emailVerificado(dto.getIdToken())
                 .orElseThrow(() -> credencialesInvalidas(ip));
         return loginConIdentidadExterna(email, ip, "Google");
@@ -168,6 +170,7 @@ public class AuthService {
     // Mismo patrón que loginConGoogle(): el controlador de dominio prueba quién es la persona y SIENEP solo busca la cuenta existente por el atributo mail de AD y emite su propio token. Igual que con Google, una cuenta PENDIENTE_DE_ACTIVACION sigue pendiente: la contraseña temporal local sigue vigente y hay que forzar su cambio, no se puede dejar activa con ella.
     // Sin @Transactional a propósito: la llamada a LDAP puede tardar hasta los timeouts del AD y dentro de una transacción retendría una conexión de BD mientras espera. Solo la parte que toca la base va en la transacción (TransactionTemplate); antes de escribir algo ahí no hay ningún throw que requiera noRollbackFor.
     public LoginResponseDTO loginConAd(AdLoginRequestDTO dto, String ip) {
+        verificarIpNoBloqueada(ip);
         String email = activeDirectoryVerifierService.emailVerificado(dto.getUsuario(), dto.getContrasenia()).orElseThrow(() -> credencialesInvalidas(ip));
         return transactionTemplate.execute(status -> loginConIdentidadExterna(email, ip, "AD"));
     }
@@ -276,10 +279,25 @@ public class AuthService {
     private ResponseStatusException credencialesInvalidas(String ip) {
         if (!loginIpRateLimiter.registrarIntento(ip)) {
             log.warn("Límite de intentos de login fallidos excedido para ip={}", ip);
-            return new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Demasiados intentos de inicio de sesión fallidos. Intenta nuevamente más tarde.");
+            return limiteDeIpExcedido();
         }
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
+    }
+
+    // Se llama al inicio de cada login (contraseña, Google y AD), antes de validar
+    // nada: con la IP ya bloqueada se responde 429 aunque las credenciales sean
+    // correctas. Si solo se controlara al fallar (credencialesInvalidas), quien
+    // supera el límite probando contraseñas igual entra apenas acierta una.
+    private void verificarIpNoBloqueada(String ip) {
+        if (loginIpRateLimiter.estaBloqueada(ip)) {
+            log.warn("Login rechazado — ip={} bloqueada por intentos fallidos", ip);
+            throw limiteDeIpExcedido();
+        }
+    }
+
+    private ResponseStatusException limiteDeIpExcedido() {
+        return new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                "Demasiados intentos de inicio de sesión fallidos. Intentá nuevamente más tarde.");
     }
 
     // =========================================================
