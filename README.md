@@ -14,6 +14,7 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
 - [Funcionalidad principal](#funcionalidad-principal)
 - [Arquitectura general](#arquitectura-general)
 - [Arquitectura de Seguridad y Autenticación](#arquitectura-de-seguridad-y-autenticación)
+    - [Login con Google y con Active Directory](#login-con-google-y-con-active-directory)
     - [Recuperación de contraseña](#recuperación-de-contraseña)
     - [Contraseña temporal (`PENDIENTE_DE_ACTIVACION`)](#contraseña-temporal-pendiente_de_activacion)
     - [Formato de las respuestas de error](#formato-de-las-respuestas-de-error)
@@ -37,12 +38,12 @@ Forma parte del **Proyecto de Desarrollo e Infraestructura** del tercer semestre
 
 La API expone los servicios correspondientes a los 7 módulos centrales del sistema:
 
-1. **Autenticación y Acceso:** Inicio y cierre de sesión, y gestión segura de credenciales.
+1. **Autenticación y Acceso:** Inicio de sesión con email y contraseña, con Google (`POST /auth/google`) o con Active Directory (`POST /auth/ad`); consulta de la sesión propia (`GET /auth/me`), cierre de sesión que invalida los JWT emitidos antes (`POST /auth/logout`) y gestión segura de credenciales.
 2. **Gestión de Estudiantes:** Altas, bajas lógicas, modificaciones, búsquedas y capacidad para adjuntar informes médicos.
-3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (RF13), con la opción de crear un recordatorio inicial en la misma llamada. La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /api/instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /api/instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
+3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (RF13), con la opción de crear un recordatorio inicial en la misma llamada. La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
 4. **Gestión de Recordatorios:** Creación (únicos y recurrentes), notificaciones, vinculación a instancias e integración con Google Calendar.
 5. **Gestión de Incidencias:** Registro detallado y visualización del historial de incidencias.
-6. **Reportes:** Generación y exportación de informes del sistema, incluyendo un endpoint público (`POST /api/reportes/validar`) para verificar si un PDF exportado es auténtico, comparando su hash SHA-256 contra el que el sistema guardó al generarlo.
+6. **Reportes:** Generación y exportación de informes del sistema, incluyendo un endpoint público (`POST /reportes/validar`) para verificar si un PDF exportado es auténtico, comparando su hash SHA-256 contra el que el sistema guardó al generarlo.
 7. **Administración y Configuración:** Gestión completa de Roles y Permisos (preexistentes y personalizados), y mantenimiento de las categorías de Instancias y Recordatorios.
 
 ## Arquitectura general
@@ -77,21 +78,28 @@ El sistema implementa una arquitectura de seguridad robusta y altamente personal
 
 A continuación se detalla la responsabilidad de las clases clave que componen este flujo, un aspecto fundamental del diseño del sistema:
 
-*   **`SecurityConfig`:** Configura el comportamiento central de Spring Security. Deshabilita CSRF (apropiado para APIs REST con JWT), establece la política de sesión sin estado (`STATELESS`), define qué endpoints son públicos (como `/api/auth/**` y Swagger) y exige autenticación para el resto. También registra el filtro JWT para que actúe antes de los filtros estándar.
-*   **`AuthController` y `AuthService`:** Exponen y procesan el endpoint `/api/auth/login`. Gestionan la validación inicial, la protección contra ataques de fuerza bruta (bloqueando cuentas tras 5 intentos fallidos en 10 minutos) y auditan el acceso exitoso o denegado. Si las credenciales son válidas, solicitan la emisión del Token.
+*   **`SecurityConfig`:** Configura el comportamiento central de Spring Security. Deshabilita CSRF (apropiado para APIs REST con JWT), establece la política de sesión sin estado (`STATELESS`), define qué endpoints son públicos (`/auth/**` salvo `GET /auth/me`, `POST /reportes/validar`, Swagger, `/actuator/health` y `/error`) y exige autenticación para el resto. También registra el filtro JWT para que actúe antes de los filtros estándar.
+*   **`AuthController` y `AuthService`:** Exponen y procesan `/auth/login`, `/auth/google` y `/auth/ad`. Gestionan la validación inicial, la protección contra ataques de fuerza bruta (bloqueando cuentas tras 5 intentos fallidos en 10 minutos) y auditan el acceso exitoso o denegado. Si las credenciales son válidas, solicitan la emisión del Token.
 *   **`LoginUsuarioDetailsService`:** Implementación de `UserDetailsService`. Su única función es asistir en el proceso de **Autenticación (Login)**. Busca al usuario en la base de datos (sea `Funcionario` o `Estudiante`) utilizando su **correo electrónico**. Esto permite a Spring validar la contraseña provista contra el hash encriptado de la base de datos.
 *   **`JwtTokenUtil`:** Clase utilitaria encargada de la criptografía. Al generar el Token, asigna el `idUsuario` (la clave primaria) como el *Subject* (sujeto) en lugar del email, mejorando la privacidad y la eficiencia de consultas futuras. Los tokens tienen una validez configurada (ej. 5 horas) y están firmados con algoritmos seguros.
 *   **`JwtRequestFilter`:** Filtro interceptor que evalúa cada petición entrante HTTP. Busca el header `Authorization: Bearer <token>`, extrae el JWT, verifica su validez y expiración, y obtiene el `idUsuario` embebido. Si es válido, inyecta la identidad autenticada en el `SecurityContextHolder`.
 *   **`CustomUsuarioDetailsService`:** Utilizado exclusivamente por el `JwtRequestFilter` para la fase de **Autorización**. A diferencia del servicio de Login, esta clase busca al usuario directamente por su **ID** y levanta sus privilegios en memoria:
     *   **Funcionarios:** Convierte el Rol y la lista de permisos (`RolPermiso`) asignados dinámicamente en la base de datos a instancias de `GrantedAuthority` de Spring.
-    *   **Estudiantes:** Se les inyecta un rol sintético (`ROLE_ESTUDIANTE`) y permisos base (`VER_COMENTARIO_NORMAL_ESTUDIANTE`), logrando que ambos actores convivan transparentemente bajo el mismo control de acceso basado en anotaciones (`@PreAuthorize`).
+    *   **Estudiantes:** Se resuelven con el mismo código: el rol `ESTUDIANTE` es una fila real de la tabla `Rol` (seedeada) y sus permisos salen de `RolPermiso`, logrando que ambos actores convivan transparentemente bajo el mismo control de acceso basado en anotaciones (`@PreAuthorize`). `RolService` impide editar o desactivar los roles base `ADMINISTRADOR` y `ESTUDIANTE`.
+
+### Login con Google y con Active Directory
+
+Ambos endpoints reutilizan el JWT interno y **solo autentican cuentas ya existentes** (no dan de alta): el email verificado tiene que coincidir con el de un Funcionario o Estudiante activo y no bloqueado.
+
+- **`POST /auth/google`:** recibe el ID token que el frontend obtiene con Google Identity Services y lo valida contra `GOOGLE_OAUTH_CLIENT_ID` (Client ID OAuth "Web application", distinto de la Service Account de Calendar).
+- **`POST /auth/ad`:** valida usuario (`sAMAccountName`) y contraseña contra el controlador de dominio y enlaza con la cuenta de SIENEP por el atributo `mail`. Usa `AD_LDAP_URL`, `AD_DOMAIN` y `AD_ROOT_DN`; si falta alguna, o el DC no responde, devuelve `503`. Credenciales rechazadas o sin cuenta: `401`.
 
 ### Recuperación de contraseña
 
 Si el usuario olvida su contraseña, el flujo se separa en dos pasos para no aplicar el cambio sin confirmación:
 
-1. **`POST /api/auth/forgot-password`** (público): recibe un email, genera un token de un solo uso (UUID), guarda su hash SHA-256 con vencimiento de 30 minutos e invalida cualquier token anterior del mismo usuario. Envía por correo un link armado con la variable de entorno `FRONTEND_URL` (ej. `https://tu-frontend/reset-password?token=...`). La contraseña actual no se modifica todavía en este paso.
-2. **`POST /api/auth/reset-password`** (público): recibe el token y la nueva contraseña, valida que no esté vencido ni ya usado, y recién ahí la aplica.
+1. **`POST /auth/forgot-password`** (público): recibe un email, genera un token de un solo uso (UUID), guarda su hash SHA-256 con vencimiento de 30 minutos e invalida cualquier token anterior del mismo usuario. Envía por correo un link armado con la variable de entorno `FRONTEND_URL` (ej. `https://tu-frontend/reset-password?token=...`). La contraseña actual no se modifica todavía en este paso.
+2. **`POST /auth/reset-password`** (público): recibe el token y la nueva contraseña, valida que no esté vencido ni ya usado, y recién ahí la aplica.
 
 Por diseño, este flujo responde siempre igual (200) exista o no el email, para no permitir enumerar cuentas registradas, y limita a **3 solicitudes cada 15 minutos por email** (`429 Too Many Requests` si se supera), para frenar abuso hacia el correo del usuario o hacia el proveedor de mail.
 
@@ -134,8 +142,8 @@ Es decir: `code` existe únicamente en errores de filtro, y hoy en uno solo. Un 
 
 El sistema permite adjuntar archivos reales (no URLs externas) en dos flujos:
 
-- **Informes adjuntos de un estudiante:** `POST /api/informes-adjuntos` (multipart) sube el archivo; `GET /api/informes-adjuntos/{id}/descargar` lo devuelve, protegido por el permiso `VER_INFORME`.
-- **Foto de perfil de un estudiante:** `PUT /api/estudiantes/{id}/foto` (multipart) sube/reemplaza la foto; `GET /api/estudiantes/{id}/foto` la devuelve. El propio estudiante puede subir y ver su foto sin necesitar el permiso general de edición/visualización.
+- **Informes adjuntos de un estudiante:** `POST /informes-adjuntos` (multipart) sube el archivo; `GET /informes-adjuntos/{id}/descargar` lo devuelve, protegido por el permiso `VER_INFORME`.
+- **Foto de perfil de un estudiante:** `PUT /estudiantes/{id}/foto` (multipart) sube/reemplaza la foto; `GET /estudiantes/{id}/foto` la devuelve. El propio estudiante puede subir y ver su foto sin necesitar el permiso general de edición/visualización.
 
 En ambos casos:
 
@@ -166,10 +174,14 @@ A continuación se muestra cómo configurar las variables para una sesión de te
 
 **Paso 1: Configurar variables**
 
-> **Nota:** además de las variables obligatorias definidas abajo, existen 3 opcionales (si no se definen, usan su valor por defecto):
+> **Nota:** además de las variables obligatorias definidas abajo, existen otras opcionales (si no se definen, usan su valor por defecto; la lista completa está en `.env.example`):
 > - `FRONTEND_URL`: URL base del frontend, usada para armar el link de "olvidé mi contraseña" (default `http://localhost:3000`).
 > - `STORAGE_PATH`: carpeta base donde se guardan los archivos subidos — informes adjuntos y fotos de perfil (default `uploads`).
 > - `CORS_ALLOWED_ORIGINS`: orígenes permitidos para CORS, separados por coma y sin barra final (default `http://localhost:3000,https://sienep.app`). El backend solo acepta peticiones `fetch`/AJAX hechas desde un origen de esta lista.
+> - `SWAGGER_ENABLED`: expone Swagger UI (default `true`; ponerla en `false` en producción).
+> - `SEED_DEMO_USERS`: si vale `true` siembra funcionarios demo con contraseñas hardcodeadas (default `false`; usar solo en desarrollo local).
+> - `GOOGLE_OAUTH_CLIENT_ID`: Client ID para `POST /auth/google` (obligatoria en producción).
+> - `AD_LDAP_URL`, `AD_DOMAIN`, `AD_ROOT_DN`: conexión al Active Directory para `POST /auth/ad`; si falta alguna, ese endpoint responde `503`.
 >
 > **Sobre Google Calendar:** con `GOOGLE_CALENDAR_ENABLED=false` (el default si no la definís) la sync queda en modo simulado, no hace falta cargar credenciales reales. Si la ponés en `true`, además necesitás `GOOGLE_CALENDAR_CREDENTIALS` con el JSON completo de la service account — no entra cómodo en una sola línea de terminal, ver `.env.example` o cargarla en un archivo `.env` (ya está en `.gitignore`).
 
@@ -255,7 +267,7 @@ Este proyecto cuenta con una amplia suite de tests unitarios y de integración p
 #### Reporte de Cobertura (JaCoCo)
 Al ejecutar los tests mediante Maven (`mvn test`), el proyecto generará automáticamente un reporte de cobertura de código utilizando el plugin **JaCoCo**. 
 
-> **Aclaración Arquitectónica:** Por decisión del equipo, el esfuerzo de *Unit Testing* se centró exclusivamente en la **capa de Servicios** (`service/`), ya que es donde reside el núcleo de la lógica de negocio, reglas de validación y orquestación transaccional. Por este motivo, al leer el reporte se recomienda enfocar el análisis en dicho paquete.
+> **Aclaración Arquitectónica:** Por decisión del equipo, el esfuerzo de *Unit Testing* se centró en la **capa de Servicios** (`service/`), ya que es donde reside el núcleo de la lógica de negocio, reglas de validación y orquestación transaccional. Por este motivo, al leer el reporte se recomienda enfocar el análisis en dicho paquete. Los controladores tienen además tests de contrato HTTP con `MockMvc` (validación, códigos de estado, `@PreAuthorize`).
 
 Para visualizar este reporte interactivo y comprobar la alta cobertura de la lógica de negocio, abrí en tu navegador web el siguiente archivo generado localmente:
 👉 `target/site/jacoco/index.html`
@@ -282,6 +294,6 @@ La sync es asíncrona y corre recién después de confirmada la transacción de 
 
 Una vez que hayas levantado la base de datos y ejecutado la aplicación, la API estará documentada de forma dinámica e interactiva.
 
-Para ver los modelos de datos, probar los endpoints y revisar los códigos de estado, ingresa desde tu navegador a:
+Para ver los modelos de datos, probar los endpoints y revisar los códigos de estado, ingresa desde tu navegador a (disponible mientras `SWAGGER_ENABLED` no sea `false`):
 
 👉 **[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)**
