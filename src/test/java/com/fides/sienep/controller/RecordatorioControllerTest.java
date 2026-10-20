@@ -1,5 +1,6 @@
 package com.fides.sienep.controller;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fides.sienep.dto.RecordatorioRequestDTO;
 import com.fides.sienep.dto.RecordatorioResponseDTO;
 import com.fides.sienep.model.TipoRecordatorio;
@@ -41,7 +42,6 @@ class RecordatorioControllerTest extends AbstractControllerTest {
         dto.setFechaHora(LocalDateTime.now().plusDays(1));
         dto.setCodInstancia(1);
         dto.setIdCategoria(1);
-        dto.setIdResponsable(2);
         return dto;
     }
 
@@ -79,15 +79,16 @@ class RecordatorioControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Crear - Sin responsable responde 400 (Bean Validation)")
-    void crear_SinResponsable_Responde400() throws Exception {
-        RecordatorioRequestDTO dto = requestValido();
-        dto.setIdResponsable(null);
+    @DisplayName("Crear - Un idResponsable en el body se ignora y responde 201 (el responsable sale de la sesión)")
+    void crear_ConIdResponsableEnElBody_SeIgnora() throws Exception {
+        when(recordatorioService.crear(any())).thenReturn(responseDTO());
+        ObjectNode body = objectMapper.valueToTree(requestValido());
+        body.put("idResponsable", 99);
 
         mockMvc.perform(post("/recordatorios")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest());
+                        .content(body.toString()))
+                .andExpect(status().isCreated());
     }
 
     @Test

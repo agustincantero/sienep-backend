@@ -9,6 +9,7 @@ import com.fides.sienep.model.*;
 import com.fides.sienep.repository.*;
 import com.fides.sienep.utils.RecordatorioIdGenerator;
 import com.fides.sienep.utils.RecurrenceRuleBuilder;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -31,6 +35,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -94,12 +99,27 @@ class RecordatorioServiceTest {
         requestDTO.setFechaHora(LocalDateTime.now().plusDays(1));
         requestDTO.setCodInstancia(1);
         requestDTO.setIdCategoria(1);
-        requestDTO.setIdResponsable(2);
 
         responseDTO = new RecordatorioResponseDTO();
         responseDTO.setCodRecordatorio(1);
         responseDTO.setTitulo("Llamar a Ana");
         responseDTO.setEstado(EstadoLogico.ACTIVO);
+
+        // El responsable sale de la sesión: por defecto opera el mismo funcionario (id 2).
+        mockSecurityContext(2);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void mockSecurityContext(int idUsuario) {
+        Authentication auth = mock(Authentication.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
+        lenient().when(auth.getName()).thenReturn(String.valueOf(idUsuario));
+        lenient().when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
     }
 
     @Test
@@ -117,6 +137,30 @@ class RecordatorioServiceTest {
         assertNotNull(resultado);
         assertEquals(1, resultado.getCodRecordatorio());
         verify(recordatorioRepository).save(any(Recordatorio.class));
+    }
+
+    @Test
+    @DisplayName("Crear recordatorio - El responsable es el funcionario autenticado")
+    void crear_ResponsableEsElFuncionarioAutenticado() {
+        mockSecurityContext(5);
+        Funcionario autenticado = new Funcionario();
+        autenticado.setIdUsuario(5);
+        autenticado.setNombre("María");
+        autenticado.setEmail("maria.lopez@utec.edu.uy");
+        autenticado.setEstado(EstadoLogico.ACTIVO);
+        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
+        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(funcionarioRepository.findById(5)).thenReturn(Optional.of(autenticado));
+        when(recordatorioIdGenerator.generarIdNeg()).thenReturn("REC-2026-000001");
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
+
+        recordatorioService.crear(requestDTO);
+
+        ArgumentCaptor<Recordatorio> captor = ArgumentCaptor.forClass(Recordatorio.class);
+        verify(recordatorioRepository).save(captor.capture());
+        assertSame(autenticado, captor.getValue().getResponsable());
+        verify(funcionarioRepository, never()).findById(2);
     }
 
     @Test
@@ -349,7 +393,6 @@ class RecordatorioServiceTest {
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
@@ -432,19 +475,20 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Editar recordatorio - Responsable no encontrado (404)")
-    void editar_LanzaNotFound_ResponsableNoExiste() {
+    @DisplayName("Editar recordatorio - Conserva el responsable aunque edite otro funcionario")
+    void editar_ConservaResponsable_AunqueEditeOtroUsuario() {
+        mockSecurityContext(3);
         when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.empty());
+        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
+        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> recordatorioService.editar(1, requestDTO));
+        recordatorioService.editar(1, requestDTO);
 
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(recordatorioRepository, never()).save(any());
+        assertSame(responsable, recordatorio.getResponsable());
+        verify(funcionarioRepository, never()).findById(anyInt());
     }
 
     @Test
@@ -455,7 +499,6 @@ class RecordatorioServiceTest {
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(frecuenciaRepository.findById(99)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -475,7 +518,6 @@ class RecordatorioServiceTest {
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
@@ -497,7 +539,6 @@ class RecordatorioServiceTest {
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
@@ -518,7 +559,6 @@ class RecordatorioServiceTest {
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
 
@@ -536,7 +576,6 @@ class RecordatorioServiceTest {
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
         when(recurrenceRuleBuilder.construir(recordatorio)).thenReturn(null);
@@ -550,41 +589,6 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Editar recordatorio - Cambia responsable: sigue siendo ACTUALIZAR sobre el mismo evento (RF22)")
-    void editar_CambiaResponsable_SigueSiendoActualizar() {
-        // Con Service Account todos los eventos viven en un único calendario
-        // compartido — a diferencia del modelo OAuth anterior, cambiar el
-        // responsable ya no implica borrar+crear en calendarios distintos.
-        recordatorio.setEventIdGoogle("evento-existente-id");
-
-        Funcionario responsableNuevo = new Funcionario();
-        responsableNuevo.setIdUsuario(3);
-        responsableNuevo.setNombre("María");
-        responsableNuevo.setApellido("López");
-        responsableNuevo.setEmail("maria.lopez@utec.edu.uy");
-        responsableNuevo.setEstado(EstadoLogico.ACTIVO);
-        requestDTO.setIdResponsable(3);
-
-        when(recordatorioRepository.findByCodRecordatorioAndEstado(1, EstadoLogico.ACTIVO))
-                .thenReturn(Optional.of(recordatorio));
-        when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
-        when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(3)).thenReturn(Optional.of(responsableNuevo));
-        when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
-        when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
-        when(recurrenceRuleBuilder.construir(recordatorio)).thenReturn(null);
-
-        recordatorioService.editar(1, requestDTO);
-
-        ArgumentCaptor<CalendarRecordatorioEvent> captor = ArgumentCaptor.forClass(CalendarRecordatorioEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
-        CalendarRecordatorioEvent evento = captor.getValue();
-        assertEquals(AccionCalendar.ACTUALIZAR, evento.getAccion());
-        assertEquals("evento-existente-id", evento.getOldEventId());
-        assertEquals("maria.lopez@utec.edu.uy", evento.getEmailFuncionario());
-    }
-
-    @Test
     @DisplayName("Editar recordatorio - Publica CREAR cuando nunca se había sincronizado (RF22)")
     void editar_PublicaCrear_CuandoNuncaTuvoEvento() {
         // Ya no depende de que el responsable haya autorizado nada (Service
@@ -593,7 +597,6 @@ class RecordatorioServiceTest {
                 .thenReturn(Optional.of(recordatorio));
         when(instanciaRepository.findById(1)).thenReturn(Optional.of(instancia));
         when(categoriaRecordatorioRepository.findById(1)).thenReturn(Optional.of(categoria));
-        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(responsable));
         when(recordatorioRepository.save(any(Recordatorio.class))).thenReturn(recordatorio);
         when(recordatorioMapper.toDto(recordatorio)).thenReturn(responseDTO);
         when(recurrenceRuleBuilder.construir(recordatorio)).thenReturn(null);

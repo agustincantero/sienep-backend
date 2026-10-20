@@ -267,7 +267,7 @@ class InstanciaComunServiceTest {
         when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
         when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
-        when(recordatorioService.crearInterno(any(RecordatorioRequestDTO.class))).thenReturn(recordatorioResponseDTO);
+        when(recordatorioService.crearInterno(any(RecordatorioRequestDTO.class), anyInt())).thenReturn(recordatorioResponseDTO);
 
         InstanciaComunResponseDTO resultado = instanciaComunService.crear(requestDTO);
 
@@ -275,13 +275,12 @@ class InstanciaComunServiceTest {
         assertEquals("REC-2026-000001", resultado.getRecordatorioCreado().getIdNegRecordatorio());
 
         ArgumentCaptor<RecordatorioRequestDTO> captor = ArgumentCaptor.forClass(RecordatorioRequestDTO.class);
-        verify(recordatorioService).crearInterno(captor.capture());
+        verify(recordatorioService).crearInterno(captor.capture(), eq(2));
 
         RecordatorioRequestDTO enviado = captor.getValue();
         assertEquals(1, enviado.getCodInstancia());
         assertEquals("Recordatorio de seguimiento", enviado.getTitulo());
-        // idResponsable no vino en el recordatorioInicial → debe caer al funcionario creador (idUsuario 2)
-        assertEquals(2, enviado.getIdResponsable());
+        // El responsable es el funcionario autenticado que crea la instancia (idUsuario 2): ver el eq(2) de arriba.
     }
 
     @Test
@@ -308,7 +307,7 @@ class InstanciaComunServiceTest {
 
         assertNotNull(resultado);
         assertNull(resultado.getRecordatorioCreado());
-        verify(recordatorioService, never()).crearInterno(any());
+        verify(recordatorioService, never()).crearInterno(any(), anyInt());
         verify(instanciaComunRepository).save(any(InstanciaComun.class));
     }
 
@@ -329,7 +328,7 @@ class InstanciaComunServiceTest {
         when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
         when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
-        when(recordatorioService.crearInterno(any(RecordatorioRequestDTO.class)))
+        when(recordatorioService.crearInterno(any(RecordatorioRequestDTO.class), anyInt()))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró una frecuencia"));
 
         InstanciaComunResponseDTO resultado = assertDoesNotThrow(
@@ -354,7 +353,7 @@ class InstanciaComunServiceTest {
         InstanciaComunResponseDTO resultado = instanciaComunService.crear(requestDTO);
 
         assertNull(resultado.getRecordatorioCreado());
-        verify(recordatorioService, never()).crearInterno(any());
+        verify(recordatorioService, never()).crearInterno(any(), anyInt());
     }
 
     @Test

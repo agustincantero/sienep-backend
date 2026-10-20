@@ -188,9 +188,11 @@ public class InstanciaComunService {
                             "No tiene permiso para crear el recordatorio inicial");
                 }
                 RecordatorioRequestDTO recordatorioDto = construirRecordatorioDesdeInstancia(
-                        dto.getRecordatorioInicial(), response.getCodInstancia(), funcionario.getIdUsuario());
+                        dto.getRecordatorioInicial(), response.getCodInstancia());
 
-                RecordatorioResponseDTO recordatorioCreado = recordatorioService.crearInterno(recordatorioDto);
+                // El responsable es el funcionario autenticado que crea la instancia, mismo criterio que POST /recordatorios.
+                RecordatorioResponseDTO recordatorioCreado =
+                        recordatorioService.crearInterno(recordatorioDto, funcionario.getIdUsuario());
                 response.setRecordatorioCreado(recordatorioCreado);
             } catch (Exception e) {
                 log.warn("[AUDIT] Fallo al crear el recordatorio inicial de la instancia {}: {}",
@@ -202,9 +204,9 @@ public class InstanciaComunService {
     }
 
     // Arma el RecordatorioRequestDTO "completo" a partir del RecordatorioInicialDTO
-    // (que no trae codInstancia ni, a veces, idResponsable).
+    // (que no trae codInstancia).
     private RecordatorioRequestDTO construirRecordatorioDesdeInstancia(
-            RecordatorioInicialDTO origen, int codInstancia, int idFuncionarioCreador) {
+            RecordatorioInicialDTO origen, int codInstancia) {
 
         RecordatorioRequestDTO dto = new RecordatorioRequestDTO();
         dto.setTitulo(origen.getTitulo());
@@ -212,8 +214,6 @@ public class InstanciaComunService {
         dto.setFechaHora(origen.getFechaHora());
         dto.setCodInstancia(codInstancia);
         dto.setIdCategoria(origen.getIdCategoria());
-        dto.setIdResponsable(
-                origen.getIdResponsable() != null ? origen.getIdResponsable() : idFuncionarioCreador);
         dto.setIdFrecuencia(origen.getIdFrecuencia());
         dto.setFechaFin(origen.getFechaFin());
 

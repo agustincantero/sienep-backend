@@ -36,8 +36,8 @@ public class RecordatorioRequestDTO {
     @NotNull(message = "Por favor selecciona la categoría del recordatorio")
     private Integer idCategoria;
 
-    @NotNull(message = "Por favor selecciona el responsable del recordatorio")
-    private Integer idResponsable;
+    // Sin idResponsable: el responsable es el funcionario autenticado que lo crea
+    // (RecordatorioService.crear) y no cambia al editar.
 
     private Integer idFrecuencia;
 

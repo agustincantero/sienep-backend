@@ -16,8 +16,8 @@ import java.time.LocalDateTime;
 
 // Subconjunto de RecordatorioRequestDTO, pensado para ir anidado dentro de
 // InstanciaComunRequestDTO. No incluye codInstancia (lo completa el service
-// con la instancia recién creada) y idResponsable es opcional: si no viene,
-// se asume el funcionario autenticado que está creando la instancia.
+// con la instancia recién creada) ni idResponsable: el responsable es siempre
+// el funcionario autenticado que está creando la instancia.
 @Getter
 @Setter
 @NoArgsConstructor
@@ -36,8 +36,6 @@ public class RecordatorioInicialDTO {
 
     @NotNull(message = "Por favor selecciona la categoría del recordatorio")
     private Integer idCategoria;
-
-    private Integer idResponsable; // opcional — default: funcionario creador de la instancia
 
     private Integer idFrecuencia;
 
