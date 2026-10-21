@@ -17,6 +17,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,10 +41,20 @@ public class RecordatorioService {
     private final ApplicationEventPublisher eventPublisher;
     private final EmailService emailService;
 
+    // Mismo criterio que InstanciaComunService e IncidenciaService: el JWT trae el idUsuario
+    // como subject, y es la única fuente confiable de quién está operando.
+    private Integer getIdUsuarioAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Integer.parseInt(auth.getName());
+    }
+
+    // El responsable es siempre quien crea el recordatorio, tomado de la sesión y no del
+    // body (igual que el funcionario de una instancia): así nadie puede agendar un
+    // recordatorio a nombre de otro llamando a la API directamente.
     @Transactional
     @PreAuthorize("hasAuthority('CREAR_RECORDATORIO')")
     public RecordatorioResponseDTO crear(RecordatorioRequestDTO dto) {
-        return crearInterno(dto);
+        return crearInterno(dto, getIdUsuarioAutenticado());
     }
 
     // Misma lógica que crear(), pero sin @Transactional ni @PreAuthorize propios: existe
@@ -53,8 +65,9 @@ public class RecordatorioService {
     // hacer nada — aunque se atrape la excepción, la instancia ya guardada se revertiría
     // igual al hacer commit. Este método, al no tener su propio @Transactional, no cruza
     // ese límite de proxy y una excepción acá puede atraparse sin efecto sobre la
-    // transacción del llamador.
-    RecordatorioResponseDTO crearInterno(RecordatorioRequestDTO dto) {
+    // transacción del llamador. idResponsable lo resuelve quien llama a partir de la sesión
+    // (crear() o el funcionario creador de la instancia), nunca del DTO.
+    RecordatorioResponseDTO crearInterno(RecordatorioRequestDTO dto, int idResponsable) {
         Instancia instancia = instanciaRepository.findById(dto.getCodInstancia())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -77,16 +90,7 @@ public class RecordatorioService {
                     "La categoría con id " + dto.getIdCategoria() + " no está activa");
         }
 
-        Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "No se encontró un funcionario con el id " + dto.getIdResponsable()));
-
-        if (responsable.getEstado() != EstadoLogico.ACTIVO) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_CONTENT,
-                    "El funcionario con id " + dto.getIdResponsable() + " no está activo");
-        }
+        Funcionario responsable = buscarFuncionarioAutenticadoActivo(idResponsable);
 
         Recordatorio recordatorio = new Recordatorio(
                 dto.getTitulo(),
@@ -229,16 +233,7 @@ public class RecordatorioService {
                     "La categoría con id " + dto.getIdCategoria() + " no está activa");
         }
 
-        Funcionario responsable = funcionarioRepository.findById(dto.getIdResponsable())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "No se encontró un funcionario con el id " + dto.getIdResponsable()));
-
-        if (responsable.getEstado() != EstadoLogico.ACTIVO) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_CONTENT,
-                    "El funcionario con id " + dto.getIdResponsable() + " no está activo");
-        }
+        // El responsable no se edita: se conserva el que se fijó al crearlo (quien lo creó).
 
         // Se captura antes de sobrescribir: hace falta para decidir si corresponde
         // volver a notificar (RF23) y para el ACTUALIZAR/CREAR de Google Calendar (RF22).
@@ -250,7 +245,6 @@ public class RecordatorioService {
         recordatorio.setFechaHora(dto.getFechaHora());
         recordatorio.setInstancia(instancia);
         recordatorio.setCategoria(categoria);
-        recordatorio.setResponsable(responsable);
         recordatorio.setFechaFin(dto.getFechaFin());
         recordatorio.setNroOcurrencias(dto.getNroOcurrencias());
 
@@ -418,5 +412,19 @@ public class RecordatorioService {
                 .build());
 
         return recordatorioMapper.toDto(reactivado);
+    }
+
+    // Mismas validaciones y mensajes que InstanciaComunService.crear() para el funcionario autenticado.
+    private Funcionario buscarFuncionarioAutenticadoActivo(int idFuncionario) {
+        Funcionario funcionario = funcionarioRepository.findById(idFuncionario)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No se encontró el funcionario autenticado"));
+
+        if (funcionario.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El funcionario autenticado no está activo");
+        }
+        return funcionario;
     }
 }
