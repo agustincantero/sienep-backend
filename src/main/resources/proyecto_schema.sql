@@ -278,10 +278,6 @@ CREATE TABLE proyecto.estudiantes (
     CONSTRAINT chk_nro_puerta CHECK (
         nro_puerta IS NULL OR (nro_puerta >= 1 AND nro_puerta <= 9999)
     ),
-    CONSTRAINT chk_edad_rango CHECK (
-        fec_nacimiento <= CURRENT_DATE - INTERVAL '18 years' AND
-        fec_nacimiento >= CURRENT_DATE - INTERVAL '100 years'
-    ),
     CONSTRAINT chk_foto_extension CHECK (
         foto IS NULL OR foto ~* '\.(jpg|jpeg|png)$'
     ),
@@ -299,6 +295,31 @@ CREATE TABLE proyecto.estudiantes (
 CREATE TRIGGER trg_actualizar_estudiantes
     BEFORE UPDATE ON proyecto.estudiantes
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+-- Reemplaza al viejo CHECK chk_edad_rango (mismo motivo que validar_fec_hora_futura en
+-- recordatorios): un CHECK con CURRENT_DATE se reevalúa en cada UPDATE, así que el día que
+-- un estudiante pasaba los 100 años la base rechazaba cualquier cambio de su fila. Acá el
+-- rango de edad solo se exige al darlo de alta o cuando se le cambia la fecha de nacimiento.
+CREATE OR REPLACE FUNCTION proyecto.validar_edad_estudiante()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT' OR NEW.fec_nacimiento IS DISTINCT FROM OLD.fec_nacimiento)
+            AND (NEW.fec_nacimiento > CURRENT_DATE - INTERVAL '18 years'
+                 OR NEW.fec_nacimiento < CURRENT_DATE - INTERVAL '100 years') THEN
+        RAISE EXCEPTION 'El estudiante debe tener entre 18 y 100 años'
+            USING ERRCODE = 'check_violation', CONSTRAINT = 'chk_edad_rango';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validar_edad_estudiante
+    BEFORE INSERT OR UPDATE ON proyecto.estudiantes
+    FOR EACH ROW EXECUTE FUNCTION proyecto.validar_edad_estudiante();
+
+-- Índices de FK: Postgres no los crea solos, y sin ellos borrar o actualizar la fila
+-- referenciada (acá, un rol) recorre la tabla entera para validar la FK.
+CREATE INDEX idx_estudiantes_rol ON proyecto.estudiantes(id_rol);
 
 -- =====================================================
 -- TABLA: funcionarios
@@ -324,6 +345,8 @@ CREATE TABLE proyecto.funcionarios (
 CREATE TRIGGER trg_actualizar_funcionarios
     BEFORE UPDATE ON proyecto.funcionarios
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+CREATE INDEX idx_funcionarios_rol ON proyecto.funcionarios(id_rol);
 
 -- =====================================================
 -- TABLA: grupos
@@ -379,6 +402,9 @@ CREATE TRIGGER trg_actualizar_itr_carrera
     BEFORE UPDATE ON proyecto.itr_carrera
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
+-- La PK (id_itr, id_carrera) cubre las búsquedas por ITR, no las por carrera.
+CREATE INDEX idx_itr_carrera_carrera ON proyecto.itr_carrera(id_carrera);
+
 -- =====================================================
 -- TABLA: rol_permisos
 -- =====================================================
@@ -400,6 +426,9 @@ CREATE TABLE proyecto.rol_permisos (
 CREATE TRIGGER trg_actualizar_rol_permisos
     BEFORE UPDATE ON proyecto.rol_permisos
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
+
+-- La PK (id_rol, id_permiso) cubre las búsquedas por rol, no las por permiso.
+CREATE INDEX idx_rol_permisos_permiso ON proyecto.rol_permisos(id_permiso);
 
 -- ADMINISTRADOR y ESTUDIANTE son roles base (ver RolService.ROLES_PROTEGIDOS): RolService
 -- ya los bloquea desde la API, esto lo garantiza también por fuera de ella. No pueden
@@ -606,6 +635,7 @@ $$ LANGUAGE plpgsql;
 CREATE INDEX idx_recordatorios_responsable ON proyecto.recordatorios(responsable);
 CREATE INDEX idx_recordatorios_instancia   ON proyecto.recordatorios(cod_instancia);
 CREATE INDEX idx_recordatorios_categoria   ON proyecto.recordatorios(id_categoria);
+CREATE INDEX idx_recordatorios_frecuencia  ON proyecto.recordatorios(id_frecuencia);
 
 -- =====================================================
 -- TABLA: estu_grupos
@@ -713,6 +743,7 @@ CREATE TRIGGER trg_actualizar_estu_obs_comentarios
 
 -- "Comentarios de este estudiante" es la consulta real más usada.
 CREATE INDEX idx_estu_obs_comentarios_usuario ON proyecto.estu_obs_comentarios(id_usuario);
+CREATE INDEX idx_estu_obs_comentarios_autor ON proyecto.estu_obs_comentarios(id_autor);
 
 -- =====================================================
 -- TABLA: estu_obs_confidenciales
@@ -740,6 +771,7 @@ CREATE TRIGGER trg_actualizar_estu_obs_confidenciales
 
 -- Mismo motivo que estu_obs_comentarios: "comentarios confidenciales de este estudiante".
 CREATE INDEX idx_estu_obs_confidenciales_estudiante ON proyecto.estu_obs_confidenciales(id_estudiante);
+CREATE INDEX idx_estu_obs_confidenciales_autor ON proyecto.estu_obs_confidenciales(id_autor);
 
 -- =====================================================
 -- TABLA: involucrados
@@ -810,6 +842,7 @@ CREATE TRIGGER trg_actualizar_ins_comentarios
     FOR EACH ROW EXECUTE FUNCTION proyecto.actualizar_updated_at();
 
 CREATE INDEX idx_inst_comentarios_instancia ON proyecto.inst_comentarios(cod_instancia);
+CREATE INDEX idx_inst_comentarios_autor ON proyecto.inst_comentarios(id_autor);
 
 -- =====================================================
 -- TABLA: inst_com_confidenciales
@@ -837,6 +870,7 @@ CREATE TRIGGER trg_actualizar_inst_com_confidenciales
 
 -- "Comentarios confidenciales de esta instancia" es la consulta real.
 CREATE INDEX idx_inst_com_confidenciales_instancia ON proyecto.inst_com_confidenciales(cod_instancia);
+CREATE INDEX idx_inst_com_confidenciales_autor ON proyecto.inst_com_confidenciales(id_autor);
 
 -- =====================================================
 -- TABLA: log_intentos
@@ -911,6 +945,12 @@ CREATE TABLE proyecto.auditoria (
         REFERENCES proyecto.usuarios(id_usuario)
         ON UPDATE CASCADE ON DELETE SET NULL
 );
+
+-- Es la tabla que más crece (una fila por cada cambio auditado) y AuditoriaService siempre
+-- la lista ordenada por fecha descendente, filtrando opcionalmente por entidad y por autor.
+CREATE INDEX idx_auditoria_fec_hora ON proyecto.auditoria(fec_hora DESC);
+CREATE INDEX idx_auditoria_entidad_fec_hora ON proyecto.auditoria(entidad, fec_hora DESC);
+CREATE INDEX idx_auditoria_usuario ON proyecto.auditoria(id_usuario);
 
 -- =====================================================
 -- FUNCION GENÉRICA DE AUDITORIA
