@@ -1,5 +1,6 @@
 package com.fides.sienep.model;
 
+import com.fides.sienep.security.DatoConfidencialConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -33,15 +34,21 @@ public class Estudiante extends Usuario {
     @Column(name = "nro_puerta")
     private Integer nroPuerta;
 
+    // Salud y motivo de derivación se guardan cifrados (ver CifradorDatosConfidenciales).
+    // sis_salud es TEXT y no VARCHAR(80): el valor cifrado es más largo que el original.
+    // El máximo de 80 caracteres se valida en los DTOs.
+    @Convert(converter = DatoConfidencialConverter.class)
     @Column(name = "inf_esta_salud", columnDefinition = "TEXT")
     private String informacionSalud;
 
-    @Column(name = "sis_salud", length = 80)
+    @Convert(converter = DatoConfidencialConverter.class)
+    @Column(name = "sis_salud", columnDefinition = "TEXT")
     private String sistemaSalud;
 
     @Column(name = "fec_nacimiento", nullable = false)
     private LocalDate fechaNacimiento;
 
+    @Convert(converter = DatoConfidencialConverter.class)
     @Column(name = "motivo", columnDefinition = "TEXT")
     private String motivoDerivacion;
 

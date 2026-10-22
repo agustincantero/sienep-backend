@@ -259,7 +259,7 @@ CREATE TABLE proyecto.estudiantes (
     calle          VARCHAR(160),
     nro_puerta     INT,
     inf_esta_salud TEXT,
-    sis_salud      VARCHAR(80),
+    sis_salud      TEXT,
     fec_nacimiento DATE      NOT NULL,
     motivo         TEXT,
     foto           VARCHAR(255),
@@ -285,9 +285,8 @@ CREATE TABLE proyecto.estudiantes (
     CONSTRAINT chk_foto_extension CHECK (
         foto IS NULL OR foto ~* '\.(jpg|jpeg|png)$'
     ),
-    CONSTRAINT chk_sis_salud_valido CHECK (
-        sis_salud IS NULL OR sis_salud ~ '^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]{1,80}$'
-    ),
+    -- inf_esta_salud, sis_salud y motivo se guardan cifrados por la aplicación (AES-256-GCM),
+    -- por eso sis_salud es TEXT y su formato (máx. 80, letras/números/espacios) se valida en los DTOs.
     CONSTRAINT fk_estudiante_usuario FOREIGN KEY (id_usuario)
         REFERENCES proyecto.usuarios(id_usuario)
         ON UPDATE CASCADE ON DELETE RESTRICT,

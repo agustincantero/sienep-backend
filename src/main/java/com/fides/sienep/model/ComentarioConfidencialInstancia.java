@@ -1,5 +1,6 @@
 package com.fides.sienep.model;
 
+import com.fides.sienep.security.DatoConfidencialConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,9 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "inst_com_confidenciales", schema = "proyecto")
+// contenido viene de ComentarioBase, compartido con los comentarios normales: el cifrado se
+// aplica acá y no en la superclase (ver CifradorDatosConfidenciales).
+@Convert(attributeName = "contenido", converter = DatoConfidencialConverter.class)
 public class ComentarioConfidencialInstancia
         extends ComentarioBase {
 

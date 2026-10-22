@@ -1,5 +1,6 @@
 package com.fides.sienep.model;
 
+import com.fides.sienep.security.DatoConfidencialConverter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,6 +38,9 @@ import java.time.LocalDateTime;
         // obs_confidencial es el nombre real de la columna de contenido en esta tabla
         @AttributeOverride(name = "contenido", column = @Column(name = "obs_confidencial", nullable = false, columnDefinition = "TEXT"))
 })
+// contenido viene de ComentarioBase, compartido con los comentarios normales: el cifrado se
+// aplica acá y no en la superclase (ver CifradorDatosConfidenciales).
+@Convert(attributeName = "contenido", converter = DatoConfidencialConverter.class)
 @Getter
 @Setter
 @NoArgsConstructor
