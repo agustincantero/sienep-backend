@@ -52,19 +52,6 @@ public class ComentarioConfidencialInstanciaController {
         return ResponseEntity.ok(comentarioService.listarPorInstancia(codInstancia, pageable));
     }
 
-    @GetMapping("/{idComConfidencial}")
-    @Operation(summary = "Obtener comentario confidencial por ID", description = "Trae un comentario confidencial puntual de la instancia.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Comentario encontrado"),
-            @ApiResponse(responseCode = "404", description = "Comentario no encontrado"),
-            @ApiResponse(responseCode = "403", description = "Sin permisos")
-    })
-    public ResponseEntity<ComentarioConfidencialInstanciaResponseDTO> obtenerPorId(
-            @PathVariable int codInstancia,
-            @PathVariable int idComConfidencial) {
-        return ResponseEntity.ok(comentarioService.obtenerPorId(codInstancia, idComConfidencial));
-    }
-
     @PutMapping("/{idComConfidencial}")
     @Operation(summary = "Editar comentario confidencial", description = "Edita el contenido de un comentario confidencial activo.")
     @ApiResponses({

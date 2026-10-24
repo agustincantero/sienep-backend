@@ -92,26 +92,6 @@ class ComentarioNormalInstanciaControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Obtener por ID - Existente responde 200")
-    void obtenerPorId_Existente_Responde200() throws Exception {
-        when(comentarioService.obtenerPorId(1, 1)).thenReturn(responseDTO());
-
-        mockMvc.perform(get("/instancias/{codInstancia}/comentarios-normales/{idComentario}", 1, 1))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.idComentario").value(1));
-    }
-
-    @Test
-    @DisplayName("Obtener por ID - Pertenece a otra instancia responde 404")
-    void obtenerPorId_PerteneceAOtraInstancia_Responde404() throws Exception {
-        when(comentarioService.obtenerPorId(2, 1))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró el comentario 1 en la instancia 2"));
-
-        mockMvc.perform(get("/instancias/{codInstancia}/comentarios-normales/{idComentario}", 2, 1))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
     @DisplayName("Editar - Datos válidos responde 200")
     void editar_Valido_Responde200() throws Exception {
         ComentarioNormalInstanciaRequestDTO dto = new ComentarioNormalInstanciaRequestDTO();
