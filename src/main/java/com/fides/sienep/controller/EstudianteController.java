@@ -89,15 +89,6 @@ public class EstudianteController {
         return ResponseEntity.ok(estudianteService.obtenerPorId(id));
     }
 
-    @GetMapping("/{id}/resumen")
-    @Operation(summary = "Obtener datos resumidos de un estudiante",
-            description = "Requiere VER_ESTUDIANTE_RESUMIDO. Sin datos de salud.")
-    @ApiResponse(responseCode = "200", description = "Estudiante encontrado")
-    @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
-    public ResponseEntity<EstudianteResumenDTO> obtenerResumenPorId(@PathVariable Integer id) {
-        return ResponseEntity.ok(estudianteService.obtenerResumenPorId(id));
-    }
-
     // =========================================================
     // ACTUALIZAR
     // =========================================================
