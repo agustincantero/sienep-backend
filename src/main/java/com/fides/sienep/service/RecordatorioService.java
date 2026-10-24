@@ -185,16 +185,6 @@ public class RecordatorioService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('VER_RECORDATORIOS')")
-    public Page<RecordatorioResponseDTO> listarPorResponsable(int idResponsable, EstadoLogico estado, Pageable pageable) {
-        EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
-        Page<Recordatorio> pagina = recordatorioRepository.findByResponsableAndEstado(
-                idResponsable, estadoEfectivo, pageable);
-        List<RecordatorioResponseDTO> dtos = recordatorioMapper.toDtoList(pagina.getContent());
-        return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
-    }
-
     @Transactional
     @PreAuthorize("hasAuthority('EDITAR_RECORDATORIO')")
     public RecordatorioResponseDTO editar(int id, RecordatorioRequestDTO dto) {

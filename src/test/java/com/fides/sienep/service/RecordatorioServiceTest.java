@@ -687,21 +687,6 @@ class RecordatorioServiceTest {
     }
 
     @Test
-    @DisplayName("Listar por responsable - Sin estado, devuelve solo ACTIVOS, paginado")
-    void listarPorResponsable_Exito() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(recordatorioRepository.findByResponsableAndEstado(2, EstadoLogico.ACTIVO, pageable))
-                .thenReturn(new PageImpl<>(List.of(recordatorio), pageable, 1));
-        when(recordatorioMapper.toDtoList(List.of(recordatorio))).thenReturn(List.of(responseDTO));
-
-        Page<RecordatorioResponseDTO> resultado = recordatorioService.listarPorResponsable(2, null, pageable);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalElements());
-    }
-
-
-    @Test
     @DisplayName("Reactivar recordatorio - Éxito, publica CalendarRecordatorioEvent con accion CREAR")
     void reactivar_Exito() {
         recordatorio.setEstado(EstadoLogico.INACTIVO);

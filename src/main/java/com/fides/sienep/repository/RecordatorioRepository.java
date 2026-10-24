@@ -80,25 +80,6 @@ public interface RecordatorioRepository extends JpaRepository<Recordatorio, Inte
                                                 @Param("estado") EstadoLogico estado,
                                                 Pageable pageable);
 
-    @Query("SELECT r FROM Recordatorio r " +
-            "JOIN FETCH r.instancia " +
-            "JOIN FETCH r.categoria " +
-            "JOIN FETCH r.responsable " +
-            "LEFT JOIN FETCH r.frecuencia " +
-            "WHERE r.responsable.idUsuario = :idResponsable AND r.estado = :estado")
-    List<Recordatorio> findByResponsableAndEstado(@Param("idResponsable") int idResponsable,
-                                                  @Param("estado") EstadoLogico estado);
-
-    @Query("SELECT r FROM Recordatorio r " +
-            "JOIN FETCH r.instancia " +
-            "JOIN FETCH r.categoria " +
-            "JOIN FETCH r.responsable " +
-            "LEFT JOIN FETCH r.frecuencia " +
-            "WHERE r.responsable.idUsuario = :idResponsable AND r.estado = :estado")
-    Page<Recordatorio> findByResponsableAndEstado(@Param("idResponsable") int idResponsable,
-                                                  @Param("estado") EstadoLogico estado,
-                                                  Pageable pageable);
-
     // ── Queries para Reportes ─────────────────────────────────
     @Query("SELECT r FROM Recordatorio r " +
             "WHERE r.instancia.estudiante.idUsuario = :idEstudiante " +
