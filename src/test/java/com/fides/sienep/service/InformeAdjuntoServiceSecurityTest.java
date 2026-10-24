@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 // Reglas de @PreAuthorize de InformeAdjuntoService con @EnableMethodSecurity real (en InformeAdjuntoServiceTest,
 // con Mockito puro, no se evalúan). Lo importante: el estudiante solo puede usar sus endpoints propios (/mios),
-// y los de funcionarios no tienen ninguna excepción para él (no puede subir, ver por id ni borrar).
+// y los de funcionarios no tienen ninguna excepción para él (no puede subir ni borrar).
 @SpringJUnitConfig(InformeAdjuntoServiceSecurityTest.Config.class)
 class InformeAdjuntoServiceSecurityTest {
 
@@ -73,10 +73,9 @@ class InformeAdjuntoServiceSecurityTest {
 
     @Test
     @WithMockUser(username = "5", roles = "ESTUDIANTE")
-    @DisplayName("Estudiante - No puede usar los endpoints de funcionarios (listar por id, ver, descargar, borrar)")
+    @DisplayName("Estudiante - No puede usar los endpoints de funcionarios (listar por id, descargar, borrar)")
     void estudiante_EndpointsDeFuncionarios_AccessDenied() {
         assertThrows(AccessDeniedException.class, () -> informeService.listarPorEstudiante(5, PageRequest.of(0, 20)));
-        assertThrows(AccessDeniedException.class, () -> informeService.obtenerPorId(1));
         assertThrows(AccessDeniedException.class, () -> informeService.descargar(1));
         assertThrows(AccessDeniedException.class, () -> informeService.eliminar(1));
     }

@@ -20,7 +20,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -82,26 +81,6 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Obtener por ID - Existente responde 200")
-    void obtenerPorId_Existente_Responde200() throws Exception {
-        when(informeService.obtenerPorId(1)).thenReturn(responseDTO());
-
-        mockMvc.perform(get("/informes-adjuntos/{id}", 1))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.idInforme").value(1));
-    }
-
-    @Test
-    @DisplayName("Obtener por ID - Inexistente responde 404")
-    void obtenerPorId_Inexistente_Responde404() throws Exception {
-        when(informeService.obtenerPorId(99))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Informe no encontrado"));
-
-        mockMvc.perform(get("/informes-adjuntos/{id}", 99))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
     @DisplayName("Listar - Responde 200 con la página del service")
     void listar_Responde200() throws Exception {
         Page<InformeAdjuntoResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
@@ -132,7 +111,7 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Mis informes - GET /informes-adjuntos/mios va a listarMios, no a obtenerPorId")
+    @DisplayName("Mis informes - GET /informes-adjuntos/mios va a listarMios")
     void listarMios_RutaPropia() throws Exception {
         when(informeService.listarMios(any())).thenReturn(new PageImpl<>(List.of(responseDTO())));
 
@@ -141,7 +120,6 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
                 .andExpect(jsonPath("$.content[0].idInforme").value(1));
 
         verify(informeService).listarMios(any());
-        verify(informeService, never()).obtenerPorId(any());
     }
 
     // ── Vista previa (RF09) ───────────────────────────────────

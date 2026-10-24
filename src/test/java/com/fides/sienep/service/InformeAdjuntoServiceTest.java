@@ -246,33 +246,6 @@ class InformeAdjuntoServiceTest {
         verify(fileStorageService).eliminarSiExiste("informes/1/3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
     }
 
-    // ── Obtener por ID ────────────────────────────────────────
-
-    @Test
-    @DisplayName("Obtener por ID - Éxito")
-    void obtenerPorId_Exito() {
-        when(informeRepository.findByIdInformeAndEstado(1, EstadoLogico.ACTIVO)).thenReturn(Optional.of(informeMock));
-        when(informeMapper.toDto(informeMock)).thenReturn(responseDTO);
-
-        InformeAdjuntoResponseDTO result = informeService.obtenerPorId(1);
-
-        assertNotNull(result);
-        assertEquals(1, result.getIdInforme());
-        verify(informeMapper).toDto(informeMock);
-    }
-
-    @Test
-    @DisplayName("Obtener por ID - No encontrado (404)")
-    void obtenerPorId_LanzaExcepcion_NoEncontrado() {
-        when(informeRepository.findByIdInformeAndEstado(99, EstadoLogico.ACTIVO)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> informeService.obtenerPorId(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(informeMapper, never()).toDto(any());
-    }
-
     // ── Descargar ─────────────────────────────────────────────
 
     @Test
