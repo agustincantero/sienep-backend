@@ -9,9 +9,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -46,25 +44,5 @@ class AuditoriaControllerTest extends AbstractControllerTest {
         mockMvc.perform(get("/auditorias"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].idAuditoria").value(1));
-    }
-
-    @Test
-    @DisplayName("Obtener por ID - Existente responde 200")
-    void obtenerPorId_Existente_Responde200() throws Exception {
-        when(auditoriaService.obtenerAuditoriaPorId(1)).thenReturn(responseDTO());
-
-        mockMvc.perform(get("/auditorias/{id}", 1))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.idAuditoria").value(1));
-    }
-
-    @Test
-    @DisplayName("Obtener por ID - Inexistente responde 404")
-    void obtenerPorId_Inexistente_Responde404() throws Exception {
-        when(auditoriaService.obtenerAuditoriaPorId(99))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Auditoria no encontrada con el ID: 99"));
-
-        mockMvc.perform(get("/auditorias/{id}", 99))
-                .andExpect(status().isNotFound());
     }
 }

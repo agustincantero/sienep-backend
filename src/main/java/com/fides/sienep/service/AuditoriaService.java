@@ -12,8 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,13 +89,5 @@ public class AuditoriaService {
         List<AuditoriaResponseDTO> respuestas = mapper.toDtoList(auditoriasPage.getContent());
 
         return new PageImpl<>(respuestas, pageable, auditoriasPage.getTotalElements());
-    }
-
-    @PreAuthorize("hasAuthority('VER_AUDITORIA')")
-    @Transactional(readOnly = true)
-    public AuditoriaResponseDTO obtenerAuditoriaPorId(int id) {
-        Auditoria auditoria = auditoriaRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auditoria no encontrada con el ID: " + id));
-        return mapper.toDto(auditoria);
     }
 }
