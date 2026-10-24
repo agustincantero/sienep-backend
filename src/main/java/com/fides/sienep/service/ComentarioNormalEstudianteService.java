@@ -2,7 +2,6 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ComentarioNormalEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioNormalEstudianteResponseDTO;
-import com.fides.sienep.dto.ComentarioNormalEstudianteUpdateDTO;
 import com.fides.sienep.mapper.ComentarioNormalEstudianteMapper;
 import com.fides.sienep.model.ComentarioNormalEstudiante;
 import com.fides.sienep.model.EstadoLogico;
@@ -53,21 +52,6 @@ public class ComentarioNormalEstudianteService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_ESTUDIANTE')")
-    @Transactional(readOnly = true)
-    public ComentarioNormalEstudianteResponseDTO obtenerPorId(Integer id) {
-        ComentarioNormalEstudiante comentario = buscarOFallar(id);
-
-        // 404 (no 403): un 403 con mensaje explícito confirma que el comentario
-        // existe (solo que es de otro estudiante). Un estudiante no debe poder
-        // distinguir "no existe" de "existe pero no es mío".
-        if (esEstudiante() && comentario.getEstudiante().getIdUsuario() != getIdUsuarioAutenticado()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario no encontrado: " + id);
-        }
-
-        return comentarioMapper.toDto(comentario);
-    }
-
     @PreAuthorize("hasAuthority('CREAR_COMENTARIO_NORMAL_ESTUDIANTE')")
     @Transactional
     public ComentarioNormalEstudianteResponseDTO crear(ComentarioNormalEstudianteRequestDTO dto) {
@@ -95,29 +79,6 @@ public class ComentarioNormalEstudianteService {
         comentarioRepository.save(comentario);
         log.info("Comentario normal creado para estudiante {}", dto.getIdEstudiante());
         return comentarioMapper.toDto(comentario);
-    }
-
-    @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE')")
-    @Transactional
-    public ComentarioNormalEstudianteResponseDTO editar(Integer id, ComentarioNormalEstudianteUpdateDTO dto) {
-        ComentarioNormalEstudiante comentario = buscarOFallar(id);
-        comentario.setContenido(dto.getContenido());
-        log.info("Comentario {} editado", id);
-        return comentarioMapper.toDto(comentarioRepository.save(comentario));
-    }
-
-    @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE')")
-    @Transactional
-    public void eliminar(Integer id) {
-        ComentarioNormalEstudiante comentario = buscarOFallar(id);
-        comentario.setEstado(EstadoLogico.ELIMINADO);
-        comentarioRepository.save(comentario);
-        log.info("Comentario {} dado de baja lógica", id);
-    }
-
-    private ComentarioNormalEstudiante buscarOFallar(Integer id) {
-        return comentarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario no encontrado: " + id));
     }
 
     private boolean esEstudiante() {

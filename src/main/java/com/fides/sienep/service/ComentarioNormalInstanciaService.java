@@ -103,7 +103,7 @@ public class ComentarioNormalInstanciaService {
     // ELIMINADO (no INACTIVO): a diferencia de los catálogos (Carrera, Grupo,
     // etc.), ningún comentario tiene reactivar() — unificado con el estado que
     // ya usan los comentarios de Estudiante (ComentarioNormalEstudiante/
-    // ComentarioConfidencialEstudiante.eliminar()).
+    // ComentarioConfidencialEstudiante).
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA')")
     public void eliminar(int codInstancia, int idComentario) {

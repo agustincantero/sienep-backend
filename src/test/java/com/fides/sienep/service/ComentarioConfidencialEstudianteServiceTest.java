@@ -2,7 +2,6 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteResponseDTO;
-import com.fides.sienep.dto.ComentarioConfidencialEstudianteUpdateDTO;
 import com.fides.sienep.mapper.ComentarioConfidencialEstudianteMapper;
 import com.fides.sienep.model.ComentarioConfidencialEstudiante;
 import com.fides.sienep.model.EstadoLogico;
@@ -210,91 +209,6 @@ class ComentarioConfidencialEstudianteServiceTest {
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
     }
-
-    // =========================================================
-    // OBTENER POR ID
-    // =========================================================
-
-    @Test
-    @DisplayName("Obtener por ID - No encontrado → 404")
-    void obtenerPorId_LanzaExcepcion_NoEncontrado() {
-        when(comentarioRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> comentarioService.obtenerPorId(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioMapper, never()).toDto(any());
-    }
-
-    // =========================================================
-    // EDITAR
-    // =========================================================
-
-    @Test
-    @DisplayName("Editar observación - Éxito")
-    void editar_Exito() {
-        ComentarioConfidencialEstudianteUpdateDTO updateDTO = new ComentarioConfidencialEstudianteUpdateDTO();
-        updateDTO.setContenido("Observación actualizada.");
-
-        when(comentarioRepository.findById(1)).thenReturn(Optional.of(comentarioMock));
-        when(comentarioRepository.save(any(ComentarioConfidencialEstudiante.class))).thenReturn(comentarioMock);
-        when(comentarioMapper.toDto(any(ComentarioConfidencialEstudiante.class))).thenReturn(responseDTO);
-
-        ComentarioConfidencialEstudianteResponseDTO result = comentarioService.editar(1, updateDTO);
-
-        assertNotNull(result);
-        assertEquals("Observación actualizada.", comentarioMock.getContenido());
-        verify(comentarioRepository).save(comentarioMock);
-    }
-
-    @Test
-    @DisplayName("Editar observación - No encontrada → 404")
-    void editar_LanzaExcepcion_NoEncontrado() {
-        ComentarioConfidencialEstudianteUpdateDTO updateDTO = new ComentarioConfidencialEstudianteUpdateDTO();
-        updateDTO.setContenido("Observación actualizada.");
-
-        when(comentarioRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> comentarioService.editar(99, updateDTO));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioRepository, never()).save(any());
-    }
-
-    // =========================================================
-    // ELIMINAR (BAJA LÓGICA)
-    // =========================================================
-
-    @Test
-    @DisplayName("Eliminar observación - Estado pasa a ELIMINADO")
-    void eliminar_DebePonerEstadoEliminado() {
-        when(comentarioRepository.findById(1)).thenReturn(Optional.of(comentarioMock));
-        when(comentarioRepository.save(any(ComentarioConfidencialEstudiante.class))).thenReturn(comentarioMock);
-
-        comentarioService.eliminar(1);
-
-        assertEquals(EstadoLogico.ELIMINADO, comentarioMock.getEstado());
-        verify(comentarioRepository).save(comentarioMock);
-        verify(comentarioRepository, never()).deleteById(any());
-    }
-
-    @Test
-    @DisplayName("Eliminar observación - No encontrada → 404")
-    void eliminar_LanzaExcepcion_NoEncontrado() {
-        when(comentarioRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> comentarioService.eliminar(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioRepository, never()).save(any());
-    }
-
 
     @Test
     @DisplayName("Listar por estudiante - Éxito, paginado (H18)")

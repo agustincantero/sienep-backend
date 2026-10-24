@@ -2,7 +2,6 @@ package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.ComentarioNormalEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioNormalEstudianteResponseDTO;
-import com.fides.sienep.dto.ComentarioNormalEstudianteUpdateDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.service.ComentarioNormalEstudianteService;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -86,26 +84,6 @@ class ComentarioNormalEstudianteControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Obtener por ID - Existente responde 200")
-    void obtenerPorId_Existente_Responde200() throws Exception {
-        when(comentarioService.obtenerPorId(1)).thenReturn(responseDTO());
-
-        mockMvc.perform(get("/comentarios-normales-estudiante/{id}", 1))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1));
-    }
-
-    @Test
-    @DisplayName("Obtener por ID - Inexistente responde 404")
-    void obtenerPorId_Inexistente_Responde404() throws Exception {
-        when(comentarioService.obtenerPorId(99))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario no encontrado: 99"));
-
-        mockMvc.perform(get("/comentarios-normales-estudiante/{id}", 99))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
     @DisplayName("Listar - Sin idEstudiante responde 200 (el service resuelve según el usuario autenticado)")
     void listar_Responde200() throws Exception {
         Page<ComentarioNormalEstudianteResponseDTO> pagina = new PageImpl<>(List.of(responseDTO()), PageRequest.of(0, 20), 1);
@@ -114,26 +92,5 @@ class ComentarioNormalEstudianteControllerTest extends AbstractControllerTest {
         mockMvc.perform(get("/comentarios-normales-estudiante").param("idEstudiante", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1));
-    }
-
-    @Test
-    @DisplayName("Editar - Datos válidos responde 200")
-    void editar_Valido_Responde200() throws Exception {
-        ComentarioNormalEstudianteUpdateDTO dto = new ComentarioNormalEstudianteUpdateDTO();
-        dto.setContenido("Comentario editado");
-        when(comentarioService.editar(eq(1), any())).thenReturn(responseDTO());
-
-        mockMvc.perform(put("/comentarios-normales-estudiante/{id}", 1)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1));
-    }
-
-    @Test
-    @DisplayName("Eliminar - Responde 204")
-    void eliminar_Responde204() throws Exception {
-        mockMvc.perform(delete("/comentarios-normales-estudiante/{id}", 1))
-                .andExpect(status().isNoContent());
     }
 }
