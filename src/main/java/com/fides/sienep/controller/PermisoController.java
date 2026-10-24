@@ -1,13 +1,10 @@
 package com.fides.sienep.controller;
 
 import com.fides.sienep.dto.PermisoResponseDTO;
-import com.fides.sienep.dto.PermisoUpdateDTO;
 import com.fides.sienep.service.PermisoService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/permisos")
 @RequiredArgsConstructor
-@Tag(name = "Permisos", description = "Catálogo de permisos del sistema (Solo lectura y modificación de descripciones)")
+@Tag(name = "Permisos", description = "Catálogo de permisos del sistema (solo lectura)")
 public class PermisoController {
 
     private final PermisoService permisoService;
@@ -27,14 +24,5 @@ public class PermisoController {
     @GetMapping
     public ResponseEntity<List<PermisoResponseDTO>> listar() {
         return ResponseEntity.ok(permisoService.listar());
-    }
-
-    @Operation(summary = "Editar descripción del permiso", description = "Permite modificar únicamente la descripción del permiso para mayor claridad. El nombre del permiso y su estado lógico son inmutables.")
-    @ApiResponse(responseCode = "200", description = "Descripción editada exitosamente")
-    @PutMapping("/{id}")
-    public ResponseEntity<PermisoResponseDTO> editarDescripcion(
-            @Parameter(description = "ID del permiso a editar", required = true) @PathVariable int id,
-            @Parameter(description = "Objeto con la nueva descripción", required = true) @Valid @RequestBody PermisoUpdateDTO requestDTO) {
-        return ResponseEntity.ok(permisoService.editarDescripcion(id, requestDTO));
     }
 }

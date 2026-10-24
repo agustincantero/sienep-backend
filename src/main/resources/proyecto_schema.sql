@@ -1149,7 +1149,6 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('REACTIVAR_CATEGORIA_RECORDATORIO', 'Permite reactivar categorías de recordatorios dadas de baja'),
     -- Permisos y perfil
     ('VER_PERMISOS',   'Permite visualizar la lista de permisos del sistema'),
-    ('EDITAR_PERMISO', 'Permite editar la descripción de los permisos'),
     ('VER_AUDITORIA',  'Permite consultar el historial de eventos y auditoría del sistema'),
     -- Comentarios de estudiante
     ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),
