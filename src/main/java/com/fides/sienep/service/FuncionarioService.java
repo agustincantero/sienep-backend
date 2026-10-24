@@ -116,15 +116,6 @@ public class FuncionarioService {
 
     @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
     @Transactional(readOnly = true)
-    public FuncionarioResponseDTO obtenerPorDocumento(String documento) {
-        Funcionario funcionario = funcionarioRepository
-                .findByDocumentoAndEstado(documento, EstadoLogico.ACTIVO)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado"));
-        return funcionarioMapper.toDto(funcionario);
-    }
-
-    @PreAuthorize("hasAuthority('VER_FUNCIONARIOS')")
-    @Transactional(readOnly = true)
     public Page<FuncionarioResponseDTO> listar(String texto, EstadoLogico estado, Pageable pageable) {
         EstadoLogico estadoEfectivo = estado != null ? estado : EstadoLogico.ACTIVO;
         Page<Funcionario> pagina = texto != null

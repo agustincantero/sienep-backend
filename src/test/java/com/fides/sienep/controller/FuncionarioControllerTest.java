@@ -123,16 +123,6 @@ class FuncionarioControllerTest extends AbstractControllerTest {
     }
 
     @Test
-    @DisplayName("Obtener por documento - Inexistente responde 404")
-    void obtenerPorDocumento_Inexistente_Responde404() throws Exception {
-        when(funcionarioService.obtenerPorDocumento("00000000"))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario no encontrado"));
-
-        mockMvc.perform(get("/funcionarios/documento/{documento}", "00000000"))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
     @DisplayName("Editar - Datos válidos responde 200")
     void editar_Valido_Responde200() throws Exception {
         FuncionarioUpdateDTO dto = new FuncionarioUpdateDTO();

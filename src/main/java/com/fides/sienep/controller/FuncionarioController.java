@@ -137,17 +137,6 @@ public class FuncionarioController {
         return ResponseEntity.noContent().build();
     }
 
-    // ========================================================
-
-
-    @Operation(summary = "Obtener funcionario por documento")
-    @ApiResponse(responseCode = "200", description = "Funcionario encontrado")
-    @ApiResponse(responseCode = "404", description = "Funcionario no encontrado")
-    @GetMapping("/documento/{documento}")
-    public ResponseEntity<FuncionarioResponseDTO> obtenerPorDocumento(@PathVariable String documento) {
-        return ResponseEntity.ok(funcionarioService.obtenerPorDocumento(documento));
-    }
-
     // =========================================================
     // FOTO DE PERFIL
     // =========================================================
