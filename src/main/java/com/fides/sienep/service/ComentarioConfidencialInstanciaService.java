@@ -84,14 +84,6 @@ public class ComentarioConfidencialInstanciaService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA')")
-    public ComentarioConfidencialInstanciaResponseDTO obtenerPorId(int codInstancia, int idComConfidencial) {
-        ComentarioConfidencialInstancia comentario = buscarActivoOFallar(idComConfidencial);
-        validarPerteneceAInstancia(comentario, codInstancia);
-        return aDto(comentario);
-    }
-
     // El path es anidado (/instancias/{codInstancia}/comentarios-confidenciales/{id}):
     // se valida que el comentario realmente pertenezca al codInstancia del path
     // (404 si no, mismo criterio que "no encontrado" para no distinguir "no

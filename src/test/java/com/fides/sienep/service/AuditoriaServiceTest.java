@@ -26,10 +26,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,62 +74,6 @@ public class AuditoriaServiceTest {
         auditoriaService.registrarEventoManual("ESTUDIANTE", TipoAccion.INSERT, 99, "192.168.0.1");
 
         verify(auditoriaRepository, never()).save(any(Auditoria.class));
-    }
-
-    @Test
-    @DisplayName("Obtener auditoría por ID - Éxito")
-    void obtenerAuditoriaPorId_Exito() {
-        Usuario autor = new Estudiante();
-        autor.setIdUsuario(1);
-        autor.setNombre("Ana");
-        autor.setApellido("Gomez");
-        autor.setDocumento("45678911");
-
-        Auditoria auditoria = new Auditoria();
-        auditoria.setId(10);
-        auditoria.setEntidad("USUARIO");
-        auditoria.setAccion(TipoAccion.UPDATE);
-        auditoria.setAutor(autor);
-        auditoria.setIp("127.0.0.1");
-        auditoria.setFechaHora(LocalDateTime.now());
-
-        when(auditoriaRepository.findById(10)).thenReturn(Optional.of(auditoria));
-
-        AuditoriaResponseDTO resultado = auditoriaService.obtenerAuditoriaPorId(10);
-
-        assertNotNull(resultado);
-        assertEquals(10, resultado.getIdAuditoria());
-        assertEquals("USUARIO", resultado.getEntidad());
-        assertEquals("Ana Gomez", resultado.getNombreAutor());
-        assertEquals(1, resultado.getIdAutor());
-        assertEquals("45678911", resultado.getDocumentoAutor());
-    }
-
-    @Test
-    @DisplayName("Obtener auditoría por ID - Sin autor (cambio directo en BD), nombre y documento nulos")
-    void obtenerAuditoriaPorId_SinAutor_NombreYDocumentoNulos() {
-        Auditoria auditoria = new Auditoria();
-        auditoria.setId(12);
-        auditoria.setEntidad("ROLES");
-        auditoria.setAccion(TipoAccion.DELETE);
-        auditoria.setFechaHora(LocalDateTime.now());
-
-        when(auditoriaRepository.findById(12)).thenReturn(Optional.of(auditoria));
-
-        AuditoriaResponseDTO resultado = auditoriaService.obtenerAuditoriaPorId(12);
-
-        assertNull(resultado.getNombreAutor());
-        assertNull(resultado.getDocumentoAutor());
-    }
-
-    @Test
-    @DisplayName("Obtener auditoría por ID - No encontrada (404)")
-    void obtenerAuditoriaPorId_LanzaNotFound() {
-        when(auditoriaRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> auditoriaService.obtenerAuditoriaPorId(99));
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        assertEquals("Auditoria no encontrada con el ID: 99", ex.getReason());
     }
 
     @Test

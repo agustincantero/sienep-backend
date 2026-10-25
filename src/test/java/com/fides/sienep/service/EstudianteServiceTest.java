@@ -235,63 +235,6 @@ class EstudianteServiceTest {
     }
 
     // =========================================================
-    // OBTENER RESUMEN POR ID
-    // =========================================================
-
-    @Test
-    @DisplayName("Obtener resumen por ID - Éxito")
-    void obtenerResumenPorId_Exito() {
-        mockAuthConPermiso("1", "VER_ESTUDIANTE_RESUMIDO");
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
-        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
-
-        EstudianteResumenDTO resultado = estudianteService.obtenerResumenPorId(1);
-
-        assertNotNull(resultado);
-        assertEquals("Ana", resultado.getNombre());
-        verify(estudianteMapper).toResumenDto(estudianteExistente);
-    }
-
-    @Test
-    @DisplayName("Obtener resumen por ID - No existe → 404")
-    void obtenerResumenPorId_LanzaExcepcion_NoEncontrado() {
-        when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> estudianteService.obtenerResumenPorId(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(estudianteMapper, never()).toResumenDto(any());
-    }
-
-    @Test
-    @DisplayName("Obtener resumen por ID - Con VER_ESTUDIANTE conserva la urlFoto")
-    void obtenerResumenPorId_ConVerEstudiante_ConservaUrlFoto() {
-        mockAuthConPermisos("1", "VER_ESTUDIANTE_RESUMIDO", "VER_ESTUDIANTE");
-        resumenDTO.setUrlFoto("/estudiantes/1/foto");
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
-        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
-
-        EstudianteResumenDTO resultado = estudianteService.obtenerResumenPorId(1);
-
-        assertEquals("/estudiantes/1/foto", resultado.getUrlFoto());
-    }
-
-    @Test
-    @DisplayName("Obtener resumen por ID - Sin VER_ESTUDIANTE oculta la urlFoto (el endpoint de foto daría 403)")
-    void obtenerResumenPorId_SinVerEstudiante_OcultaUrlFoto() {
-        mockAuthConPermiso("1", "VER_ESTUDIANTE_RESUMIDO");
-        resumenDTO.setUrlFoto("/estudiantes/1/foto");
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
-        when(estudianteMapper.toResumenDto(estudianteExistente)).thenReturn(resumenDTO);
-
-        EstudianteResumenDTO resultado = estudianteService.obtenerResumenPorId(1);
-
-        assertNull(resultado.getUrlFoto());
-    }
-
-    // =========================================================
     // LISTAR
     // =========================================================
 

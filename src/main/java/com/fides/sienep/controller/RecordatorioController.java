@@ -70,17 +70,6 @@ public class RecordatorioController {
         return ResponseEntity.ok(recordatorioService.listarPorInstancia(codInstancia, estado, pageable));
     }
 
-    @Operation(summary = "Listar recordatorios por responsable", description = "Sin el parámetro estado, devuelve solo los ACTIVOS.")
-    @ApiResponse(responseCode = "200", description = "Página de recordatorios del responsable")
-    @GetMapping("/responsable/{idResponsable}")
-    public ResponseEntity<Page<RecordatorioResponseDTO>> listarPorResponsable(
-            @PathVariable int idResponsable,
-            @Parameter(description = "Estado opcional para filtrar (ej. ACTIVO, INACTIVO). Por defecto: ACTIVO", required = false)
-            @RequestParam(required = false) EstadoLogico estado,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(recordatorioService.listarPorResponsable(idResponsable, estado, pageable));
-    }
-
     @Operation(summary = "Editar un recordatorio")
     @ApiResponse(responseCode = "200", description = "Recordatorio editado correctamente")
     @ApiResponse(responseCode = "400", description = "Datos inválidos")

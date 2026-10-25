@@ -62,15 +62,6 @@ public class InformeAdjuntoController {
         return respuestaDeDescarga(informeService.descargarMio(id), inline);
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Obtener informe por ID")
-    @ApiResponse(responseCode = "200", description = "Informe encontrado")
-    @ApiResponse(responseCode = "404", description = "Informe no encontrado")
-    public ResponseEntity<InformeAdjuntoResponseDTO> obtenerPorId(
-            @PathVariable Integer id) {
-        return ResponseEntity.ok(informeService.obtenerPorId(id));
-    }
-
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Adjuntar informe a un estudiante")
     @ApiResponse(responseCode = "201", description = "Informe adjuntado")

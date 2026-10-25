@@ -55,12 +55,6 @@ public class InformeAdjuntoService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @PreAuthorize("hasAuthority('VER_INFORME')")
-    @Transactional(readOnly = true)
-    public InformeAdjuntoResponseDTO obtenerPorId(Integer id) {
-        return informeMapper.toDto(buscarActivoOFallar(id));
-    }
-
     @PreAuthorize("hasAuthority('ADJUNTAR_INFORME')")
     @Transactional
     public InformeAdjuntoResponseDTO adjuntar(InformeAdjuntoRequestDTO dto) {

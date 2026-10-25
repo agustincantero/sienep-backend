@@ -35,11 +35,6 @@ public interface FuncionarioRepository extends JpaRepository<Funcionario, Intege
 
     Optional<Funcionario> findByDocumento(String documento);
 
-    Optional<Funcionario> findByDocumentoAndEstado(
-            String documento,
-            EstadoLogico estado
-    );
-
     Page<Funcionario> findByEstado(
             EstadoLogico estado,
             Pageable pageable

@@ -1149,17 +1149,12 @@ INSERT INTO proyecto.permisos (nom_permiso, per_descripcion) VALUES
     ('REACTIVAR_CATEGORIA_RECORDATORIO', 'Permite reactivar categorías de recordatorios dadas de baja'),
     -- Permisos y perfil
     ('VER_PERMISOS',   'Permite visualizar la lista de permisos del sistema'),
-    ('EDITAR_PERMISO', 'Permite editar la descripción de los permisos'),
     ('VER_AUDITORIA',  'Permite consultar el historial de eventos y auditoría del sistema'),
     -- Comentarios de estudiante
     ('VER_COMENTARIO_NORMAL_ESTUDIANTE',            'Permite ver comentarios normales de un estudiante'),
     ('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',      'Permite ver comentarios confidenciales de estudiantes'),
     ('CREAR_COMENTARIO_NORMAL_ESTUDIANTE',          'Permite crear comentarios normales sobre un estudiante'),
     ('CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',    'Permite crear comentarios confidenciales sobre un estudiante'),
-    ('EDITAR_COMENTARIO_NORMAL_ESTUDIANTE',         'Permite editar comentarios normales de un estudiante'),
-    ('EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',   'Permite editar comentarios confidenciales de un estudiante'),
-    ('ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',       'Permite eliminar comentarios normales de un estudiante'),
-    ('ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'Permite eliminar comentarios confidenciales de un estudiante'),
     -- Comentarios de instancia
     ('VER_COMENTARIO_NORMAL_INSTANCIA',             'Permite ver comentarios normales de instancia'),
     ('VER_COMENTARIO_CONFIDENCIAL_INSTANCIA',       'Permite ver comentarios confidenciales de instancia'),
@@ -1215,9 +1210,7 @@ FROM proyecto.roles r
         'CREAR_INCIDENCIA', 'VER_INCIDENCIAS',
         'EDITAR_INCIDENCIA', 'DESACTIVAR_INCIDENCIA', 'REACTIVAR_INCIDENCIA',
         'VER_COMENTARIO_NORMAL_ESTUDIANTE', 'CREAR_COMENTARIO_NORMAL_ESTUDIANTE',
-        'EDITAR_COMENTARIO_NORMAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_NORMAL_ESTUDIANTE',
         'VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
-        'EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE', 'ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE',
         'VER_COMENTARIO_NORMAL_INSTANCIA', 'CREAR_COMENTARIO_NORMAL_INSTANCIA',
         'EDITAR_COMENTARIO_NORMAL_INSTANCIA', 'ELIMINAR_COMENTARIO_NORMAL_INSTANCIA',
         'VER_COMENTARIO_CONFIDENCIAL_INSTANCIA', 'CREAR_COMENTARIO_CONFIDENCIAL_INSTANCIA',

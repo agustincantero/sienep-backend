@@ -84,14 +84,6 @@ public class ComentarioNormalInstanciaService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('VER_COMENTARIO_NORMAL_INSTANCIA')")
-    public ComentarioNormalInstanciaResponseDTO obtenerPorId(int codInstancia, int idComentario) {
-        ComentarioNormalInstancia comentario = buscarActivoOFallar(idComentario);
-        validarPerteneceAInstancia(comentario, codInstancia);
-        return aDto(comentario);
-    }
-
     // El path es anidado (/instancias/{codInstancia}/comentarios-normales/{id}):
     // se valida que el comentario realmente pertenezca al codInstancia del path
     // (404 si no, mismo criterio que "no encontrado" para no distinguir "no
@@ -111,7 +103,7 @@ public class ComentarioNormalInstanciaService {
     // ELIMINADO (no INACTIVO): a diferencia de los catálogos (Carrera, Grupo,
     // etc.), ningún comentario tiene reactivar() — unificado con el estado que
     // ya usan los comentarios de Estudiante (ComentarioNormalEstudiante/
-    // ComentarioConfidencialEstudiante.eliminar()).
+    // ComentarioConfidencialEstudiante).
     @Transactional
     @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_NORMAL_INSTANCIA')")
     public void eliminar(int codInstancia, int idComentario) {

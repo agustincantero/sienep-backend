@@ -2,7 +2,6 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioConfidencialEstudianteResponseDTO;
-import com.fides.sienep.dto.ComentarioConfidencialEstudianteUpdateDTO;
 import com.fides.sienep.mapper.ComentarioConfidencialEstudianteMapper;
 import com.fides.sienep.model.ComentarioConfidencialEstudiante;
 import com.fides.sienep.model.EstadoLogico;
@@ -47,12 +46,6 @@ public class ComentarioConfidencialEstudianteService {
         return new PageImpl<>(dtos, pageable, pagina.getTotalElements());
     }
 
-    @PreAuthorize("hasAuthority('VER_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
-    @Transactional(readOnly = true)
-    public ComentarioConfidencialEstudianteResponseDTO obtenerPorId(Integer id) {
-        return comentarioMapper.toDto(buscarOFallar(id));
-    }
-
     @PreAuthorize("hasAuthority('CREAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
     @Transactional
     public ComentarioConfidencialEstudianteResponseDTO crear(ComentarioConfidencialEstudianteRequestDTO dto) {
@@ -80,29 +73,6 @@ public class ComentarioConfidencialEstudianteService {
         comentarioRepository.save(comentario);
         log.info("Observación confidencial creada para estudiante {}", dto.getIdEstudiante());
         return comentarioMapper.toDto(comentario);
-    }
-
-    @PreAuthorize("hasAuthority('EDITAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
-    @Transactional
-    public ComentarioConfidencialEstudianteResponseDTO editar(Integer id, ComentarioConfidencialEstudianteUpdateDTO dto) {
-        ComentarioConfidencialEstudiante comentario = buscarOFallar(id);
-        comentario.setContenido(dto.getContenido());
-        log.info("Observación confidencial {} editada", id);
-        return comentarioMapper.toDto(comentarioRepository.save(comentario));
-    }
-
-    @PreAuthorize("hasAuthority('ELIMINAR_COMENTARIO_CONFIDENCIAL_ESTUDIANTE')")
-    @Transactional
-    public void eliminar(Integer id) {
-        ComentarioConfidencialEstudiante comentario = buscarOFallar(id);
-        comentario.setEstado(EstadoLogico.ELIMINADO);
-        comentarioRepository.save(comentario);
-        log.info("Observación confidencial {} dada de baja lógica", id);
-    }
-
-    private ComentarioConfidencialEstudiante buscarOFallar(Integer id) {
-        return comentarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Observación confidencial no encontrada: " + id));
     }
 
     private Integer getIdUsuarioAutenticado() {

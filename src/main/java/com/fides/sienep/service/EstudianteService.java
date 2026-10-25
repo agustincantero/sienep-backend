@@ -141,12 +141,6 @@ public class EstudianteService {
 
     @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
     @Transactional(readOnly = true)
-    public EstudianteResumenDTO obtenerResumenPorId(Integer id) {
-        return aResumen(buscarOFallar(id), tienePermiso("VER_ESTUDIANTE"));
-    }
-
-    @PreAuthorize("hasAuthority('VER_ESTUDIANTE_RESUMIDO')")
-    @Transactional(readOnly = true)
     public Page<EstudianteResumenDTO> listar(String texto, Integer idGrupo, Integer idCarrera, Integer idItr, EstadoLogico estado, Pageable pageable) {
         boolean aplicaFiltro = texto != null || idGrupo != null || idCarrera != null || idItr != null;
         if (aplicaFiltro && !tienePermiso("BUSCAR_ESTUDIANTE")) {

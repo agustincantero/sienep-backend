@@ -2,7 +2,6 @@ package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ComentarioNormalEstudianteRequestDTO;
 import com.fides.sienep.dto.ComentarioNormalEstudianteResponseDTO;
-import com.fides.sienep.dto.ComentarioNormalEstudianteUpdateDTO;
 import com.fides.sienep.mapper.ComentarioNormalEstudianteMapper;
 import com.fides.sienep.model.ComentarioNormalEstudiante;
 import com.fides.sienep.model.EstadoLogico;
@@ -27,8 +26,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -109,15 +106,6 @@ class ComentarioNormalEstudianteServiceTest {
         Authentication auth = mock(Authentication.class);
         lenient().when(auth.getName()).thenReturn(String.valueOf(id));
         lenient().when(auth.getAuthorities()).thenReturn(List.of());
-        SecurityContextHolder.getContext().setAuthentication(auth);
-    }
-
-    private void mockAutenticadoComoEstudiante(int id) {
-        Authentication auth = mock(Authentication.class);
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority("ROLE_ESTUDIANTE"));
-        lenient().when(auth.getName()).thenReturn(String.valueOf(id));
-        lenient().doReturn(authorities).when(auth).getAuthorities();
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
@@ -220,106 +208,6 @@ class ComentarioNormalEstudianteServiceTest {
                 () -> comentarioService.crear(dto));
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
-        verify(comentarioRepository, never()).save(any());
-    }
-
-    // =========================================================
-    // OBTENER POR ID
-    // =========================================================
-
-    @Test
-    @DisplayName("Obtener por ID - No encontrado → 404")
-    void obtenerPorId_LanzaExcepcion_NoEncontrado() {
-        when(comentarioRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> comentarioService.obtenerPorId(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioMapper, never()).toDto(any());
-    }
-
-    @Test
-    @DisplayName("Obtener por ID - Comentario de otro estudiante → 404, no 403 (B13)")
-    void obtenerPorId_LanzaNotFound_ComentarioAjeno() {
-        // comentarioMock pertenece a estudianteMock (idUsuario=0 por defecto);
-        // se autentica un estudiante con un id distinto.
-        mockAutenticadoComoEstudiante(99);
-        when(comentarioRepository.findById(1)).thenReturn(Optional.of(comentarioMock));
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> comentarioService.obtenerPorId(1));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioMapper, never()).toDto(any());
-    }
-
-    // =========================================================
-    // EDITAR
-    // =========================================================
-
-    @Test
-    @DisplayName("Editar comentario - Éxito")
-    void editar_Exito() {
-        ComentarioNormalEstudianteUpdateDTO updateDTO = new ComentarioNormalEstudianteUpdateDTO();
-        updateDTO.setContenido("Contenido actualizado.");
-
-        when(comentarioRepository.findById(1)).thenReturn(Optional.of(comentarioMock));
-        when(comentarioRepository.save(any(ComentarioNormalEstudiante.class))).thenReturn(comentarioMock);
-        when(comentarioMapper.toDto(any(ComentarioNormalEstudiante.class))).thenReturn(responseDTO);
-
-        ComentarioNormalEstudianteResponseDTO result = comentarioService.editar(1, updateDTO);
-
-        assertNotNull(result);
-        assertEquals("Contenido actualizado.", comentarioMock.getContenido());
-        verify(comentarioRepository).save(comentarioMock);
-    }
-
-    @Test
-    @DisplayName("Editar comentario - No encontrado → 404")
-    void editar_LanzaExcepcion_NoEncontrado() {
-        ComentarioNormalEstudianteUpdateDTO updateDTO = new ComentarioNormalEstudianteUpdateDTO();
-        updateDTO.setContenido("Contenido actualizado.");
-
-        when(comentarioRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> comentarioService.editar(99, updateDTO));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        verify(comentarioRepository, never()).save(any());
-    }
-
-    // =========================================================
-    // ELIMINAR (BAJA LÓGICA)
-    // =========================================================
-
-    @Test
-    @DisplayName("Eliminar comentario - Estado pasa a ELIMINADO")
-    void eliminar_DebePonerEstadoEliminado() {
-        when(comentarioRepository.findById(1)).thenReturn(Optional.of(comentarioMock));
-        when(comentarioRepository.save(any(ComentarioNormalEstudiante.class))).thenReturn(comentarioMock);
-
-        comentarioService.eliminar(1);
-
-        assertEquals(EstadoLogico.ELIMINADO, comentarioMock.getEstado());
-        verify(comentarioRepository).save(comentarioMock);
-        verify(comentarioRepository, never()).deleteById(any());
-    }
-
-    @Test
-    @DisplayName("Eliminar comentario - No encontrado → 404")
-    void eliminar_LanzaExcepcion_NoEncontrado() {
-        when(comentarioRepository.findById(99)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> comentarioService.eliminar(99));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(comentarioRepository, never()).save(any());
     }
 

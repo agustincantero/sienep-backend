@@ -33,11 +33,4 @@ public class AuditoriaController {
 
         return ResponseEntity.ok(auditoriaService.listarAuditorias(page, size, entidad, accion, idAutor, texto));
     }
-
-    @Operation(summary = "Ver detalle de auditoría", description = "Obtiene los detalles específicos de un registro de auditoría mediante su ID, incluyendo los valores previos y nuevos en formato JSON.")
-    @ApiResponse(responseCode = "200", description = "Detalle de la auditoría obtenido exitosamente")
-    @GetMapping("/{id}")
-    public ResponseEntity<AuditoriaResponseDTO> obtenerAuditoriaPorId(@PathVariable int id) {
-        return ResponseEntity.ok(auditoriaService.obtenerAuditoriaPorId(id));
-    }
 }
