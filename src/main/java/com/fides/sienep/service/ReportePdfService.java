@@ -27,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -122,6 +123,15 @@ public class ReportePdfService {
                 reporte.getHasta().format(FORMATTER_FECHA) + " (meses completos)";
     }
 
+    // Valores que pueden venir nulos de las vistas: se muestra un guion en vez de la palabra null
+    private String texto(Object valor) {
+        return valor != null ? String.valueOf(valor) : "-";
+    }
+
+    private String porcentaje(BigDecimal valor) {
+        return valor != null ? valor + " %" : "-";
+    }
+
     // ── Secciones del documento ───────────────────────────────
 
     private void agregarEncabezado(Document doc, String periodo) throws Exception {
@@ -174,13 +184,13 @@ public class ReportePdfService {
                 new String[]{"Mes", "Categoría", "Instancias", "% del mes"},
                 new float[]{1f, 2.5f, 1f, 1f},
                 reporte.getInstanciasPorCategoria(),
-                f -> new String[]{f.getAnioMes(), f.getCategoria(), String.valueOf(f.getInstancias()), f.getPorcentajeDelMes() + " %"});
+                f -> new String[]{f.getAnioMes(), f.getCategoria(), String.valueOf(f.getInstancias()), porcentaje(f.getPorcentajeDelMes())});
 
         agregarTablaIndicador(doc, "IND-04", "Instancias por canal",
                 new String[]{"Mes", "Canal", "Modalidad", "Instancias", "% del mes"},
                 new float[]{1f, 1.8f, 1.5f, 1f, 1f},
                 reporte.getInstanciasPorCanal(),
-                f -> new String[]{f.getAnioMes(), f.getCanal(), f.getModalidad(), String.valueOf(f.getInstancias()), f.getPorcentajeDelMes() + " %"});
+                f -> new String[]{f.getAnioMes(), f.getCanal(), f.getModalidad(), String.valueOf(f.getInstancias()), porcentaje(f.getPorcentajeDelMes())});
 
         agregarTablaIndicador(doc, "IND-05", "Incidencias por lugar",
                 new String[]{"Mes", "Tipo de espacio", "Lugar", "Incidencias"},
@@ -199,8 +209,8 @@ public class ReportePdfService {
                 new float[]{1f, 1f, 1f, 1f, 1f, 1.2f},
                 reporte.getIncidenciasInvolucrados(),
                 f -> new String[]{f.getAnioMes(), String.valueOf(f.getIncidencias()), String.valueOf(f.getTotalInvolucrados()),
-                        String.valueOf(f.getIncidenciasConMasDeUno()), String.valueOf(f.getPromedioInvolucrados()),
-                        f.getPorcentajeConMasDeUno() + " %"});
+                        String.valueOf(f.getIncidenciasConMasDeUno()), texto(f.getPromedioInvolucrados()),
+                        porcentaje(f.getPorcentajeConMasDeUno())});
     }
 
     private <T> void agregarTablaIndicador(Document doc, String codigo, String titulo, String[] cabeceras, float[] anchos,

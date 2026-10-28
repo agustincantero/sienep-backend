@@ -7,6 +7,8 @@ import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasInvolucradosMes;
 import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasLugarMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCanalMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCategoriaMes;
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -135,6 +137,22 @@ class ReportePdfServiceTest {
         byte[] pdf = assertDoesNotThrow(() -> reportePdfService.generarPdf(reporte));
 
         assertTrue(pdf.length > 0);
+    }
+
+    @Test
+    @DisplayName("Generar PDF - Valores nulos de las vistas se muestran como guion y no como la palabra null")
+    void generarPdf_ValoresNulos_ConGuion() throws Exception {
+        ReporteResponseDTO reporte = reporteBaseBuilder()
+                .instanciasPorCategoria(List.of(new InstanciasCategoriaMes(MARZO, "2026-03", "Reunión", 5, null)))
+                .incidenciasInvolucrados(List.of(new IncidenciasInvolucradosMes(MARZO, "2026-03", 1, 1, 0, null, null)))
+                .build();
+
+        byte[] pdf = reportePdfService.generarPdf(reporte);
+
+        PdfReader lector = new PdfReader(pdf);
+        String texto = PdfTextExtractor.getTextFromPage(lector, 1);
+        lector.close();
+        assertFalse(texto.contains("null"), "El PDF no debe mostrar la palabra null");
     }
 
     @Test
