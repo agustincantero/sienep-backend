@@ -930,9 +930,9 @@ class EstudianteServiceTest {
         ArchivoDescargaDTO resultado = estudianteService.obtenerFoto(1);
 
         assertNotNull(resultado);
-        assertEquals("foto_1.jpg", resultado.nombreDescarga());
-        assertEquals(MediaType.IMAGE_JPEG, resultado.contentType());
-        assertSame(recursoMock, resultado.recurso());
+        assertEquals("foto_1.jpg", resultado.getNombreDescarga());
+        assertEquals(MediaType.IMAGE_JPEG, resultado.getContentType());
+        assertSame(recursoMock, resultado.getRecurso());
     }
 
     @Test
@@ -1020,8 +1020,8 @@ class EstudianteServiceTest {
 
         ProcesosAbiertosDTO procesos = estudianteService.procesosAbiertos(1);
 
-        assertEquals(3, procesos.instanciasFuturas());
-        assertEquals(0, procesos.recordatoriosPendientes());
+        assertEquals(3, procesos.getInstanciasFuturas());
+        assertEquals(0, procesos.getRecordatoriosPendientes());
         assertTrue(procesos.hayProcesosAbiertos());
         // Recordatorios: desde las 00:00 de hoy (uno de hoy a las 8 sigue pendiente aunque ya hayan pasado).
         ArgumentCaptor<LocalDateTime> desde = ArgumentCaptor.forClass(LocalDateTime.class);

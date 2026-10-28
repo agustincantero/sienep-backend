@@ -235,10 +235,10 @@ public class EstudianteController {
     public ResponseEntity<Resource> verFoto(@PathVariable Integer id) {
         ArchivoDescargaDTO archivo = estudianteService.obtenerFoto(id);
         return ResponseEntity.ok()
-                .contentType(archivo.contentType())
+                .contentType(archivo.getContentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"" + archivo.nombreDescarga() + "\"")
+                        "inline; filename=\"" + archivo.getNombreDescarga() + "\"")
                 .header("X-Content-Type-Options", "nosniff")
-                .body(archivo.recurso());
+                .body(archivo.getRecurso());
     }
 }
