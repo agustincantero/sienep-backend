@@ -13,9 +13,11 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -37,24 +39,42 @@ class ReporteControllerTest extends AbstractControllerTest {
     private ReporteResponseDTO responseDTO() {
         return ReporteResponseDTO.builder()
                 .fechaGeneracion(LocalDateTime.now())
-                .totalEstudiantes(10)
+                .totalInstancias(10)
                 .build();
     }
 
     @Test
     @DisplayName("Generar reporte - Sin filtros responde 200")
     void generarReporte_SinFiltros_Responde200() throws Exception {
-        when(reporteService.generarReporte(any(), any(), any(), any(), any(), any())).thenReturn(responseDTO());
+        when(reporteService.generarReporte(any(), any())).thenReturn(responseDTO());
 
         mockMvc.perform(get("/reportes"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalEstudiantes").value(10));
+                .andExpect(jsonPath("$.totalInstancias").value(10));
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Pasa desde y hasta al service")
+    void generarReporte_ConPeriodo_PasaLasFechasAlService() throws Exception {
+        when(reporteService.generarReporte(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 9, 30))).thenReturn(responseDTO());
+
+        mockMvc.perform(get("/reportes").param("desde", "2026-03-01").param("hasta", "2026-09-30"))
+                .andExpect(status().isOk());
+
+        verify(reporteService).generarReporte(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 9, 30));
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Fecha con formato inválido responde 400")
+    void generarReporte_FechaInvalida_Responde400() throws Exception {
+        mockMvc.perform(get("/reportes").param("desde", "01/03/2026"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     @DisplayName("Exportar PDF - Responde 200 con el PDF y el nombre de archivo correcto")
     void exportarPdf_Responde200() throws Exception {
-        when(reporteService.generarReporte(any(), any(), any(), any(), any(), any())).thenReturn(responseDTO());
+        when(reporteService.generarReporte(any(), any())).thenReturn(responseDTO());
         when(reportePdfService.generarPdf(any())).thenReturn("pdf-fake".getBytes());
 
         mockMvc.perform(get("/reportes/pdf"))

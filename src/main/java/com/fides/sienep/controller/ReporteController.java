@@ -10,9 +10,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -41,45 +38,36 @@ public class ReporteController {
     @GetMapping
     @Operation(
             summary = "Generar reporte de seguimiento",
-            description = "Genera métricas agregadas de instancias, incidencias y recordatorios. " +
-                    "Todos los filtros son opcionales y combinables. " +
-                    "Sin filtros devuelve métricas globales, paginadas (los totales del reporte " +
-                    "reflejan únicamente los estudiantes de la página actual — ver totalEstudiantesFiltrados " +
-                    "para el total real a través de todas las páginas). " +
-                    "Requiere VER_REPORTES.")
+            description = "Devuelve los indicadores IND-01 a IND-07 leídos del Data Warehouse (instancias e incidencias por mes, " +
+                    "instancias por categoría y canal, incidencias por lugar, día y franja horaria, e involucrados). " +
+                    "El período es por mes completo (15/03 a 20/05 trae marzo, abril y mayo) y sin fechas trae todo lo " +
+                    "cargado. Es global, no admite filtros de estudiante, grupo ni carrera. El campo datosAl indica la " +
+                    "última carga del Data Warehouse. Requiere VER_REPORTES.")
     @ApiResponse(responseCode = "200", description = "Reporte generado exitosamente")
+    @ApiResponse(responseCode = "400", description = "La fecha 'desde' es posterior a 'hasta'")
     @ApiResponse(responseCode = "403", description = "Sin permiso VER_REPORTES")
+    @ApiResponse(responseCode = "503", description = "El Data Warehouse no está configurado o no responde")
     public ResponseEntity<ReporteResponseDTO> generarReporte(
-            @RequestParam(required = false) Integer idCarrera,
-            @RequestParam(required = false) Integer idGrupo,
-            @RequestParam(required = false) Integer idEstudiante,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
-            @ParameterObject @PageableDefault(size = 20, sort = "apellido") Pageable pageable) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
 
-        return ResponseEntity.ok(
-                reporteService.generarReporte(idCarrera, idGrupo, idEstudiante, desde, hasta, pageable));
+        return ResponseEntity.ok(reporteService.generarReporte(desde, hasta));
     }
 
     @GetMapping("/pdf")
     @PreAuthorize("hasAuthority('EXPORTAR_REPORTES')")
     @Operation(
             summary = "Exportar reporte en PDF",
-            description = "Genera y descarga el reporte en formato PDF con los mismos filtros disponibles. " +
+            description = "Genera y descarga en PDF el mismo reporte de GET /reportes. " +
                     "Requiere EXPORTAR_REPORTES.")
     @ApiResponse(responseCode = "200", description = "PDF generado exitosamente")
     @ApiResponse(responseCode = "403", description = "Sin permiso EXPORTAR_REPORTES")
+    @ApiResponse(responseCode = "503", description = "El Data Warehouse no está configurado o no responde")
     public ResponseEntity<byte[]> exportarPdf(
-            @RequestParam(required = false) Integer idCarrera,
-            @RequestParam(required = false) Integer idGrupo,
-            @RequestParam(required = false) Integer idEstudiante,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
 
-        // Sin Pageable a propósito: el PDF es un documento autocontenido, tiene
-        // que representar el total de la población filtrada, no una página.
-        ReporteResponseDTO reporte = reporteService.generarReporte(
-                idCarrera, idGrupo, idEstudiante, desde, hasta, null);
+        ReporteResponseDTO reporte = reporteService.generarReporte(desde, hasta);
 
         byte[] pdf = reportePdfService.generarPdf(reporte);
 

@@ -1,13 +1,19 @@
 package com.fides.sienep.service;
 
-import com.fides.sienep.dto.ReporteEstudianteDTO;
 import com.fides.sienep.dto.ReporteResponseDTO;
+import com.fides.sienep.dto.ReporteResponseDTO.EvolucionMensual;
+import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasDiaFranja;
+import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasInvolucradosMes;
+import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasLugarMes;
+import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCanalMes;
+import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCategoriaMes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 // no un mock de iText — es la forma más honesta de probar esta clase.
 class ReportePdfServiceTest {
 
+    private static final LocalDate MARZO = LocalDate.of(2026, 3, 1);
+
     private ReportePdfService reportePdfService;
 
     @BeforeEach
@@ -31,32 +39,28 @@ class ReportePdfServiceTest {
         return ReporteResponseDTO.builder()
                 .fechaGeneracion(LocalDateTime.now())
                 .generadoPor("Juan García")
-                .filtrosAplicados("Período: últimos 3 meses")
                 .desde(LocalDate.now().minusMonths(3))
                 .hasta(LocalDate.now())
-                .totalEstudiantes(2)
                 .totalInstancias(5)
-                .totalIncidencias(1)
-                .totalRecordatorios(3)
-                .recordatoriosVencidos(1)
-                .recordatoriosHoy(1)
-                .recordatoriosFuturos(1);
+                .totalIncidencias(1);
     }
 
     @Test
-    @DisplayName("Generar PDF - Éxito, devuelve bytes con encabezado PDF válido")
+    @DisplayName("Generar PDF - Con todos los indicadores devuelve bytes con encabezado PDF válido")
     void generarPdf_Exito_DevuelveBytesValidos() {
         ReporteResponseDTO reporte = reporteBaseBuilder()
-                .detallePorEstudiante(List.of(
-                        ReporteEstudianteDTO.builder()
-                                .idEstudiante(1)
-                                .nombreCompleto("Ana Pérez")
-                                .documento("12345678")
-                                .cantidadInstancias(3)
-                                .cantidadIncidencias(1)
-                                .cantidadRecordatorios(2)
-                                .build()
-                ))
+                .evolucionMensual(List.of(new EvolucionMensual(MARZO, "2026-03", 5, 1)))
+                .instanciasPorCategoria(List.of(
+                        new InstanciasCategoriaMes(MARZO, "2026-03", "Reunión", 5, new BigDecimal("100.0"))))
+                .instanciasPorCanal(List.of(
+                        new InstanciasCanalMes(MARZO, "2026-03", "Presencial", "Presencial", 5, new BigDecimal("100.0"))))
+                .incidenciasPorLugar(List.of(
+                        new IncidenciasLugarMes(MARZO, "2026-03", "Aulas", "Aula 1", 1)))
+                .incidenciasPorDiaFranja(List.of(
+                        new IncidenciasDiaFranja(MARZO, "2026-03", 1, "Lunes", "Mañana", 1)))
+                .incidenciasInvolucrados(List.of(
+                        new IncidenciasInvolucradosMes(MARZO, "2026-03", 1, 1, 0,
+                                new BigDecimal("1.00"), new BigDecimal("0.0"))))
                 .build();
 
         byte[] pdf = reportePdfService.generarPdf(reporte);
@@ -69,10 +73,23 @@ class ReportePdfServiceTest {
     }
 
     @Test
-    @DisplayName("Generar PDF - Detalle por estudiante vacío no rompe")
-    void generarPdf_DetalleVacio_NoRompe() {
+    @DisplayName("Generar PDF - Incrusta la fuente Onest del frontend")
+    void generarPdf_IncrustaFuenteOnest() throws Exception {
+        byte[] pdf = reportePdfService.generarPdf(reporteBaseBuilder().build());
+
+        assertTrue(new String(pdf, "ISO-8859-1").contains("Onest"));
+    }
+
+    @Test
+    @DisplayName("Generar PDF - Indicadores vacíos no rompen")
+    void generarPdf_IndicadoresVacios_NoRompe() {
         ReporteResponseDTO reporte = reporteBaseBuilder()
-                .detallePorEstudiante(List.of())
+                .evolucionMensual(List.of())
+                .instanciasPorCategoria(List.of())
+                .instanciasPorCanal(List.of())
+                .incidenciasPorLugar(List.of())
+                .incidenciasPorDiaFranja(List.of())
+                .incidenciasInvolucrados(List.of())
                 .build();
 
         byte[] pdf = assertDoesNotThrow(() -> reportePdfService.generarPdf(reporte));
@@ -82,11 +99,9 @@ class ReportePdfServiceTest {
     }
 
     @Test
-    @DisplayName("Generar PDF - Detalle por estudiante null no rompe")
-    void generarPdf_DetalleNull_NoRompe() {
-        ReporteResponseDTO reporte = reporteBaseBuilder()
-                .detallePorEstudiante(null)
-                .build();
+    @DisplayName("Generar PDF - Indicadores null no rompen")
+    void generarPdf_IndicadoresNull_NoRompe() {
+        ReporteResponseDTO reporte = reporteBaseBuilder().build();
 
         byte[] pdf = assertDoesNotThrow(() -> reportePdfService.generarPdf(reporte));
 
@@ -95,33 +110,50 @@ class ReportePdfServiceTest {
     }
 
     @Test
-    @DisplayName("Generar PDF - Con advertencia, no rompe")
-    void generarPdf_ConAdvertencia_NoRompe() {
-        ReporteResponseDTO reporte = reporteBaseBuilder()
-                .advertencia("El filtro por carrera puede contar instancias duplicadas si un " +
-                        "estudiante cambió de carrera durante el período.")
-                .detallePorEstudiante(List.of())
-                .build();
+    @DisplayName("Generar PDF - Muchas filas continúan en más páginas sin romper")
+    void generarPdf_MuchasFilas_NoRompe() {
+        List<IncidenciasLugarMes> filas = java.util.stream.IntStream.range(0, 300)
+                .mapToObj(i -> new IncidenciasLugarMes(MARZO, "2026-03", "Aulas", "Aula " + i, 1))
+                .toList();
+        ReporteResponseDTO reporte = reporteBaseBuilder().incidenciasPorLugar(filas).build();
 
         byte[] pdf = assertDoesNotThrow(() -> reportePdfService.generarPdf(reporte));
 
-        assertNotNull(pdf);
         assertTrue(pdf.length > 0);
     }
 
     @Test
-    @DisplayName("Generar PDF - Datos incompletos (fechas null) se envuelve en 500, no en NPE crudo")
-    void generarPdf_DatosIncompletos_Lanza500EnVezDeNPE() {
-        // desde/hasta en null hace que reporte.getDesde().format(...) explote adentro
-        // del try/catch de generarPdf(). El comportamiento esperado es que el error se
-        // envuelva en un ResponseStatusException 500 con mensaje claro, no que se
-        // propague una NullPointerException cruda hasta el controller.
+    @DisplayName("Generar PDF - Período nulo (DW sin datos) no rompe y dice sin datos")
+    void generarPdf_PeriodoNulo_DiceSinDatos() throws Exception {
         ReporteResponseDTO reporte = ReporteResponseDTO.builder()
                 .fechaGeneracion(LocalDateTime.now())
                 .generadoPor("Juan García")
-                .totalEstudiantes(0)
-                .detallePorEstudiante(List.of())
+                .totalInstancias(0)
+                .totalIncidencias(0)
                 .build(); // desde/hasta quedan null
+
+        byte[] pdf = assertDoesNotThrow(() -> reportePdfService.generarPdf(reporte));
+
+        assertTrue(pdf.length > 0);
+    }
+
+    @Test
+    @DisplayName("Generar PDF - Con y sin fecha de la última carga del DW no rompe")
+    void generarPdf_DatosAl_ConYSinFecha() {
+        assertDoesNotThrow(() -> reportePdfService.generarPdf(
+                reporteBaseBuilder().datosAl(LocalDateTime.of(2026, 10, 24, 22, 6)).build()));
+        assertDoesNotThrow(() -> reportePdfService.generarPdf(reporteBaseBuilder().datosAl(null).build()));
+    }
+
+    @Test
+    @DisplayName("Generar PDF - Datos incompletos (sin fecha de generación) se envuelve en 500, no en NPE crudo")
+    void generarPdf_DatosIncompletos_Lanza500EnVezDeNPE() {
+        // Sin fechaGeneracion, agregarMetadata() explota adentro del try/catch de generarPdf().
+        // El comportamiento esperado es que el error se envuelva en un ResponseStatusException
+        // 500 con mensaje claro, no que se propague una NullPointerException cruda hasta el controller.
+        ReporteResponseDTO reporte = ReporteResponseDTO.builder()
+                .generadoPor("Juan García")
+                .build(); // fechaGeneracion queda null
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> reportePdfService.generarPdf(reporte));

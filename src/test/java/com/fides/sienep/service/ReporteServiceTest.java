@@ -1,20 +1,10 @@
 package com.fides.sienep.service;
 
 import com.fides.sienep.dto.ReporteResponseDTO;
-import com.fides.sienep.model.EstadoLogico;
-import com.fides.sienep.model.EstadoRecordatorio;
-import com.fides.sienep.model.Estudiante;
+import com.fides.sienep.dto.ReporteResponseDTO.EvolucionMensual;
 import com.fides.sienep.model.Funcionario;
-import com.fides.sienep.model.Incidencia;
-import com.fides.sienep.model.InstanciaComun;
-import com.fides.sienep.model.PaisDocumento;
-import com.fides.sienep.model.Recordatorio;
-import com.fides.sienep.repository.EstudianteRepository;
 import com.fides.sienep.repository.FuncionarioRepository;
-import com.fides.sienep.repository.GrupoRepository;
-import com.fides.sienep.repository.IncidenciaRepository;
-import com.fides.sienep.repository.InstanciaComunRepository;
-import com.fides.sienep.repository.RecordatorioRepository;
+import com.fides.sienep.repository.ReporteDwRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,66 +13,38 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ReporteServiceTest {
 
-    @Mock
-    private EstudianteRepository estudianteRepository;
+    private static final LocalDate MARZO = LocalDate.of(2026, 3, 1);
+    private static final LocalDate ABRIL = LocalDate.of(2026, 4, 1);
 
     @Mock
     private FuncionarioRepository funcionarioRepository;
 
     @Mock
-    private GrupoRepository grupoRepository;
-
-    @Mock
-    private InstanciaComunRepository instanciaComunRepository;
-
-    @Mock
-    private IncidenciaRepository incidenciaRepository;
-
-    @Mock
-    private RecordatorioRepository recordatorioRepository;
+    private ReporteDwRepository reporteDwRepository;
 
     @InjectMocks
     private ReporteService reporteService;
 
-    private Estudiante estudianteMock;
-
     @BeforeEach
     void setUp() {
-        estudianteMock = new Estudiante();
-        estudianteMock.setNombre("Ana");
-        estudianteMock.setApellido("García");
-        estudianteMock.setDocumento("12345678");
-        estudianteMock.setPaisDocumento(PaisDocumento.ARG);
-        estudianteMock.setEmail("ana.garcia@utec.edu.uy");
-        estudianteMock.setFechaNacimiento(LocalDate.of(2000, 3, 15));
-        estudianteMock.setEstado(EstadoLogico.ACTIVO);
-        estudianteMock.setTelefonos(new ArrayList<>());
-        estudianteMock.setGrupos(new ArrayList<>());
-
-        // Simular usuario autenticado
         Authentication auth = mock(Authentication.class);
         lenient().when(auth.getName()).thenReturn("1");
         lenient().doReturn(new ArrayList<>()).when(auth).getAuthorities();
@@ -93,6 +55,14 @@ class ReporteServiceTest {
         funcionarioAutenticadoMock.setApellido("Fernández");
         funcionarioAutenticadoMock.setDocumento("11222333");
         lenient().when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioAutenticadoMock));
+
+        lenient().when(reporteDwRepository.evolucionMensual(any(), any())).thenReturn(List.of());
+        lenient().when(reporteDwRepository.instanciasPorCategoria(any(), any())).thenReturn(List.of());
+        lenient().when(reporteDwRepository.instanciasPorCanal(any(), any())).thenReturn(List.of());
+        lenient().when(reporteDwRepository.incidenciasPorLugar(any(), any())).thenReturn(List.of());
+        lenient().when(reporteDwRepository.incidenciasPorDiaFranja(any(), any())).thenReturn(List.of());
+        lenient().when(reporteDwRepository.incidenciasInvolucrados(any(), any())).thenReturn(List.of());
+        lenient().when(reporteDwRepository.ultimaActualizacion()).thenReturn(null);
     }
 
     @AfterEach
@@ -100,379 +70,142 @@ class ReporteServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    // ── Helper: mockear queries de métricas vacías ────────────
-    private void mockearMetricasVacias(Integer idEstudiante) {
-        List<Integer> ids = List.of(idEstudiante);
-        lenient().when(instanciaComunRepository.findByEstudiantesYPeriodo(
-                        eq(ids), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-        lenient().when(incidenciaRepository.findByEstudiantesYPeriodo(
-                        eq(ids), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-        lenient().when(recordatorioRepository.findByEstudiantesYPeriodo(
-                        eq(ids), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-    }
-
-    // ── Helper: crear recordatorio mock con estado operativo ──
-    // La instancia (con estudianteMock) es necesaria porque ReporteService
-    // ahora agrupa los recordatorios batch por recordatorio.getInstancia()
-    // .getEstudiante().getIdUsuario() (M11).
-    private Recordatorio buildRecordatorio(EstadoRecordatorio estadoOperativo) {
-        InstanciaComun instancia = new InstanciaComun();
-        instancia.setEstudiante(estudianteMock);
-
-        Recordatorio r = new Recordatorio();
-        r.setInstancia(instancia);
-        r.setEstadoOperativo(estadoOperativo);
-        r.setEstado(EstadoLogico.ACTIVO);
-        return r;
-    }
-
     // =========================================================
-    // SIN FILTROS
+    // METADATOS Y SIN DATOS
     // =========================================================
 
     @Test
-    @DisplayName("Generar reporte - Sin filtros devuelve métricas globales")
-    void generarReporte_SinFiltros_DevuelveMetricasGlobales() {
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
+    @DisplayName("Generar reporte - DW sin datos devuelve totales en 0, listas vacías y período nulo")
+    void generarReporte_SinDatos_DevuelveVacio() {
+        ReporteResponseDTO resultado = reporteService.generarReporte(null, null);
 
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null, null);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalEstudiantes());
         assertEquals(0, resultado.getTotalInstancias());
         assertEquals(0, resultado.getTotalIncidencias());
-        assertEquals(0, resultado.getTotalRecordatorios());
-        assertNull(resultado.getAdvertencia());
+        assertTrue(resultado.getEvolucionMensual().isEmpty());
+        assertNull(resultado.getDesde());
+        assertNull(resultado.getHasta());
+        assertNull(resultado.getDatosAl());
         assertNotNull(resultado.getFechaGeneracion());
-        assertEquals("11222333 - Mariana Fernández", resultado.getGeneradoPor());
+        assertEquals("Mariana Fernández · 11222333", resultado.getGeneradoPor());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Informa hasta cuándo llegan los datos del DW")
+    void generarReporte_InformaDatosAl() {
+        LocalDateTime ultimaCarga = LocalDateTime.of(2026, 10, 24, 22, 6);
+        when(reporteDwRepository.ultimaActualizacion()).thenReturn(ultimaCarga);
+
+        assertEquals(ultimaCarga, reporteService.generarReporte(null, null).getDatosAl());
     }
 
     @Test
     @DisplayName("Generar reporte - Funcionario autenticado no encontrado devuelve 404")
     void generarReporte_FuncionarioAutenticadoNoEncontrado_Lanza404() {
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of());
         when(funcionarioRepository.findById(1)).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> reporteService.generarReporte(null, null, null, null, null, null));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> reporteService.generarReporte(null, null));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
-    @Test
-    @DisplayName("Generar reporte - Sin filtros solo considera estudiantes ACTIVOS (M10)")
-    void generarReporte_SinFiltros_SoloConsideraActivos() {
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
-
-        reporteService.generarReporte(null, null, null, null, null, null);
-
-        verify(estudianteRepository).findByEstado(EstadoLogico.ACTIVO);
-        verify(estudianteRepository, never()).findAll();
-    }
-
     // =========================================================
-    // FILTRO POR ESTUDIANTE
+    // PERÍODO (POR MES COMPLETO)
     // =========================================================
 
     @Test
-    @DisplayName("Generar reporte - Por estudiante devuelve solo ese estudiante")
-    void generarReporte_PorEstudiante_DevuelveSoloEseEstudiante() {
-        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, 1, null, null, null);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalEstudiantes());
-        assertNull(resultado.getAdvertencia());
-    }
-
-    @Test
-    @DisplayName("Generar reporte - Estudiante no encontrado devuelve lista vacía")
-    void generarReporte_EstudianteNoEncontrado_DevuelveListaVacia() {
-        when(estudianteRepository.findById(99)).thenReturn(Optional.empty());
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, 99, null, null, null);
-
-        assertNotNull(resultado);
-        assertEquals(0, resultado.getTotalEstudiantes());
-        assertTrue(resultado.getDetallePorEstudiante().isEmpty());
-    }
-
-    // =========================================================
-    // FILTRO POR GRUPO Y CARRERA — ADVERTENCIA
-    // =========================================================
-
-    @Test
-    @DisplayName("Generar reporte - Por grupo incluye advertencia de duplicados")
-    void generarReporte_PorGrupo_IncluyeAdvertencia() {
-        when(estudianteRepository.findByGrupoAndEstadoList(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(estudianteMock));
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, 1, null, null, null, null);
-
-        assertNotNull(resultado.getAdvertencia());
-        assertTrue(resultado.getAdvertencia().contains("múltiples grupos"));
-    }
-
-    @Test
-    @DisplayName("Generar reporte - Por carrera incluye advertencia de duplicados")
-    void generarReporte_PorCarrera_IncluyeAdvertencia() {
-        when(estudianteRepository.findByCarreraAndEstadoList(1, EstadoLogico.ACTIVO))
-                .thenReturn(List.of(estudianteMock));
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                1, null, null, null, null, null);
-
-        assertNotNull(resultado.getAdvertencia());
-        assertTrue(resultado.getAdvertencia().contains("múltiples grupos"));
-    }
-
-    // =========================================================
-    // MÉTRICAS
-    // =========================================================
-
-    @Test
-    @DisplayName("Generar reporte - Conteo de instancias e incidencias correcto")
-    void generarReporte_ConteoDeMetricasCorrecto() {
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
-
-        InstanciaComun instancia = new InstanciaComun();
-        instancia.setEstudiante(estudianteMock);
-        Incidencia incidencia = new Incidencia();
-        incidencia.setEstudiante(estudianteMock);
-
-        when(instanciaComunRepository.findByEstudiantesYPeriodo(
-                any(), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of(instancia, instancia));
-
-        when(incidenciaRepository.findByEstudiantesYPeriodo(
-                any(), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of(incidencia));
-
-        when(recordatorioRepository.findByEstudiantesYPeriodo(
-                any(), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null, null);
-
-        assertEquals(2, resultado.getTotalInstancias());
-        assertEquals(1, resultado.getTotalIncidencias());
-        assertEquals(0, resultado.getTotalRecordatorios());
-    }
-
-    @Test
-    @DisplayName("Generar reporte - Con varios estudiantes hace una sola query por tipo y agrupa bien las métricas (M11)")
-    void generarReporte_VariosEstudiantes_UnaSolaQueryPorTipoYAgrupaBien() {
-        estudianteMock.setIdUsuario(1);
-
-        Estudiante estudianteMock2 = new Estudiante();
-        estudianteMock2.setIdUsuario(2);
-        estudianteMock2.setNombre("Luis");
-        estudianteMock2.setApellido("Pérez");
-        estudianteMock2.setDocumento("87654321");
-        estudianteMock2.setPaisDocumento(PaisDocumento.ARG);
-        estudianteMock2.setEmail("luis.perez@utec.edu.uy");
-        estudianteMock2.setFechaNacimiento(LocalDate.of(1999, 5, 20));
-        estudianteMock2.setEstado(EstadoLogico.ACTIVO);
-        estudianteMock2.setTelefonos(new ArrayList<>());
-        estudianteMock2.setGrupos(new ArrayList<>());
-
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO))
-                .thenReturn(List.of(estudianteMock, estudianteMock2));
-
-        InstanciaComun instanciaDeUno = new InstanciaComun();
-        instanciaDeUno.setEstudiante(estudianteMock);
-        InstanciaComun instanciaDeDos = new InstanciaComun();
-        instanciaDeDos.setEstudiante(estudianteMock2);
-
-        when(instanciaComunRepository.findByEstudiantesYPeriodo(
-                eq(List.of(1, 2)), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of(instanciaDeUno, instanciaDeDos, instanciaDeDos));
-        when(incidenciaRepository.findByEstudiantesYPeriodo(
-                eq(List.of(1, 2)), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-        when(recordatorioRepository.findByEstudiantesYPeriodo(
-                eq(List.of(1, 2)), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null, null);
-
-        // Una sola llamada por tipo, sin importar cuántos estudiantes haya (no N+1)
-        verify(instanciaComunRepository, times(1))
-                .findByEstudiantesYPeriodo(any(), any(), any(), any());
-        verify(incidenciaRepository, times(1))
-                .findByEstudiantesYPeriodo(any(), any(), any(), any());
-        verify(recordatorioRepository, times(1))
-                .findByEstudiantesYPeriodo(any(), any(), any(), any());
-
-        assertEquals(2, resultado.getTotalEstudiantes());
-        assertEquals(3, resultado.getTotalInstancias());
-
-        // Las métricas quedan asignadas al estudiante correcto, no mezcladas
-        assertEquals(1, resultado.getDetallePorEstudiante().get(0).getCantidadInstancias());
-        assertEquals(2, resultado.getDetallePorEstudiante().get(1).getCantidadInstancias());
-    }
-
-    @Test
-    @DisplayName("Generar reporte - Conteo de recordatorios por estado operativo correcto")
-    void generarReporte_ConteoRecordatoriosPorEstadoCorrecto() {
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
-
-        lenient().when(instanciaComunRepository.findByEstudiantesYPeriodo(
-                        any(), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-        lenient().when(incidenciaRepository.findByEstudiantesYPeriodo(
-                        any(), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(List.of());
-
-        List<Recordatorio> recordatorios = List.of(
-                buildRecordatorio(EstadoRecordatorio.VENCIDO),
-                buildRecordatorio(EstadoRecordatorio.VENCIDO),
-                buildRecordatorio(EstadoRecordatorio.HOY),
-                buildRecordatorio(EstadoRecordatorio.FUTURO)
-        );
-
-        when(recordatorioRepository.findByEstudiantesYPeriodo(
-                any(), eq(EstadoLogico.ACTIVO), any(), any()))
-                .thenReturn(recordatorios);
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null, null);
-
-        assertEquals(4, resultado.getTotalRecordatorios());
-        assertEquals(2, resultado.getRecordatoriosVencidos());
-        assertEquals(1, resultado.getRecordatoriosHoy());
-        assertEquals(1, resultado.getRecordatoriosFuturos());
-    }
-
-    // =========================================================
-    // VALIDACIÓN DE FECHAS
-    // =========================================================
-
-    @Test
-    @DisplayName("Generar reporte - Fecha desde posterior a hasta → 400")
+    @DisplayName("Generar reporte - Fecha desde posterior a hasta devuelve 400 sin consultar el DW")
     void generarReporte_FechasInvertidas_Lanza400() {
-        LocalDate desde = LocalDate.now();
-        LocalDate hasta = LocalDate.now().minusDays(1);
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> reporteService.generarReporte(null, null, null, desde, hasta, null));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> reporteService.generarReporte(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 3, 1)));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        verify(estudianteRepository, never()).findByEstado(EstadoLogico.ACTIVO);
+        verifyNoInteractions(reporteDwRepository);
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Redondea desde y hasta a los meses que tocan")
+    void generarReporte_RedondeaElPeriodoAMeses() {
+        ReporteResponseDTO resultado = reporteService.generarReporte(LocalDate.of(2026, 3, 15), LocalDate.of(2026, 5, 20));
+
+        // Las vistas se consultan por el primer día de cada mes
+        verify(reporteDwRepository).evolucionMensual(MARZO, LocalDate.of(2026, 5, 1));
+        verify(reporteDwRepository).instanciasPorCanal(MARZO, LocalDate.of(2026, 5, 1));
+        // El período informado son meses completos
+        assertEquals(MARZO, resultado.getDesde());
+        assertEquals(LocalDate.of(2026, 5, 31), resultado.getHasta());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Sin fechas consulta sin límite y toma el período de lo cargado")
+    void generarReporte_SinFechas_TomaTodoLoCargado() {
+        when(reporteDwRepository.evolucionMensual(null, null)).thenReturn(List.of(
+                new EvolucionMensual(MARZO, "2026-03", 10, 2),
+                new EvolucionMensual(ABRIL, "2026-04", 5, 1),
+                new EvolucionMensual(LocalDate.of(2026, 9, 1), "2026-09", 7, 3)));
+
+        ReporteResponseDTO resultado = reporteService.generarReporte(null, null);
+
+        verify(reporteDwRepository).instanciasPorCategoria(null, null);
+        assertEquals(MARZO, resultado.getDesde());
+        assertEquals(LocalDate.of(2026, 9, 30), resultado.getHasta());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Febrero de un año bisiesto termina el 29")
+    void generarReporte_UltimoDiaDelMes() {
+        ReporteResponseDTO resultado = reporteService.generarReporte(LocalDate.of(2028, 1, 10), LocalDate.of(2028, 2, 3));
+
+        assertEquals(LocalDate.of(2028, 2, 29), resultado.getHasta());
     }
 
     // =========================================================
-    // PERÍODO Y FILTROS APLICADOS
+    // TOTALES Y PASE DE LAS VISTAS
     // =========================================================
 
     @Test
-    @DisplayName("Generar reporte - Período por defecto es últimos 3 meses")
-    void generarReporte_SinPeriodo_UsaUltimos3Meses() {
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of());
+    @DisplayName("Generar reporte - Los totales son la suma de la serie mensual")
+    void generarReporte_TotalesSumanLaSerie() {
+        when(reporteDwRepository.evolucionMensual(any(), any())).thenReturn(List.of(
+                new EvolucionMensual(MARZO, "2026-03", 154, 20),
+                new EvolucionMensual(ABRIL, "2026-04", 153, 19)));
 
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null, null);
+        ReporteResponseDTO resultado = reporteService.generarReporte(MARZO, ABRIL);
 
-        assertEquals(LocalDate.now().minusMonths(3), resultado.getDesde());
-        assertEquals(LocalDate.now(), resultado.getHasta());
+        assertEquals(307, resultado.getTotalInstancias());
+        assertEquals(39, resultado.getTotalIncidencias());
+        assertEquals(2, resultado.getEvolucionMensual().size());
     }
 
     @Test
-    @DisplayName("Generar reporte - Filtros aplicados se reflejan en la descripción")
-    void generarReporte_FiltrosAplicados_SeReflejanEnDescripcion() {
-        when(estudianteRepository.findById(5)).thenReturn(Optional.of(estudianteMock));
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
+    @DisplayName("Generar reporte - Devuelve las filas de cada vista tal como vienen del DW, sin recalcular")
+    void generarReporte_PasaLasVistasSinTransformar() {
+        var porCategoria = List.of(new ReporteResponseDTO.InstanciasCategoriaMes(
+                MARZO, "2026-03", "COORDINACIÓN", 55, new java.math.BigDecimal("35.7")));
+        var porCanal = List.of(new ReporteResponseDTO.InstanciasCanalMes(
+                MARZO, "2026-03", "Google Meet", "A distancia", 44, new java.math.BigDecimal("28.6")));
+        when(reporteDwRepository.instanciasPorCategoria(any(), any())).thenReturn(porCategoria);
+        when(reporteDwRepository.instanciasPorCanal(any(), any())).thenReturn(porCanal);
 
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, 5,
-                LocalDate.of(2025, 1, 1),
-                LocalDate.of(2025, 6, 30), null);
+        ReporteResponseDTO resultado = reporteService.generarReporte(MARZO, MARZO);
 
-        assertNotNull(resultado.getFiltrosAplicados());
-        assertTrue(resultado.getFiltrosAplicados().contains("Estudiante ID: 5"));
-        assertTrue(resultado.getFiltrosAplicados().contains("2025-01-01"));
+        assertSame(porCategoria, resultado.getInstanciasPorCategoria());
+        assertSame(porCanal, resultado.getInstanciasPorCanal());
     }
 
     // =========================================================
-    // PAGINACIÓN (H1)
+    // DW NO DISPONIBLE
     // =========================================================
 
     @Test
-    @DisplayName("Generar reporte - Con Pageable usa la query paginada y completa la metadata")
-    void generarReporte_ConPageable_UsaQueryPaginadaYCompletaMetadata() {
-        Pageable pageable = PageRequest.of(0, 20);
-        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteMock), pageable, 1);
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
+    @DisplayName("Generar reporte - Si el DW no está disponible propaga el 503")
+    void generarReporte_DwNoDisponible_Propaga503() {
+        when(reporteDwRepository.evolucionMensual(any(), any()))
+                .thenThrow(DwJdbc.noDisponible("El Data Warehouse no está configurado", null));
 
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null, pageable);
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> reporteService.generarReporte(null, null));
 
-        verify(estudianteRepository).findByEstado(EstadoLogico.ACTIVO, pageable);
-        verify(estudianteRepository, never()).findByEstado(EstadoLogico.ACTIVO);
-        assertEquals(0, resultado.getPagina());
-        assertEquals(20, resultado.getTamanioPagina());
-        assertEquals(1, resultado.getTotalPaginas());
-        assertEquals(1L, resultado.getTotalEstudiantesFiltrados());
-    }
-
-    @Test
-    @DisplayName("Generar reporte - Sin Pageable (exportación PDF) no completa metadata de paginación")
-    void generarReporte_SinPageable_NoCompletaMetadataDePaginacion() {
-        when(estudianteRepository.findByEstado(EstadoLogico.ACTIVO)).thenReturn(List.of(estudianteMock));
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
-
-        ReporteResponseDTO resultado = reporteService.generarReporte(
-                null, null, null, null, null, null);
-
-        assertNull(resultado.getPagina());
-        assertNull(resultado.getTamanioPagina());
-        assertNull(resultado.getTotalPaginas());
-        assertNull(resultado.getTotalEstudiantesFiltrados());
-    }
-
-    @Test
-    @DisplayName("Generar reporte - Con Pageable y filtro de grupo usa findByGrupoAndEstado paginado")
-    void generarReporte_ConPageableYGrupo_UsaQueryPaginadaDeGrupo() {
-        Pageable pageable = PageRequest.of(0, 20);
-        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteMock), pageable, 1);
-        when(estudianteRepository.findByGrupoAndEstado(1, EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
-
-        reporteService.generarReporte(null, 1, null, null, null, pageable);
-
-        verify(estudianteRepository).findByGrupoAndEstado(1, EstadoLogico.ACTIVO, pageable);
-        verify(estudianteRepository, never()).findByGrupoAndEstadoList(anyInt(), any());
-    }
-
-    @Test
-    @DisplayName("Generar reporte - Con Pageable y filtro de carrera usa findByCarreraAndEstado paginado")
-    void generarReporte_ConPageableYCarrera_UsaQueryPaginadaDeCarrera() {
-        Pageable pageable = PageRequest.of(0, 20);
-        Page<Estudiante> pagina = new PageImpl<>(List.of(estudianteMock), pageable, 1);
-        when(estudianteRepository.findByCarreraAndEstado(1, EstadoLogico.ACTIVO, pageable)).thenReturn(pagina);
-        mockearMetricasVacias(estudianteMock.getIdUsuario());
-
-        reporteService.generarReporte(1, null, null, null, null, pageable);
-
-        verify(estudianteRepository).findByCarreraAndEstado(1, EstadoLogico.ACTIVO, pageable);
-        verify(estudianteRepository, never()).findByCarreraAndEstadoList(anyInt(), any());
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
     }
 }
