@@ -1,4 +1,4 @@
-package com.fides.sienep.service;
+package com.fides.sienep.config;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,6 +7,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DwJdbcTest {
@@ -48,5 +49,20 @@ class DwJdbcTest {
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, primero.getStatusCode());
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, segundo.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("enSnapshot sin DW configurado responde 503 sin ejecutar la lectura")
+    void enSnapshot_SinConfigurar_Lanza503() {
+        boolean[] ejecutada = {false};
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> dwJdbc("", "dw_lectura").enSnapshot(() -> {
+                    ejecutada[0] = true;
+                    return null;
+                }));
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
+        assertFalse(ejecutada[0]);
     }
 }

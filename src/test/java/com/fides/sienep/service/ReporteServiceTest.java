@@ -4,6 +4,7 @@ import com.fides.sienep.dto.ReporteResponseDTO;
 import com.fides.sienep.dto.ReporteResponseDTO.EvolucionMensual;
 import com.fides.sienep.model.Funcionario;
 import com.fides.sienep.repository.FuncionarioRepository;
+import com.fides.sienep.config.DwJdbc;
 import com.fides.sienep.repository.ReporteDwRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,6 +58,8 @@ class ReporteServiceTest {
         funcionarioAutenticadoMock.setDocumento("11222333");
         lenient().when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioAutenticadoMock));
 
+        lenient().when(reporteDwRepository.enSnapshot(any()))
+                .thenAnswer(inv -> ((Supplier<?>) inv.getArgument(0)).get());
         lenient().when(reporteDwRepository.evolucionMensual(any(), any())).thenReturn(List.of());
         lenient().when(reporteDwRepository.instanciasPorCategoria(any(), any())).thenReturn(List.of());
         lenient().when(reporteDwRepository.instanciasPorCanal(any(), any())).thenReturn(List.of());
@@ -157,6 +161,23 @@ class ReporteServiceTest {
         ReporteResponseDTO resultado = reporteService.generarReporte(LocalDate.of(2028, 1, 10), LocalDate.of(2028, 2, 3));
 
         assertEquals(LocalDate.of(2028, 2, 29), resultado.getHasta());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Desde sin hasta y sin datos en el rango informa sin período, no a medias")
+    void generarReporte_DesdeSinHastaYSinDatos_PeriodoNulo() {
+        ReporteResponseDTO resultado = reporteService.generarReporte(LocalDate.of(2030, 1, 15), null);
+
+        assertNull(resultado.getDesde());
+        assertNull(resultado.getHasta());
+    }
+
+    @Test
+    @DisplayName("Generar reporte - Lee todas las vistas dentro de un mismo snapshot del DW")
+    void generarReporte_LeeEnUnSnapshot() {
+        reporteService.generarReporte(null, null);
+
+        verify(reporteDwRepository, times(1)).enSnapshot(any());
     }
 
     // =========================================================

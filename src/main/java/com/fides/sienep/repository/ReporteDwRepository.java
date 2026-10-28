@@ -6,7 +6,7 @@ import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasInvolucradosMes;
 import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasLugarMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCanalMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCategoriaMes;
-import com.fides.sienep.service.DwJdbc;
+import com.fides.sienep.config.DwJdbc;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 // Lee las vistas v_* del Data Warehouse (IND-01 a IND-07), que ya vienen normalizadas y con porcentajes y promedios calculados; acá no se transforma nada. Las vistas están agregadas por mes, así que el período son meses completos: desde y hasta se pasan como el primer día del mes (la columna mes) y null significa sin límite.
 @Repository
@@ -24,6 +25,11 @@ import java.util.List;
 public class ReporteDwRepository {
 
     private final DwJdbc dwJdbc;
+
+    // Agrupa varias lecturas en una transacción con snapshot, para que salgan de la misma carga del DW (ver DwJdbc.enSnapshot)
+    public <T> T enSnapshot(Supplier<T> lectura) {
+        return dwJdbc.enSnapshot(lectura);
+    }
 
     public List<EvolucionMensual> evolucionMensual(LocalDate desde, LocalDate hasta) {
         return consultar("SELECT mes, anio_mes, instancias_agendadas, incidencias_ocurridas " +

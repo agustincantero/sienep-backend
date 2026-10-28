@@ -21,7 +21,8 @@ import java.util.List;
  * Reporte con los 7 indicadores del Data Warehouse (IND-01 a IND-07), leídos de sus vistas v_*. La normalización y los
  * cálculos viven en el ETL y en las vistas, acá solo se arma la respuesta. Las vistas están agregadas por mes, así que
  * el período se redondea a meses completos. Es global (solo período) a propósito, porque carrera y grupo pertenecen
- * al estudiante y un estudiante puede cursar varias, así que no se pueden atribuir a una instancia sin duplicar conteos.
+ * al estudiante y un estudiante puede cursar varias, así que no se pueden atribuir a una instancia o incidencia sin
+ * duplicar conteos.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,6 +40,13 @@ public class ReporteService {
                     "La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
         }
 
+        String generadoPor = getNombreUsuarioAutenticado();
+
+        // Todas las vistas se leen en un mismo snapshot para que los indicadores salgan de la misma carga del DW
+        return reporteDwRepository.enSnapshot(() -> armarReporte(desde, hasta, generadoPor));
+    }
+
+    private ReporteResponseDTO armarReporte(LocalDate desde, LocalDate hasta, String generadoPor) {
         // La columna mes de las vistas es el primer día de cada mes
         LocalDate mesDesde = desde != null ? desde.withDayOfMonth(1) : null;
         LocalDate mesHasta = hasta != null ? hasta.withDayOfMonth(1) : null;
@@ -52,12 +60,20 @@ public class ReporteService {
             totalIncidencias += mes.getIncidenciasOcurridas();
         }
 
+        LocalDate periodoDesde = periodoDesde(desde, evolucion);
+        LocalDate periodoHasta = periodoHasta(hasta, evolucion);
+        // Un período a medias no tiene sentido (por ejemplo, desde sin hasta y sin datos en el rango): se informa sin período
+        if (periodoDesde == null || periodoHasta == null) {
+            periodoDesde = null;
+            periodoHasta = null;
+        }
+
         return ReporteResponseDTO.builder()
                 .fechaGeneracion(LocalDateTime.now())
-                .generadoPor(getNombreUsuarioAutenticado())
+                .generadoPor(generadoPor)
                 .datosAl(reporteDwRepository.ultimaActualizacion())
-                .desde(periodoDesde(desde, evolucion))
-                .hasta(periodoHasta(hasta, evolucion))
+                .desde(periodoDesde)
+                .hasta(periodoHasta)
                 .totalInstancias(totalInstancias)
                 .totalIncidencias(totalIncidencias)
                 .evolucionMensual(evolucion)
