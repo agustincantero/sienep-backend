@@ -57,6 +57,7 @@ public class InstanciaComunService {
     private final InstanciaIdGenerator instanciaIdGenerator;
     private final InstanciaComunMapper instanciaComunMapper;
     private final EmailService emailService;
+    private final AuditoriaService auditoriaService;
     private final RecordatorioService recordatorioService;
     private final RecordatorioRepository recordatorioRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -142,8 +143,10 @@ public class InstanciaComunService {
         // El try-catch externo es una segunda capa de defensa: aunque enviarNotificacionInstancia
         // ya no relanza, esto garantiza que cualquier excepción inesperada no revierta
         // la transacción de @Transactional.
+        boolean notificada = false;
+        String motivoFallo = "El servicio de correo no aceptó el envío";
         try {
-            emailService.enviarNotificacionInstancia(
+            notificada = emailService.enviarNotificacionInstancia(
                     funcionario.getEmail(),
                     funcionario.getNombre(),
                     response.getIdNegInstancia(),
@@ -153,6 +156,17 @@ public class InstanciaComunService {
         } catch (Exception e) {
             log.warn("[AUDIT] Fallo al notificar instancia {} al funcionario {}: {}",
                     response.getIdNegInstancia(), funcionario.getIdUsuario(), e.getMessage());
+            motivoFallo = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+        }
+
+        // RNF12 — el envío queda en la auditoría como NOTIFICACION, con el funcionario creador como
+        // autor. Mismo criterio que el correo: un fallo al auditar no revierte la instancia.
+        try {
+            auditoriaService.registrarNotificacion("INSTANCIAS", funcionario.getIdUsuario(), "INSTANCIA_CREADA",
+                    response.getIdNegInstancia(), funcionario, notificada, notificada ? null : motivoFallo);
+        } catch (Exception e) {
+            log.warn("[AUDIT] No se pudo auditar la notificación de la instancia {}: {}",
+                    response.getIdNegInstancia(), e.getMessage());
         }
 
         // RF13 — Integración de Instancias con Google Calendar (async, post-commit). A

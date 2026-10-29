@@ -30,9 +30,12 @@ import java.util.List;
 public class RecordatorioNotificacionScheduler {
 
     private static final int VENTANA_HORAS_ANTICIPACION = 24;
+    private static final String TIPO_NOTIFICACION = "RECORDATORIO_PROXIMO";
+    private static final String MOTIVO_FALLO_ENVIO = "El servicio de correo no aceptó el envío";
 
     private final RecordatorioRepository recordatorioRepository;
     private final EmailService emailService;
+    private final AuditoriaService auditoriaService;
 
     // Corre a los :00 de cada hora. Formato cron de Spring: seg min hora día mes díaSemana.
     @Scheduled(cron = "0 0 * * * *")
@@ -53,8 +56,10 @@ public class RecordatorioNotificacionScheduler {
         log.info("[RF23] {} recordatorio(s) próximos a vencer, enviando notificaciones.", proximos.size());
 
         for (Recordatorio recordatorio : proximos) {
+            boolean enviada = false;
+            String motivo = MOTIVO_FALLO_ENVIO;
             try {
-                emailService.enviarRecordatorioProximo(
+                enviada = emailService.enviarRecordatorioProximo(
                         recordatorio.getResponsable().getEmail(),
                         recordatorio.getResponsable().getNombre(),
                         recordatorio.getIdNegRecordatorio(),
@@ -64,6 +69,7 @@ public class RecordatorioNotificacionScheduler {
                 // Se marca como notificado incluso si el email falla puertas adentro
                 // de EmailService (que ya loguea warn y no relanza): reintentar cada
                 // hora un envío que sigue fallando no aporta nada y satura los logs.
+                // El fallo queda igual en la auditoría.
                 recordatorio.setNotificadoProximidad(true);
                 recordatorioRepository.save(recordatorio);
             } catch (Exception e) {
@@ -72,7 +78,21 @@ public class RecordatorioNotificacionScheduler {
                 // el resto de la corrida ni tirar abajo el @Scheduled.
                 log.warn("[RF23] Fallo al notificar recordatorio {} próximo a vencer: {}",
                         recordatorio.getIdNegRecordatorio(), e.getMessage());
+                motivo = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             }
+            auditar(recordatorio, enviada, enviada ? null : motivo);
+        }
+    }
+
+    // RNF12 — cada aviso queda en la auditoría como NOTIFICACION, enviado o con error. Sin autor
+    // porque lo dispara el sistema. Un fallo al auditar no debe cortar la corrida.
+    private void auditar(Recordatorio recordatorio, boolean enviada, String motivo) {
+        try {
+            auditoriaService.registrarNotificacion("RECORDATORIOS", null, TIPO_NOTIFICACION,
+                    recordatorio.getIdNegRecordatorio(), recordatorio.getResponsable(), enviada, motivo);
+        } catch (Exception e) {
+            log.warn("[RF23] No se pudo auditar la notificación del recordatorio {}: {}",
+                    recordatorio.getIdNegRecordatorio(), e.getMessage());
         }
     }
 }

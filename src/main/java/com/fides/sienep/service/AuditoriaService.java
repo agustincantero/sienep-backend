@@ -7,6 +7,8 @@ import com.fides.sienep.repository.AuditoriaRepository;
 import com.fides.sienep.repository.UsuarioRepository;
 import com.fides.sienep.dto.AuditoriaResponseDTO;
 import com.fides.sienep.mapper.AuditoriaMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,35 @@ public class AuditoriaService {
                 .accion(accion)
                 .autor(autor)
                 .ip(ip)
+                .build();
+
+        auditoriaRepository.save(auditoria);
+    }
+
+    // RF23 / RNF12 — deja constancia de cada notificación por correo, enviada o fallida. A diferencia de registrarEventoManual, el evento se guarda aunque no haya autor: los avisos del scheduler los dispara el sistema, no una persona. No se guarda el email del destinatario (RD01), solo su id y su nombre.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarNotificacion(String entidad, Integer idAutor, String tipo, String idNegocio,
+                                      Usuario destinatario, boolean enviada, String motivo) {
+        Usuario autor = idAutor != null ? usuarioRepository.findById(idAutor).orElse(null) : null;
+
+        ObjectNode detalle = JsonNodeFactory.instance.objectNode();
+        detalle.put("canal", "EMAIL");
+        detalle.put("tipo", tipo);
+        detalle.put("id_negocio", idNegocio);
+        if (destinatario != null) {
+            detalle.put("id_destinatario", destinatario.getIdUsuario());
+            detalle.put("destinatario", destinatario.getNombre() + " " + destinatario.getApellido());
+        }
+        detalle.put("resultado", enviada ? "ENVIADA" : "ERROR");
+        if (motivo != null) {
+            detalle.put("motivo", motivo);
+        }
+
+        Auditoria auditoria = Auditoria.builder()
+                .entidad(entidad.toUpperCase())
+                .accion(TipoAccion.NOTIFICACION)
+                .autor(autor)
+                .valorNuevo(detalle)
                 .build();
 
         auditoriaRepository.save(auditoria);

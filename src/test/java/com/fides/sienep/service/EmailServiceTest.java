@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -147,12 +149,13 @@ class EmailServiceTest {
     }
 
     @Test
-    @DisplayName("enviarNotificacionInstancia NO relanza la excepción si Brevo falla (solo warn)")
+    @DisplayName("enviarNotificacionInstancia NO relanza la excepción si Brevo falla y devuelve false")
     void enviarNotificacionInstancia_falloBrevo_noLanza() {
         mockServer.expect(requestTo(BREVO_URL)).andRespond(withServerError());
 
-        assertDoesNotThrow(() -> emailService.enviarNotificacionInstancia(
+        boolean enviada = assertDoesNotThrow(() -> emailService.enviarNotificacionInstancia(
                 "juan@utec.edu.uy", "Juan", "INST-2026-000001", "Seguimiento", LocalDateTime.now().plusDays(1)));
+        assertFalse(enviada);
     }
 
     @Test
@@ -167,8 +170,9 @@ class EmailServiceTest {
                         org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
-        assertDoesNotThrow(() -> emailService.enviarNotificacionInstancia(
+        boolean enviada = assertDoesNotThrow(() -> emailService.enviarNotificacionInstancia(
                 "juan@utec.edu.uy", "Juan", "INST-2026-000001", "Seguimiento", LocalDateTime.now().plusDays(1)));
+        assertTrue(enviada);
         mockServer.verify();
     }
 
@@ -237,12 +241,13 @@ class EmailServiceTest {
     }
 
     @Test
-    @DisplayName("enviarRecordatorioProximo NO relanza la excepción si Brevo falla (solo warn)")
+    @DisplayName("enviarRecordatorioProximo NO relanza la excepción si Brevo falla y devuelve false")
     void enviarRecordatorioProximo_falloBrevo_noLanza() {
         mockServer.expect(requestTo(BREVO_URL)).andRespond(withServerError());
 
-        assertDoesNotThrow(() -> emailService.enviarRecordatorioProximo(
+        boolean enviada = assertDoesNotThrow(() -> emailService.enviarRecordatorioProximo(
                 "juan@utec.edu.uy", "Juan", "REC-2026-000001", "Control", LocalDateTime.now()));
+        assertFalse(enviada);
     }
 
     @Test
@@ -257,8 +262,9 @@ class EmailServiceTest {
                         org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("{{")))))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
-        assertDoesNotThrow(() -> emailService.enviarRecordatorioProximo(
+        boolean enviada = assertDoesNotThrow(() -> emailService.enviarRecordatorioProximo(
                 "juan@utec.edu.uy", "Juan", "REC-2026-000001", "Control", LocalDateTime.now()));
+        assertTrue(enviada);
         mockServer.verify();
     }
 }

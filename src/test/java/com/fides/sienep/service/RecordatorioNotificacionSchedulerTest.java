@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -25,6 +26,7 @@ class RecordatorioNotificacionSchedulerTest {
 
     @Mock private RecordatorioRepository recordatorioRepository;
     @Mock private EmailService emailService;
+    @Mock private AuditoriaService auditoriaService;
 
     @InjectMocks
     private RecordatorioNotificacionScheduler scheduler;
@@ -67,6 +69,7 @@ class RecordatorioNotificacionSchedulerTest {
         when(recordatorioRepository.findByEstadoAndNotificadoProximidadFalseAndFechaHoraBetween(
                 eq(EstadoLogico.ACTIVO), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(List.of(recordatorio1, recordatorio2));
+        when(emailService.enviarRecordatorioProximo(any(), any(), any(), any(), any())).thenReturn(true);
 
         scheduler.notificarRecordatoriosProximos();
 
@@ -79,6 +82,12 @@ class RecordatorioNotificacionSchedulerTest {
         assertTrue(recordatorio2.isNotificadoProximidad());
         verify(recordatorioRepository).save(recordatorio1);
         verify(recordatorioRepository).save(recordatorio2);
+
+        // RNF12 — cada envío queda auditado como enviado, sin autor porque lo dispara el sistema.
+        verify(auditoriaService).registrarNotificacion("RECORDATORIOS", null, "RECORDATORIO_PROXIMO",
+                "REC-2026-000001", responsable, true, null);
+        verify(auditoriaService).registrarNotificacion("RECORDATORIOS", null, "RECORDATORIO_PROXIMO",
+                "REC-2026-000002", responsable, true, null);
     }
 
     @Test
@@ -92,6 +101,7 @@ class RecordatorioNotificacionSchedulerTest {
 
         verify(emailService, never()).enviarRecordatorioProximo(any(), any(), any(), any(), any());
         verify(recordatorioRepository, never()).save(any());
+        verifyNoInteractions(auditoriaService);
     }
 
     @Test
@@ -111,5 +121,42 @@ class RecordatorioNotificacionSchedulerTest {
         // El segundo sí se procesa con normalidad.
         assertTrue(recordatorio2.isNotificadoProximidad());
         verify(recordatorioRepository).save(recordatorio2);
+
+        // El fallo inesperado queda auditado como error, con el mensaje de la excepción como motivo.
+        verify(auditoriaService).registrarNotificacion("RECORDATORIOS", null, "RECORDATORIO_PROXIMO",
+                "REC-2026-000001", responsable, false, "Responsable con relación rota");
+    }
+
+    @Test
+    @DisplayName("Correo rechazado - audita el error y marca igual notificadoProximidad")
+    void notificarRecordatoriosProximos_CorreoRechazado_AuditaErrorYMarca() {
+        when(recordatorioRepository.findByEstadoAndNotificadoProximidadFalseAndFechaHoraBetween(
+                eq(EstadoLogico.ACTIVO), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of(recordatorio1));
+        when(emailService.enviarRecordatorioProximo(any(), any(), any(), any(), any())).thenReturn(false);
+
+        scheduler.notificarRecordatoriosProximos();
+
+        // No se reintenta cada hora un envío que falla: se marca, y el fallo queda en la auditoría.
+        assertTrue(recordatorio1.isNotificadoProximidad());
+        verify(recordatorioRepository).save(recordatorio1);
+        verify(auditoriaService).registrarNotificacion("RECORDATORIOS", null, "RECORDATORIO_PROXIMO",
+                "REC-2026-000001", responsable, false, "El servicio de correo no aceptó el envío");
+    }
+
+    @Test
+    @DisplayName("Fallo al auditar no interrumpe la corrida del resto")
+    void notificarRecordatoriosProximos_FalloAlAuditar_ContinuaConLosDemas() {
+        when(recordatorioRepository.findByEstadoAndNotificadoProximidadFalseAndFechaHoraBetween(
+                eq(EstadoLogico.ACTIVO), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of(recordatorio1, recordatorio2));
+        when(emailService.enviarRecordatorioProximo(any(), any(), any(), any(), any())).thenReturn(true);
+        doThrow(new RuntimeException("BD caída"))
+                .when(auditoriaService).registrarNotificacion(any(), any(), any(), eq("REC-2026-000001"), any(), anyBoolean(), any());
+
+        assertDoesNotThrow(() -> scheduler.notificarRecordatoriosProximos());
+
+        verify(emailService).enviarRecordatorioProximo(any(), any(), eq("REC-2026-000002"), any(), any());
+        verify(auditoriaService).registrarNotificacion(any(), any(), any(), eq("REC-2026-000002"), any(), eq(true), any());
     }
 }

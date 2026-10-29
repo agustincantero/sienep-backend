@@ -45,6 +45,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -59,6 +60,7 @@ class InstanciaComunServiceTest {
     @Mock private InstanciaIdGenerator instanciaIdGenerator;
     @Mock private InstanciaComunMapper instanciaComunMapper;
     @Mock private EmailService emailService;
+    @Mock private AuditoriaService auditoriaService;
     @Mock private RecordatorioService recordatorioService;
     @Mock private RecordatorioRepository recordatorioRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
@@ -191,6 +193,7 @@ class InstanciaComunServiceTest {
         when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
         when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
         when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+        when(emailService.enviarNotificacionInstancia(any(), any(), any(), any(), any())).thenReturn(true);
 
         instanciaComunService.crear(requestDTO);
 
@@ -201,6 +204,9 @@ class InstanciaComunServiceTest {
                 eq("Reunión de seguimiento"),
                 any()
         );
+        // RNF12 — el envío queda auditado con el funcionario creador como autor.
+        verify(auditoriaService).registrarNotificacion(
+                "INSTANCIAS", 2, "INSTANCIA_CREADA", "INST-2026-000001", funcionario, true, null);
     }
 
     @Test
@@ -221,6 +227,46 @@ class InstanciaComunServiceTest {
 
         assertNotNull(resultado);
         verify(instanciaComunRepository).save(any(InstanciaComun.class));
+        verify(auditoriaService).registrarNotificacion(
+                "INSTANCIAS", 2, "INSTANCIA_CREADA", "INST-2026-000001", funcionario, false, "SMTP no disponible");
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Correo rechazado queda auditado como error (RF15, RNF12)")
+    void crear_CorreoRechazado_AuditaError() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+        when(emailService.enviarNotificacionInstancia(any(), any(), any(), any(), any())).thenReturn(false);
+
+        instanciaComunService.crear(requestDTO);
+
+        verify(auditoriaService).registrarNotificacion(
+                "INSTANCIAS", 2, "INSTANCIA_CREADA", "INST-2026-000001", funcionario,
+                false, "El servicio de correo no aceptó el envío");
+    }
+
+    @Test
+    @DisplayName("Crear instancia común - Fallo al auditar la notificación no revierte la instancia (RNF12)")
+    void crear_FalloAlAuditar_NoRollback() {
+        mockSecurityContext(2);
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudiante));
+        when(funcionarioRepository.findById(2)).thenReturn(Optional.of(funcionario));
+        when(categoriaInstanciaRepository.findById(1)).thenReturn(Optional.of(categoria));
+        when(instanciaIdGenerator.generarIdNeg()).thenReturn("INST-2026-000001");
+        when(instanciaComunRepository.save(any(InstanciaComun.class))).thenReturn(instancia);
+        when(instanciaComunMapper.toDto(instancia)).thenReturn(responseDTO);
+        doThrow(new RuntimeException("BD caída"))
+                .when(auditoriaService).registrarNotificacion(any(), any(), any(), any(), any(), anyBoolean(), any());
+
+        InstanciaComunResponseDTO resultado = assertDoesNotThrow(
+                () -> instanciaComunService.crear(requestDTO));
+
+        assertNotNull(resultado);
     }
 
     @Test
