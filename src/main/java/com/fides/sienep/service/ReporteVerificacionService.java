@@ -5,6 +5,7 @@ import com.fides.sienep.model.ReporteGenerado;
 import com.fides.sienep.repository.ReporteGeneradoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,7 +22,6 @@ import java.util.Optional;
 public class ReporteVerificacionService {
 
     private final ReporteGeneradoRepository reporteGeneradoRepository;
-    private final ReporteValidacionRateLimiter reporteValidacionRateLimiter;
 
     @Transactional
     public void registrarGeneracion(byte[] pdfBytes) {
@@ -29,13 +29,9 @@ public class ReporteVerificacionService {
         reporteGeneradoRepository.save(new ReporteGenerado(hash));
     }
 
+    @PreAuthorize("hasAuthority('VER_REPORTES')")
     @Transactional(readOnly = true)
-    public ReporteValidacionResponseDTO validar(MultipartFile archivo, String ip) {
-        if (!reporteValidacionRateLimiter.registrarIntento(ip)) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Demasiadas validaciones desde esta IP. Intenta nuevamente más tarde.");
-        }
-
+    public ReporteValidacionResponseDTO validar(MultipartFile archivo) {
         if (archivo == null || archivo.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe adjuntar un archivo PDF");
         }

@@ -49,8 +49,8 @@ public class ReporteResponseDTO {
     @Schema(description = "IND-04. Instancias por canal y mes, con el peso de cada canal dentro del mes")
     private List<InstanciasCanalMes> instanciasPorCanal;
 
-    @Schema(description = "IND-05. Incidencias por lugar y mes")
-    private List<IncidenciasLugarMes> incidenciasPorLugar;
+    @Schema(description = "IND-05. Incidencias por tipo de espacio y mes (sin el detalle por lugar)")
+    private List<IncidenciasEspacioMes> incidenciasPorLugar;
 
     @Schema(description = "IND-06. Incidencias por día de la semana y franja horaria, por mes")
     private List<IncidenciasDiaFranja> incidenciasPorDiaFranja;
@@ -92,11 +92,10 @@ public class ReporteResponseDTO {
 
     @Getter
     @AllArgsConstructor
-    public static class IncidenciasLugarMes {
+    public static class IncidenciasEspacioMes {
         private final LocalDate mes;
         private final String anioMes;
         private final String tipoEspacio;
-        private final String lugar;
         private final int incidencias;
     }
 

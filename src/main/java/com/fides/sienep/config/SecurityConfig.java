@@ -62,15 +62,14 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // OJO: JwtRequestFilter.esRutaPermitidaPendienteActivacion mantiene a
-                        // mano una lista de rutas parecida (las públicas /auth/** y
-                        // POST /reportes/validar, más cambiar la propia contraseña). Si se
-                        // cambian las rutas públicas de acá, actualizar también esa.
+                        // mano una lista de rutas parecida (las públicas /auth/**, más
+                        // cambiar la propia contraseña). Si se cambian las rutas públicas
+                        // de acá, actualizar también esa.
                         //
                         // /auth/me es el único /auth/* que exige token. Va ANTES del
                         // permitAll de abajo: gana el primer matcher que matchea.
                         .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reportes/validar").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",

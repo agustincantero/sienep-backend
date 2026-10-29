@@ -237,15 +237,14 @@ class JwtRequestFilterTest {
     }
 
     // El front puede adjuntar el Bearer a todo request: un usuario pendiente que vuelve a
-    // loguearse, pide "olvidé mi contraseña" o valida un reporte NO debe recibir un 403.
+    // loguearse o pide "olvidé mi contraseña" NO debe recibir un 403.
     @Test
-    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - Las rutas públicas de /auth y POST /reportes/validar continúan la cadena")
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - Las rutas públicas de /auth continúan la cadena")
     void pendienteActivacion_RutasPublicas_ContinuanLaCadena() throws Exception {
         assertRutaPermitidaPendienteActivacion("POST", "/auth/login");
         assertRutaPermitidaPendienteActivacion("POST", "/auth/google");
         assertRutaPermitidaPendienteActivacion("POST", "/auth/forgot-password");
         assertRutaPermitidaPendienteActivacion("POST", "/auth/reset-password");
-        assertRutaPermitidaPendienteActivacion("POST", "/reportes/validar");
     }
 
     @Test
@@ -255,6 +254,22 @@ class JwtRequestFilterTest {
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(request.getMethod()).thenReturn("GET");
         when(request.getRequestURI()).thenReturn("/authorities");
+        when(userDetailsService.loadUserByUsername("2"))
+                .thenReturn(userDetails("2", null, EstadoLogico.PENDIENTE_DE_ACTIVACION));
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_FORBIDDEN), any());
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    @DisplayName("Usuario PENDIENTE_DE_ACTIVACION - POST /reportes/validar ya no es público y responde 403")
+    void pendienteActivacion_ValidarReporte_Responde403() throws Exception {
+        String token = tokenValido("2");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getRequestURI()).thenReturn("/reportes/validar");
         when(userDetailsService.loadUserByUsername("2"))
                 .thenReturn(userDetails("2", null, EstadoLogico.PENDIENTE_DE_ACTIVACION));
 

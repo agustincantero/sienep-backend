@@ -27,17 +27,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ReporteVerificacionServiceTest {
 
-    private static final String IP = "190.64.20.10";
 
     @Mock private ReporteGeneradoRepository reporteGeneradoRepository;
-    @Mock private ReporteValidacionRateLimiter reporteValidacionRateLimiter;
 
     @InjectMocks
     private ReporteVerificacionService reporteVerificacionService;
 
     @BeforeEach
     void setUp() {
-        lenient().when(reporteValidacionRateLimiter.registrarIntento(any())).thenReturn(true);
     }
 
     @Test
@@ -63,7 +60,7 @@ class ReporteVerificacionServiceTest {
         when(reporteGeneradoRepository.findByHashSha256(hashEsperado(contenido)))
                 .thenReturn(Optional.of(registro));
 
-        ReporteValidacionResponseDTO resultado = reporteVerificacionService.validar(archivo, IP);
+        ReporteValidacionResponseDTO resultado = reporteVerificacionService.validar(archivo);
 
         assertTrue(resultado.isAutentico());
     }
@@ -76,7 +73,7 @@ class ReporteVerificacionServiceTest {
 
         when(reporteGeneradoRepository.findByHashSha256(any())).thenReturn(Optional.empty());
 
-        ReporteValidacionResponseDTO resultado = reporteVerificacionService.validar(archivo, IP);
+        ReporteValidacionResponseDTO resultado = reporteVerificacionService.validar(archivo);
 
         assertFalse(resultado.isAutentico());
     }
@@ -86,18 +83,7 @@ class ReporteVerificacionServiceTest {
     void validar_archivoVacio_lanzaExcepcion() {
         MultipartFile archivoVacio = new MockMultipartFile("archivo", "vacio.pdf", "application/pdf", new byte[0]);
 
-        assertThrows(ResponseStatusException.class, () -> reporteVerificacionService.validar(archivoVacio, IP));
-        verifyNoInteractions(reporteGeneradoRepository);
-    }
-
-    @Test
-    @DisplayName("validar rechaza con 429 cuando se supera el límite de intentos por IP")
-    void validar_limiteDeIpExcedido_lanzaExcepcion() {
-        MultipartFile archivo = new MockMultipartFile(
-                "archivo", "reporte.pdf", "application/pdf", "contenido".getBytes(StandardCharsets.UTF_8));
-        when(reporteValidacionRateLimiter.registrarIntento(IP)).thenReturn(false);
-
-        assertThrows(ResponseStatusException.class, () -> reporteVerificacionService.validar(archivo, IP));
+        assertThrows(ResponseStatusException.class, () -> reporteVerificacionService.validar(archivoVacio));
         verifyNoInteractions(reporteGeneradoRepository);
     }
 

@@ -106,7 +106,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     // Whitelist para un usuario PENDIENTE_DE_ACTIVACION: todo /auth/** (ver su identidad,
     // cerrar sesión, y también las rutas públicas de login y recuperación de contraseña:
     // este filtro corre para cualquier request con un token válido, y el frontend puede
-    // adjuntar el Bearer a todo), el POST público /reportes/validar, y cambiar su propia
+    // adjuntar el Bearer a todo), y cambiar su propia
     // contraseña (que es lo único que lo saca de este estado, en
     // FuncionarioService/EstudianteService.cambiarContrasenia()).
     // Nota: el reset admin (POST .../contrasenia, distinto endpoint que comparte el
@@ -123,9 +123,6 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         if (path.startsWith("/auth/")) {
-            return true;
-        }
-        if ("POST".equals(metodo) && "/reportes/validar".equals(path)) {
             return true;
         }
         return "PATCH".equals(metodo) && path.matches(PATRON_CAMBIO_CONTRASENIA);

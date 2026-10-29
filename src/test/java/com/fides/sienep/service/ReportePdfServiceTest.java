@@ -4,7 +4,7 @@ import com.fides.sienep.dto.ReporteResponseDTO;
 import com.fides.sienep.dto.ReporteResponseDTO.EvolucionMensual;
 import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasDiaFranja;
 import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasInvolucradosMes;
-import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasLugarMes;
+import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasEspacioMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCanalMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCategoriaMes;
 import com.itextpdf.text.pdf.PdfReader;
@@ -57,7 +57,7 @@ class ReportePdfServiceTest {
                 .instanciasPorCanal(List.of(
                         new InstanciasCanalMes(MARZO, "2026-03", "Presencial", "Presencial", 5, new BigDecimal("100.0"))))
                 .incidenciasPorLugar(List.of(
-                        new IncidenciasLugarMes(MARZO, "2026-03", "Aulas", "Aula 1", 1)))
+                        new IncidenciasEspacioMes(MARZO, "2026-03", "Aulas", 1)))
                 .incidenciasPorDiaFranja(List.of(
                         new IncidenciasDiaFranja(MARZO, "2026-03", 1, "Lunes", "Mañana", 1)))
                 .incidenciasInvolucrados(List.of(
@@ -114,8 +114,8 @@ class ReportePdfServiceTest {
     @Test
     @DisplayName("Generar PDF - Muchas filas continúan en más páginas sin romper")
     void generarPdf_MuchasFilas_NoRompe() {
-        List<IncidenciasLugarMes> filas = java.util.stream.IntStream.range(0, 300)
-                .mapToObj(i -> new IncidenciasLugarMes(MARZO, "2026-03", "Aulas", "Aula " + i, 1))
+        List<IncidenciasEspacioMes> filas = java.util.stream.IntStream.range(0, 300)
+                .mapToObj(i -> new IncidenciasEspacioMes(MARZO, "2026-03", "Aulas", 1))
                 .toList();
         ReporteResponseDTO reporte = reporteBaseBuilder().incidenciasPorLugar(filas).build();
 

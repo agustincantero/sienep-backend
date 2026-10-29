@@ -8,10 +8,8 @@ import com.fides.sienep.service.ReporteVerificacionService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,11 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // P1 de la auditoría — mismo criterio que CarreraControllerTest (ver ese archivo
-// y AbstractControllerTest para el porqué del diseño). exportarPdf tiene
-// @PreAuthorize a nivel de CONTROLLER (única excepción del proyecto, ver
-// auditoría sección 1) — igual no se ejerce acá porque SecurityConfig
-// (@EnableMethodSecurity) no se carga en este slice; probarlo de verdad
-// requeriría el patrón @SpringBootTest de los tests de comentarios confidenciales.
+// y AbstractControllerTest para el porqué del diseño).
 @WebMvcTest(ReporteController.class)
 class ReporteControllerTest extends AbstractControllerTest {
 
@@ -88,23 +82,11 @@ class ReporteControllerTest extends AbstractControllerTest {
     void validar_ArchivoValido_Responde200() throws Exception {
         MockMultipartFile archivo = new MockMultipartFile(
                 "archivo", "reporte.pdf", "application/pdf", "contenido".getBytes());
-        when(reporteVerificacionService.validar(any(), any()))
+        when(reporteVerificacionService.validar(any()))
                 .thenReturn(ReporteValidacionResponseDTO.builder().autentico(true).build());
 
         mockMvc.perform(multipart("/reportes/validar").file(archivo))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.autentico").value(true));
-    }
-
-    @Test
-    @DisplayName("Validar - Demasiadas validaciones desde la IP responde 429 (propagado desde el service)")
-    void validar_LimiteExcedido_Responde429() throws Exception {
-        MockMultipartFile archivo = new MockMultipartFile(
-                "archivo", "reporte.pdf", "application/pdf", "contenido".getBytes());
-        when(reporteVerificacionService.validar(any(), any()))
-                .thenThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Demasiadas validaciones"));
-
-        mockMvc.perform(multipart("/reportes/validar").file(archivo))
-                .andExpect(status().isTooManyRequests());
     }
 }

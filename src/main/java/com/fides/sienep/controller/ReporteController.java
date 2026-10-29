@@ -8,13 +8,11 @@ import com.fides.sienep.service.ReporteVerificacionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,7 +53,6 @@ public class ReporteController {
     }
 
     @GetMapping("/pdf")
-    @PreAuthorize("hasAuthority('EXPORTAR_REPORTES')")
     @Operation(
             summary = "Exportar reporte en PDF",
             description = "Genera y descarga en PDF el mismo reporte de GET /reportes. " +
@@ -85,15 +82,16 @@ public class ReporteController {
     @PostMapping(value = "/validar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Validar autenticidad de un reporte PDF",
-            description = "Endpoint público (no requiere autenticación). Sube un PDF previamente exportado " +
+            description = "Requiere autenticación y el permiso VER_REPORTES. Sube un PDF previamente exportado " +
                     "desde SIENEP y confirma si es auténtico — es decir, si fue generado por el sistema y " +
                     "no fue alterado desde entonces — comparando el hash SHA-256 del archivo subido contra " +
                     "el hash guardado al momento de exportarlo.")
     @ApiResponse(responseCode = "200", description = "Resultado de la validación (auténtico o no)")
     @ApiResponse(responseCode = "400", description = "No se adjuntó un archivo válido")
-    @ApiResponse(responseCode = "429", description = "Demasiadas validaciones desde esta IP, reintentar más tarde")
+    @ApiResponse(responseCode = "401", description = "No autenticado")
+    @ApiResponse(responseCode = "403", description = "Sin el permiso VER_REPORTES")
     public ResponseEntity<ReporteValidacionResponseDTO> validar(
-            @RequestParam("archivo") MultipartFile archivo, HttpServletRequest request) {
-        return ResponseEntity.ok(reporteVerificacionService.validar(archivo, request.getRemoteAddr()));
+            @RequestParam("archivo") MultipartFile archivo) {
+        return ResponseEntity.ok(reporteVerificacionService.validar(archivo));
     }
 }

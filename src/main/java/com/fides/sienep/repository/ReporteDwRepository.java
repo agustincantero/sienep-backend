@@ -3,7 +3,7 @@ package com.fides.sienep.repository;
 import com.fides.sienep.dto.ReporteResponseDTO.EvolucionMensual;
 import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasDiaFranja;
 import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasInvolucradosMes;
-import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasLugarMes;
+import com.fides.sienep.dto.ReporteResponseDTO.IncidenciasEspacioMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCanalMes;
 import com.fides.sienep.dto.ReporteResponseDTO.InstanciasCategoriaMes;
 import com.fides.sienep.config.DwJdbc;
@@ -56,12 +56,12 @@ public class ReporteDwRepository {
                         rs.getBigDecimal("porcentaje_del_mes")));
     }
 
-    public List<IncidenciasLugarMes> incidenciasPorLugar(LocalDate desde, LocalDate hasta) {
-        return consultar("SELECT mes, anio_mes, tipo_espacio, lugar, incidencias " +
-                        "FROM datawarehouse.v_incidencias_lugar_mes", "mes, tipo_espacio, lugar",
+    public List<IncidenciasEspacioMes> incidenciasPorLugar(LocalDate desde, LocalDate hasta) {
+        return consultar("SELECT mes, anio_mes, tipo_espacio, incidencias " +
+                        "FROM datawarehouse.v_incidencias_lugar_mes", "mes, tipo_espacio",
                 desde, hasta,
-                (rs, i) -> new IncidenciasLugarMes(rs.getObject("mes", LocalDate.class), rs.getString("anio_mes"),
-                        rs.getString("tipo_espacio"), rs.getString("lugar"), rs.getInt("incidencias")));
+                (rs, i) -> new IncidenciasEspacioMes(rs.getObject("mes", LocalDate.class), rs.getString("anio_mes"),
+                        rs.getString("tipo_espacio"), rs.getInt("incidencias")));
     }
 
     public List<IncidenciasDiaFranja> incidenciasPorDiaFranja(LocalDate desde, LocalDate hasta) {

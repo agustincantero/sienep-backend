@@ -20,6 +20,7 @@ import com.itextpdf.text.pdf.PdfPageEventHelper;
 import com.itextpdf.text.pdf.PdfTemplate;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -90,6 +91,7 @@ public class ReportePdfService {
         }
     }
 
+    @PreAuthorize("hasAuthority('EXPORTAR_REPORTES')")
     public byte[] generarPdf(ReporteResponseDTO reporte) {
         try {
             String periodo = textoPeriodo(reporte);
@@ -192,11 +194,11 @@ public class ReportePdfService {
                 reporte.getInstanciasPorCanal(),
                 f -> new String[]{f.getAnioMes(), f.getCanal(), f.getModalidad(), String.valueOf(f.getInstancias()), porcentaje(f.getPorcentajeDelMes())});
 
-        agregarTablaIndicador(doc, "IND-05", "Incidencias por lugar",
-                new String[]{"Mes", "Tipo de espacio", "Lugar", "Incidencias"},
-                new float[]{1f, 1.8f, 2f, 1f},
+        agregarTablaIndicador(doc, "IND-05", "Incidencias por tipo de espacio",
+                new String[]{"Mes", "Tipo de espacio", "Incidencias"},
+                new float[]{1f, 2f, 1f},
                 reporte.getIncidenciasPorLugar(),
-                f -> new String[]{f.getAnioMes(), f.getTipoEspacio(), f.getLugar(), String.valueOf(f.getIncidencias())});
+                f -> new String[]{f.getAnioMes(), f.getTipoEspacio(), String.valueOf(f.getIncidencias())});
 
         agregarTablaIndicador(doc, "IND-06", "Incidencias por día de la semana y franja horaria",
                 new String[]{"Mes", "Día", "Franja", "Incidencias"},

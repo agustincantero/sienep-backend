@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 // (y nunca para emails inexistentes) sería en sí mismo un oráculo de enumeración.
 //
 // Limitación conocida y aceptada para el alcance del proyecto (mismo criterio que
-// LoginIpRateLimiter/ReporteValidacionRateLimiter): el store es en memoria del
+// LoginIpRateLimiter): el store es en memoria del
 // proceso y no se comparte entre instancias si el backend llegara a escalar
 // horizontalmente.
 @Slf4j
