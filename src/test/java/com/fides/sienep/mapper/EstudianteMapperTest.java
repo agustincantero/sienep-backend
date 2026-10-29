@@ -5,6 +5,7 @@ import com.fides.sienep.dto.EstudianteResumenDTO;
 import com.fides.sienep.dto.MiPerfilEstudianteDTO;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.model.Estudiante;
+import com.fides.sienep.model.Grupo;
 import com.fides.sienep.model.Telefono;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -84,5 +85,24 @@ class EstudianteMapperTest {
         assertEquals(List.of("091555444"), mapper.toMiPerfilDto(estudiante).getTelefonos());
         assertEquals(List.of("091555444"), mapper.toDto(estudiante).getTelefonos());
         assertEquals(List.of("091555444"), mapper.toResumenDto(estudiante).getTelefonos());
+    }
+
+    @Test
+    @DisplayName("Grupos - La ficha devuelve los ids aunque dos grupos de distintas carreras se llamen igual")
+    void toDto_GruposConMismoNombre_DevuelveIdsDistintos() {
+        Estudiante estudiante = estudiante(null);
+        estudiante.getGrupos().add(Grupo.builder().idGrupo(2).nomGrupo("Grupo B").build());
+        estudiante.getGrupos().add(Grupo.builder().idGrupo(5).nomGrupo("Grupo B").build());
+
+        EstudianteResponseDTO dto = mapper.toDto(estudiante);
+
+        assertEquals(List.of("Grupo B", "Grupo B"), dto.getGrupos());
+        assertEquals(List.of(2, 5), dto.getIdGrupos());
+    }
+
+    @Test
+    @DisplayName("Grupos - Sin grupos devuelve la lista de ids vacía, no null")
+    void toDto_SinGrupos_IdsVacios() {
+        assertEquals(List.of(), mapper.toDto(estudiante(null)).getIdGrupos());
     }
 }
