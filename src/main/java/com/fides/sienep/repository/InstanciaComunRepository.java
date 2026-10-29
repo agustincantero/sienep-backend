@@ -65,30 +65,6 @@ public interface InstanciaComunRepository extends JpaRepository<InstanciaComun, 
     List<InstanciaComun> findByCategoriaAndEstado(@Param("idCategoria") int idCategoria,
                                                   @Param("estado") EstadoLogico estado);
 
-    // ── Queries para Reportes ─────────────────────────────────
-    @Query("SELECT ic FROM InstanciaComun ic " +
-            "WHERE ic.estudiante.idUsuario = :idEstudiante " +
-            "AND ic.estado = :estado " +
-            "AND ic.fechaHora BETWEEN :desde AND :hasta")
-    List<InstanciaComun> findByEstudianteYPeriodo(
-            @Param("idEstudiante") Integer idEstudiante,
-            @Param("estado") EstadoLogico estado,
-            @Param("desde") LocalDateTime desde,
-            @Param("hasta") LocalDateTime hasta);
-
-    // Versión "batch" de la anterior: evita llamar a findByEstudianteYPeriodo()
-    // una vez por cada estudiante dentro de un for (N+1). Con IN (:idsEstudiantes)
-    // se trae todo en una sola query y se agrupa en memoria por idEstudiante.
-    @Query("SELECT ic FROM InstanciaComun ic " +
-            "WHERE ic.estudiante.idUsuario IN :idsEstudiantes " +
-            "AND ic.estado = :estado " +
-            "AND ic.fechaHora BETWEEN :desde AND :hasta")
-    List<InstanciaComun> findByEstudiantesYPeriodo(
-            @Param("idsEstudiantes") List<Integer> idsEstudiantes,
-            @Param("estado") EstadoLogico estado,
-            @Param("desde") LocalDateTime desde,
-            @Param("hasta") LocalDateTime hasta);
-
     // RF06 — procesos abiertos antes de la baja de un estudiante: instancias activas agendadas a futuro.
     @Query("SELECT COUNT(i) FROM InstanciaComun i " +
             "WHERE i.estudiante.idUsuario = :idEstudiante AND i.estado = :estado AND i.fechaHora > :desde")

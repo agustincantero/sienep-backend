@@ -261,9 +261,9 @@ class InformeAdjuntoServiceTest {
         ArchivoDescargaDTO resultado = informeService.descargar(1);
 
         assertNotNull(resultado);
-        assertEquals("informe_2024.pdf", resultado.nombreDescarga());
-        assertEquals(MediaType.APPLICATION_PDF, resultado.contentType());
-        assertSame(recursoMock, resultado.recurso());
+        assertEquals("informe_2024.pdf", resultado.getNombreDescarga());
+        assertEquals(MediaType.APPLICATION_PDF, resultado.getContentType());
+        assertSame(recursoMock, resultado.getRecurso());
     }
 
     @Test
@@ -374,8 +374,8 @@ class InformeAdjuntoServiceTest {
 
         ArchivoDescargaDTO resultado = informeService.descargarMio(1);
 
-        assertSame(recursoMock, resultado.recurso());
-        assertEquals("informe_2024.pdf", resultado.nombreDescarga());
+        assertSame(recursoMock, resultado.getRecurso());
+        assertEquals("informe_2024.pdf", resultado.getNombreDescarga());
         SecurityContextHolder.clearContext();
     }
 

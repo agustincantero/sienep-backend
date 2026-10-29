@@ -92,11 +92,11 @@ public class InformeAdjuntoController {
     // extensión (FileStorageService) y nosniff impide que el navegador lo interprete como otra cosa.
     private ResponseEntity<Resource> respuestaDeDescarga(ArchivoDescargaDTO archivo, boolean inline) {
         return ResponseEntity.ok()
-                .contentType(archivo.contentType())
+                .contentType(archivo.getContentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        (inline ? "inline" : "attachment") + "; filename=\"" + archivo.nombreDescarga() + "\"")
+                        (inline ? "inline" : "attachment") + "; filename=\"" + archivo.getNombreDescarga() + "\"")
                 .header("X-Content-Type-Options", "nosniff")
-                .body(archivo.recurso());
+                .body(archivo.getRecurso());
     }
 
     @DeleteMapping("/{id}")

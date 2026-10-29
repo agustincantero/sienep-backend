@@ -1,16 +1,22 @@
 package com.fides.sienep.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 // RF06 — lo que conviene revisar antes de dar de baja a un estudiante: si hay algo, la baja pide confirmación.
+@Getter
+@AllArgsConstructor
 @Schema(description = "Procesos abiertos de un estudiante, a revisar antes de darlo de baja")
-public record ProcesosAbiertosDTO(
-        @Schema(description = "Instancias activas agendadas a futuro", example = "2")
-        long instanciasFuturas,
-        @Schema(description = "Recordatorios activos, no cumplidos y desde hoy en adelante", example = "1")
-        long recordatoriosPendientes) {
+public class ProcesosAbiertosDTO {
 
-    // No viaja en el JSON (un record solo serializa sus componentes): el cliente lo deduce de los dos conteos.
+    @Schema(description = "Instancias activas agendadas a futuro", example = "2")
+    private final long instanciasFuturas;
+
+    @Schema(description = "Recordatorios activos, no cumplidos y desde hoy en adelante", example = "1")
+    private final long recordatoriosPendientes;
+
+    // No viaja en el JSON (no es un getter de bean, no empieza con get ni is): el cliente lo deduce de los dos conteos.
     public boolean hayProcesosAbiertos() {
         return instanciasFuturas > 0 || recordatoriosPendientes > 0;
     }

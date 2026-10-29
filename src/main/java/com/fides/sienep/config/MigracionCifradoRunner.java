@@ -1,6 +1,8 @@
 package com.fides.sienep.config;
 
 import com.fides.sienep.security.CifradorDatosConfidenciales;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,13 @@ public class MigracionCifradoRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(MigracionCifradoRunner.class);
 
-    private record TablaConfidencial(String tabla, String columnaId, List<String> columnas, String triggerUpdatedAt) {
+    @Getter
+    @AllArgsConstructor
+    private static class TablaConfidencial {
+        private final String tabla;
+        private final String columnaId;
+        private final List<String> columnas;
+        private final String triggerUpdatedAt;
     }
 
     private static final List<TablaConfidencial> TABLAS = List.of(
@@ -55,37 +63,37 @@ public class MigracionCifradoRunner implements ApplicationRunner {
             try {
                 Integer cifradas = transaction.execute(status -> migrar(t));
                 if (cifradas != null && cifradas > 0) {
-                    log.info("[AUDIT] Cifrado en reposo: {} filas de {} cifradas", cifradas, t.tabla());
+                    log.info("[AUDIT] Cifrado en reposo: {} filas de {} cifradas", cifradas, t.getTabla());
                 }
             } catch (RuntimeException e) {
                 // No se corta el arranque: los valores en claro se siguen leyendo bien y se
                 // reintenta en el próximo inicio.
-                log.error("[AUDIT] Cifrado en reposo: no se pudo migrar {}: {}", t.tabla(),
+                log.error("[AUDIT] Cifrado en reposo: no se pudo migrar {}: {}", t.getTabla(),
                         e instanceof DataAccessException dae ? causa(dae) : e.getMessage());
             }
         }
     }
 
     private int migrar(TablaConfidencial t) {
-        String tabla = "proyecto." + t.tabla();
-        String algunaEnClaro = t.columnas().stream()
+        String tabla = "proyecto." + t.getTabla();
+        String algunaEnClaro = t.getColumnas().stream()
                 .map(c -> "(" + c + " IS NOT NULL AND " + c + " NOT LIKE 'enc:v1:%')")
                 .reduce((a, b) -> a + " OR " + b).orElseThrow();
         List<Map<String, Object>> filas = jdbc.queryForList(
-                "SELECT " + t.columnaId() + ", " + String.join(", ", t.columnas())
+                "SELECT " + t.getColumnaId() + ", " + String.join(", ", t.getColumnas())
                         + " FROM " + tabla + " WHERE " + algunaEnClaro + " FOR UPDATE");
         if (filas.isEmpty()) return 0;
 
-        jdbc.execute("ALTER TABLE " + tabla + " DISABLE TRIGGER " + t.triggerUpdatedAt());
+        jdbc.execute("ALTER TABLE " + tabla + " DISABLE TRIGGER " + t.getTriggerUpdatedAt());
         String update = "UPDATE " + tabla + " SET "
-                + String.join(", ", t.columnas().stream().map(c -> c + " = ?").toList())
-                + " WHERE " + t.columnaId() + " = ?";
+                + String.join(", ", t.getColumnas().stream().map(c -> c + " = ?").toList())
+                + " WHERE " + t.getColumnaId() + " = ?";
         int cifradas = 0;
         for (Map<String, Object> fila : filas) {
-            Object id = fila.get(t.columnaId());
-            Object[] valores = new Object[t.columnas().size() + 1];
-            for (int i = 0; i < t.columnas().size(); i++) {
-                String valor = (String) fila.get(t.columnas().get(i));
+            Object id = fila.get(t.getColumnaId());
+            Object[] valores = new Object[t.getColumnas().size() + 1];
+            for (int i = 0; i < t.getColumnas().size(); i++) {
+                String valor = (String) fila.get(t.getColumnas().get(i));
                 valores[i] = cifrador.estaCifrado(valor) ? valor : cifrador.cifrar(valor);
             }
             valores[valores.length - 1] = id;
@@ -100,10 +108,10 @@ public class MigracionCifradoRunner implements ApplicationRunner {
             } catch (DataAccessException e) {
                 jdbc.execute("ROLLBACK TO SAVEPOINT cifrar_fila");
                 log.error("[AUDIT] Cifrado en reposo: no se pudo cifrar {} {}={}: {}",
-                        t.tabla(), t.columnaId(), id, causa(e));
+                        t.getTabla(), t.getColumnaId(), id, causa(e));
             }
         }
-        jdbc.execute("ALTER TABLE " + tabla + " ENABLE TRIGGER " + t.triggerUpdatedAt());
+        jdbc.execute("ALTER TABLE " + tabla + " ENABLE TRIGGER " + t.getTriggerUpdatedAt());
         return cifradas;
     }
 

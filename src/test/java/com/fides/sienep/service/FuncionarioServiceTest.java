@@ -730,9 +730,9 @@ class FuncionarioServiceTest {
 
         ArchivoDescargaDTO resultado = funcionarioService.obtenerFoto(1);
 
-        assertSame(recurso, resultado.recurso());
-        assertEquals(MediaType.IMAGE_PNG, resultado.contentType());
-        assertEquals("foto_1.png", resultado.nombreDescarga());
+        assertSame(recurso, resultado.getRecurso());
+        assertEquals(MediaType.IMAGE_PNG, resultado.getContentType());
+        assertEquals("foto_1.png", resultado.getNombreDescarga());
     }
 
     @Test

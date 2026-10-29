@@ -124,8 +124,8 @@ class EstudianteProcesosAbiertosIT {
                 "1", null, List.of(new SimpleGrantedAuthority("DESACTIVAR_ESTUDIANTE"))));
 
         ProcesosAbiertosDTO procesos = estudianteService.procesosAbiertos(estudiante.getIdUsuario());
-        assertEquals(2, procesos.instanciasFuturas());
-        assertEquals(2, procesos.recordatoriosPendientes());
+        assertEquals(2, procesos.getInstanciasFuturas());
+        assertEquals(2, procesos.getRecordatoriosPendientes());
 
         // La baja sin confirmar se frena (409) y el estudiante sigue activo.
         int id = estudiante.getIdUsuario();
@@ -136,7 +136,7 @@ class EstudianteProcesosAbiertosIT {
 
         // Al otro estudiante solo se le cuenta lo suyo: su instancia futura y el recordatorio de esa instancia.
         ProcesosAbiertosDTO delOtro = estudianteService.procesosAbiertos(otro.getIdUsuario());
-        assertEquals(1, delOtro.instanciasFuturas());
-        assertEquals(1, delOtro.recordatoriosPendientes());
+        assertEquals(1, delOtro.getInstanciasFuturas());
+        assertEquals(1, delOtro.getRecordatoriosPendientes());
     }
 }
