@@ -18,6 +18,7 @@ public interface EstudianteMapper {
 
     @Mapping(target = "telefonos", expression = "java(mapTelefonos(entidad.getTelefonos()))")
     @Mapping(target = "grupos",    expression = "java(mapGrupos(entidad.getGrupos()))")
+    @Mapping(target = "idGrupos",  expression = "java(mapIdGrupos(entidad.getGrupos()))")
     @Mapping(target = "createdAt", source = "estudianteCreatedAt")
     @Mapping(target = "updatedAt", source = "estudianteUpdatedAt")
     @Mapping(target = "urlFoto",   expression = "java(mapUrlFoto(entidad))")
@@ -63,5 +64,14 @@ public interface EstudianteMapper {
             nombres.add(g.getNomGrupo());
         }
         return nombres;
+    }
+
+    default List<Integer> mapIdGrupos(List<Grupo> grupos) {
+        if (grupos == null) return new ArrayList<>();
+        List<Integer> ids = new ArrayList<>();
+        for (Grupo g : grupos) {
+            ids.add(g.getIdGrupo());
+        }
+        return ids;
     }
 }

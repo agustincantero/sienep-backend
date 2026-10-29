@@ -46,6 +46,11 @@ public class EstudianteResponseDTO {
     @Schema(description = "Nombres de los grupos académicos del estudiante")
     private List<String> grupos;
 
+    @Schema(description = "Ids de los grupos académicos del estudiante, en el mismo orden que `grupos`. " +
+            "El formulario de edición los usa para marcar los grupos asignados: el nombre solo no alcanza, " +
+            "porque dos carreras pueden tener un grupo con el mismo nombre.")
+    private List<Integer> idGrupos;
+
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime createdAt;
 
