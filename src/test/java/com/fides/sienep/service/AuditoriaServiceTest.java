@@ -77,6 +77,69 @@ public class AuditoriaServiceTest {
     }
 
     @Test
+    @DisplayName("Registrar notificación - Sin autor (scheduler) guarda NOTIFICACION con el detalle del envío")
+    void registrarNotificacion_SinAutor_GuardaDetalle() {
+        Usuario destinatario = new Estudiante();
+        destinatario.setIdUsuario(2);
+        destinatario.setNombre("Juan");
+        destinatario.setApellido("García");
+        destinatario.setEmail("juan.garcia@utec.edu.uy");
+
+        auditoriaService.registrarNotificacion("recordatorios", null, "RECORDATORIO_PROXIMO",
+                "REC-2026-000001", destinatario, true, null);
+
+        ArgumentCaptor<Auditoria> captor = ArgumentCaptor.forClass(Auditoria.class);
+        verify(auditoriaRepository).save(captor.capture());
+        Auditoria guardada = captor.getValue();
+        assertEquals("RECORDATORIOS", guardada.getEntidad());
+        assertEquals(TipoAccion.NOTIFICACION, guardada.getAccion());
+        assertNull(guardada.getAutor());
+        assertNull(guardada.getValorAnterior());
+        assertEquals("EMAIL", guardada.getValorNuevo().get("canal").asText());
+        assertEquals("RECORDATORIO_PROXIMO", guardada.getValorNuevo().get("tipo").asText());
+        assertEquals("REC-2026-000001", guardada.getValorNuevo().get("id_negocio").asText());
+        assertEquals(2, guardada.getValorNuevo().get("id_destinatario").asInt());
+        assertEquals("Juan García", guardada.getValorNuevo().get("destinatario").asText());
+        assertEquals("ENVIADA", guardada.getValorNuevo().get("resultado").asText());
+        assertFalse(guardada.getValorNuevo().has("motivo"));
+        // RD01 — el email del destinatario no queda en la auditoría.
+        assertFalse(guardada.getValorNuevo().toString().contains("juan.garcia@utec.edu.uy"));
+        verifyNoInteractions(usuarioRepository);
+    }
+
+    @Test
+    @DisplayName("Registrar notificación - Con error guarda el resultado ERROR, el motivo y el autor")
+    void registrarNotificacion_ConError_GuardaMotivoYAutor() {
+        Usuario autor = new Estudiante();
+        autor.setIdUsuario(1);
+        autor.setNombre("Ana");
+        autor.setApellido("López");
+        when(usuarioRepository.findById(1)).thenReturn(Optional.of(autor));
+
+        auditoriaService.registrarNotificacion("INSTANCIAS", 1, "INSTANCIA_CREADA",
+                "INST-2026-000001", autor, false, "SMTP no disponible");
+
+        ArgumentCaptor<Auditoria> captor = ArgumentCaptor.forClass(Auditoria.class);
+        verify(auditoriaRepository).save(captor.capture());
+        Auditoria guardada = captor.getValue();
+        assertSame(autor, guardada.getAutor());
+        assertEquals("ERROR", guardada.getValorNuevo().get("resultado").asText());
+        assertEquals("SMTP no disponible", guardada.getValorNuevo().get("motivo").asText());
+    }
+
+    @Test
+    @DisplayName("Registrar notificación - Sin destinatario (relación rota) guarda igual el evento")
+    void registrarNotificacion_SinDestinatario_GuardaIgual() {
+        auditoriaService.registrarNotificacion("RECORDATORIOS", null, "RECORDATORIO_PROXIMO",
+                "REC-2026-000001", null, false, "NullPointerException");
+
+        ArgumentCaptor<Auditoria> captor = ArgumentCaptor.forClass(Auditoria.class);
+        verify(auditoriaRepository).save(captor.capture());
+        assertFalse(captor.getValue().getValorNuevo().has("id_destinatario"));
+        assertEquals("ERROR", captor.getValue().getValorNuevo().get("resultado").asText());
+    }
+
+    @Test
     @DisplayName("Listar auditorías paginadas con filtros - Éxito")
     void listarAuditorias_Exito() {
         Usuario autor = new Estudiante();

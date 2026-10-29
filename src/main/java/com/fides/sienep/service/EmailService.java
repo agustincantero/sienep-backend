@@ -188,8 +188,9 @@ public class EmailService {
     // RF15 — notificación del ID de negocio al funcionario creador de la instancia.
     // A diferencia de los flujos de contraseña, un fallo de envío NO debe interrumpir
     // la operación principal: la instancia ya fue persistida correctamente.
-    // Por eso este método registra el error como warn y no relanza la excepción.
-    public void enviarNotificacionInstancia(String destinatario, String nombreUsuario,
+    // Por eso este método registra el error como warn y no relanza la excepción. Devuelve si el
+    // correo salió, para que quien llama lo deje en la auditoría (RNF12).
+    public boolean enviarNotificacionInstancia(String destinatario, String nombreUsuario,
                                             String idNegInstancia, String tituloInstancia,
                                             LocalDateTime fechaHora) {
         try {
@@ -209,9 +210,11 @@ public class EmailService {
             ));
             enviarEmailBrevo(destinatario, "Nueva instancia registrada - " + idNegInstancia, texto, html);
             log.info("[AUDIT] Notificación de instancia {} enviada a {}", idNegInstancia, destinatario);
+            return true;
         } catch (Exception e) {
             log.warn("[AUDIT] No se pudo enviar notificación de instancia {} a {}: {}",
                     idNegInstancia, destinatario, e.getMessage());
+            return false;
         }
     }
 
@@ -253,7 +256,9 @@ public class EmailService {
     // que cualquier aviso de Calendar es un efecto lateral de Google (depende de que la sync
     // haya funcionado y de que el responsable tenga ese calendario agregado). RF22 y RF23 son
     // requerimientos separados en la especificación, no uno sustituto del otro.
-    public void enviarRecordatorioProximo(String destinatario, String nombreUsuario,
+    //
+    // Como RF15, no relanza: devuelve si el correo salió, para que el scheduler lo audite.
+    public boolean enviarRecordatorioProximo(String destinatario, String nombreUsuario,
                                           String idNegRecordatorio, String tituloRecordatorio,
                                           LocalDateTime fechaHora) {
         try {
@@ -273,9 +278,11 @@ public class EmailService {
             ));
             enviarEmailBrevo(destinatario, "Recordatorio próximo a vencer - " + idNegRecordatorio, texto, html);
             log.info("[AUDIT] Aviso de proximidad de recordatorio {} enviado a {}", idNegRecordatorio, destinatario);
+            return true;
         } catch (Exception e) {
             log.warn("[AUDIT] No se pudo enviar aviso de proximidad de recordatorio {} a {}: {}",
                     idNegRecordatorio, destinatario, e.getMessage());
+            return false;
         }
     }
 }
