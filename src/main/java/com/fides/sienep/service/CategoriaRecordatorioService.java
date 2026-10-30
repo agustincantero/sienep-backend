@@ -39,7 +39,8 @@ public class CategoriaRecordatorioService {
     private final CategoriaRecordatorioRepository categoriaRepository;
     private final CategoriaRecordatorioMapper mapper;
 
-    @PreAuthorize("hasAuthority('VER_CATEGORIAS_RECORDATORIO')")
+    // Quien crea o edita un recordatorio necesita el listado para elegir la categoría, aunque no tenga el permiso de administrar categorías.
+    @PreAuthorize("hasAnyAuthority('VER_CATEGORIAS_RECORDATORIO','VER_RECORDATORIOS','CREAR_RECORDATORIO','EDITAR_RECORDATORIO')")
     @Transactional(readOnly = true)
     @Cacheable("categoriasRecordatorio")
     public List<CategoriaRecordatorioResponseDTO> listar(String nombre, EstadoLogico estado) {

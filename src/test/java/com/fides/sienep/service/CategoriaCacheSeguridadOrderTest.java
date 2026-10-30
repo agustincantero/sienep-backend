@@ -1,10 +1,14 @@
 package com.fides.sienep.service;
 
 import com.fides.sienep.dto.CategoriaInstanciaResponseDTO;
+import com.fides.sienep.dto.CategoriaRecordatorioResponseDTO;
 import com.fides.sienep.mapper.CategoriaInstanciaMapper;
+import com.fides.sienep.mapper.CategoriaRecordatorioMapper;
 import com.fides.sienep.model.CategoriaInstancia;
+import com.fides.sienep.model.CategoriaRecordatorio;
 import com.fides.sienep.model.EstadoLogico;
 import com.fides.sienep.repository.CategoriaInstanciaRepository;
+import com.fides.sienep.repository.CategoriaRecordatorioRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -52,11 +56,23 @@ class CategoriaCacheSeguridadOrderTest {
     @MockitoBean
     private CategoriaInstanciaMapper categoriaMapper;
 
+    @Autowired
+    private CategoriaRecordatorioService categoriaRecordatorioService;
+
+    @MockitoBean
+    private CategoriaRecordatorioRepository categoriaRecordatorioRepository;
+
+    @MockitoBean
+    private CategoriaRecordatorioMapper categoriaRecordatorioMapper;
+
     @AfterEach
     void limpiarContextoYCache() {
         SecurityContextHolder.clearContext();
         if (cacheManager.getCache("categoriasInstancia") != null) {
             cacheManager.getCache("categoriasInstancia").clear();
+        }
+        if (cacheManager.getCache("categoriasRecordatorio") != null) {
+            cacheManager.getCache("categoriasRecordatorio").clear();
         }
     }
 
@@ -118,6 +134,37 @@ class CategoriaCacheSeguridadOrderTest {
         autenticarCon("CREAR_INSTANCIA");
 
         assertThrows(AccessDeniedException.class, () -> categoriaInstanciaService.obtenerPorId(1));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"VER_CATEGORIAS_RECORDATORIO", "VER_RECORDATORIOS", "CREAR_RECORDATORIO", "EDITAR_RECORDATORIO"})
+    void cualquieraDeLosPermisosDeRecordatorio_PuedeListarLasCategorias(String permiso) {
+        CategoriaRecordatorio categoria = new CategoriaRecordatorio();
+        categoria.setIdCategoria(1);
+        categoria.setEstado(EstadoLogico.ACTIVO);
+        CategoriaRecordatorioResponseDTO dto = new CategoriaRecordatorioResponseDTO();
+        dto.setIdCategoria(1);
+        when(categoriaRecordatorioRepository.buscarConFiltros(null, EstadoLogico.ACTIVO)).thenReturn(List.of(categoria));
+        when(categoriaRecordatorioMapper.toDtoList(List.of(categoria))).thenReturn(List.of(dto));
+
+        autenticarCon(permiso);
+
+        assertEquals(1, categoriaRecordatorioService.listar(null, null).size());
+    }
+
+    @Test
+    void sinNingunPermisoDeRecordatorio_NoPuedeListarLasCategorias() {
+        autenticarCon("VER_INSTANCIAS");
+
+        assertThrows(AccessDeniedException.class, () -> categoriaRecordatorioService.listar(null, null));
+    }
+
+    @Test
+    void obtenerPorIdDeRecordatorio_SigueExigiendoElPermisoDeCategorias() {
+        // El permiso ampliado es solo para listar: el detalle de una categoría sigue siendo de quien las administra.
+        autenticarCon("CREAR_RECORDATORIO");
+
+        assertThrows(AccessDeniedException.class, () -> categoriaRecordatorioService.obtenerPorId(1));
     }
 
     private void autenticarCon(String permiso) {
