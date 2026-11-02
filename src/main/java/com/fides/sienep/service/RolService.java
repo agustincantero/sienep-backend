@@ -61,7 +61,8 @@ public class RolService {
     }
 
     // --- Métodos CRUD ---
-    @PreAuthorize("hasAuthority('VER_ROLES')")
+    // Quien ve, crea o edita funcionarios necesita el listado para elegir el rol y saber qué roles puede gestionar, aunque no tenga el permiso de administrar roles.
+    @PreAuthorize("hasAnyAuthority('VER_ROLES','VER_FUNCIONARIOS','CREAR_FUNCIONARIO','EDITAR_FUNCIONARIO')")
     @Transactional(readOnly = true)
     @Cacheable("roles")
     public List<RolResponseDTO> listar(EstadoLogico estado) {
