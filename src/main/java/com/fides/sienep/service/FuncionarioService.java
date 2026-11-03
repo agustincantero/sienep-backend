@@ -190,7 +190,7 @@ public class FuncionarioService {
 
         if (funcionario.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra inactivo");
-        }else if (id.equals(getIdUsuarioAutenticado())) {
+        }else if (id.toString().equals(getIdUsuarioAutenticado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No puede desactivar su propia cuenta.");
         }
         funcionario.setEstado(EstadoLogico.INACTIVO);
@@ -321,10 +321,10 @@ public class FuncionarioService {
         funcionarioRepository.save(funcionario);
         log.info("[AUDIT] Funcionario id={} cambió su contraseña", id);
     }
-    private Integer getIdUsuarioAutenticado() {
+    private String getIdUsuarioAutenticado() {
         Authentication auth = Objects.requireNonNull(
                 SecurityContextHolder.getContext().getAuthentication(),
                 "No hay usuario autenticado");
-        return Integer.parseInt(auth.getName());
+        return auth.getName();
     }
 }
