@@ -94,8 +94,8 @@ CREATE TABLE proyecto.usuarios (
     CONSTRAINT chk_nombre_apellido_not_empty
         CHECK (TRIM(nombre) <> '' AND TRIM(apellido) <> ''),
     CONSTRAINT chk_nombre_apellido_valido CHECK (
-        nombre   ~ '^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ''-]{1,50}$' AND
-        apellido ~ '^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ''-]{1,50}$'
+        nombre   ~ '^[A-Za-zÁÉÍÓÚáéíóúÑñÜüÇçÃã0-9 ''-]{1,50}$' AND
+        apellido ~ '^[A-Za-zÁÉÍÓÚáéíóúÑñÜüÇçÃã0-9 ''-]{1,50}$'
     ),
     CONSTRAINT chk_documento_valido CHECK (
         (pais_documento = 'URY' AND documento ~ '^[0-9]{6,8}$') OR
