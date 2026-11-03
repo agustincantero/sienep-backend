@@ -3,21 +3,16 @@ package com.fides.sienep.exception;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
-import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
-import org.springframework.http.HttpMethod;
 
 import java.util.Map;
 
@@ -120,14 +115,40 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals(HttpStatus.CONFLICT.value(), response.getBody().get("status"));
+        assertEquals("La operación no pudo completarse por un conflicto con datos existentes.",
+                response.getBody().get("message"));
+    }
+
+    @Test
+    @DisplayName("DataIntegrityViolationException por uk_documento_pais - El mensaje nombra el documento")
+    void handleDataIntegrityViolation_UkDocumentoPais_MensajeDeDocumento() {
+        DataIntegrityViolationException ex = new DataIntegrityViolationException(
+                "could not execute statement",
+                new RuntimeException("ERROR: duplicate key value violates unique constraint \"uk_documento_pais\""));
+
+        ResponseEntity<Map<String, Object>> response = handler.handleDataIntegrityViolation(ex);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("Ya hay un usuario registrado con ese documento.", response.getBody().get("message"));
+    }
+
+    @Test
+    @DisplayName("DataIntegrityViolationException por uk_email - El mensaje nombra el email")
+    void handleDataIntegrityViolation_UkEmail_MensajeDeEmail() {
+        DataIntegrityViolationException ex = new DataIntegrityViolationException(
+                "could not execute statement",
+                new RuntimeException("ERROR: duplicate key value violates unique constraint \"uk_email\""));
+
+        ResponseEntity<Map<String, Object>> response = handler.handleDataIntegrityViolation(ex);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("Ya existe un usuario con ese email.", response.getBody().get("message"));
     }
 
     @Test
     @DisplayName("NoResourceFoundException - Responde 404 en vez de 500")
     void handleNoResourceFound_Responde404() {
-        NoResourceFoundException ex = new NoResourceFoundException(HttpMethod.GET, "/api/ruta-inexistente", "api/ruta-inexistente");
-
-        ResponseEntity<Map<String, Object>> response = handler.handleNoResourceFound(ex);
+        ResponseEntity<Map<String, Object>> response = handler.handleNoResourceFound();
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND.value(), response.getBody().get("status"));
@@ -158,9 +179,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("HttpMediaTypeNotSupportedException - Responde 415 en vez de 500")
     void handleHttpMediaTypeNotSupported_Responde415() {
-        HttpMediaTypeNotSupportedException ex = new HttpMediaTypeNotSupportedException("Content-Type no soportado");
-
-        ResponseEntity<Map<String, Object>> response = handler.handleHttpMediaTypeNotSupported(ex);
+        ResponseEntity<Map<String, Object>> response = handler.handleHttpMediaTypeNotSupported();
 
         assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE, response.getStatusCode());
         assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), response.getBody().get("status"));
@@ -192,9 +211,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("InvalidDataAccessApiUsageException - Responde 400 en vez de 500 (ej. ?page= tan grande que desborda el offset)")
     void handleInvalidDataAccessApiUsage_Responde400() {
-        InvalidDataAccessApiUsageException ex = new InvalidDataAccessApiUsageException("Page offset exceeds Integer.MAX_VALUE");
-
-        ResponseEntity<Map<String, Object>> response = handler.handleInvalidDataAccessApiUsage(ex);
+        ResponseEntity<Map<String, Object>> response = handler.handleInvalidDataAccessApiUsage();
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.getBody().get("status"));
@@ -203,9 +220,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("MultipartException - Responde 400 en vez de 500 (ej. nombre de archivo con byte nulo)")
     void handleMultipartException_Responde400() {
-        MultipartException ex = new MultipartException("Failed to parse multipart servlet request");
-
-        ResponseEntity<Map<String, Object>> response = handler.handleMultipartException(ex);
+        ResponseEntity<Map<String, Object>> response = handler.handleMultipartException();
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.getBody().get("status"));

@@ -23,6 +23,7 @@ import com.fides.sienep.repository.GrupoRepository;
 import com.fides.sienep.repository.InstanciaComunRepository;
 import com.fides.sienep.repository.RecordatorioRepository;
 import com.fides.sienep.repository.RolRepository;
+import com.fides.sienep.repository.UsuarioRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -67,6 +68,9 @@ class EstudianteServiceTest {
 
     @Mock
     private EstudianteRepository estudianteRepository;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
 
     @Mock
     private GrupoRepository grupoRepository;
@@ -341,8 +345,8 @@ class EstudianteServiceTest {
     @DisplayName("Crear - Éxito")
     void crear_Exito() {
         EstudianteRequestDTO dto = buildDtoValido();
-        when(estudianteRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(estudianteRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
         when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(new Rol("ESTUDIANTE")));
@@ -361,8 +365,8 @@ class EstudianteServiceTest {
     @DisplayName("Crear - Éxito aunque falle el envío del email (RF05 no debe ser bloqueante)")
     void crear_Exito_AunqueFalleEmail() {
         EstudianteRequestDTO dto = buildDtoValido();
-        when(estudianteRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(estudianteRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
         when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(new Rol("ESTUDIANTE")));
@@ -382,13 +386,49 @@ class EstudianteServiceTest {
     @DisplayName("Crear - Documento duplicado → 409")
     void crear_DebeLanzar409_CuandoDocumentoYaExiste() {
         EstudianteRequestDTO dto = buildDtoValido();
-        when(estudianteRepository.existsByDocumento("12345678")).thenReturn(true);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(eq("12345678"), any())).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> estudianteService.crear(dto));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        // El front elige bajo qué campo mostrar el error buscando "documento" en el mensaje.
+        assertTrue(ex.getReason().toLowerCase().contains("documento"));
+        verify(usuarioRepository, never()).existsByEmailIgnoreCase(anyString());
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear - Documento y país de un funcionario → 409 (el chequeo es contra todos los usuarios)")
+    void crear_DebeLanzar409_CuandoDocumentoEsDeUnFuncionario() {
+        EstudianteRequestDTO dto = buildDtoValido();
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(dto.getDocumento(), dto.getPaisDocumento()))
+                .thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.crear(dto));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().toLowerCase().contains("documento"));
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear - Email existente con otras mayúsculas → 409 que nombra el email")
+    void crear_LanzaExcepcion_EmailDuplicadoConOtrasMayusculas() {
+        EstudianteRequestDTO dto = buildDtoValido();
+        dto.setEmail("Ana.Garcia@UTEC.edu.uy");
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase("Ana.Garcia@UTEC.edu.uy")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> estudianteService.crear(dto));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().toLowerCase().contains("email"));
         verify(estudianteRepository, never()).save(any());
     }
 
@@ -396,8 +436,8 @@ class EstudianteServiceTest {
     @DisplayName("Crear - Email duplicado → 409")
     void crear_LanzaExcepcion_EmailDuplicado() {
         EstudianteRequestDTO dto = buildDtoValido();
-        when(estudianteRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(estudianteRepository.existsByEmail(anyString())).thenReturn(true);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
@@ -418,8 +458,8 @@ class EstudianteServiceTest {
         dto.setEmail("ana.garcia@utec.edu.uy");
         dto.setFechaNacimiento(LocalDate.of(1998, 7, 20));
 
-        when(estudianteRepository.existsByDocumento("47520642")).thenReturn(false);
-        when(estudianteRepository.existsByEmail(dto.getEmail())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(eq("47520642"), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(dto.getEmail())).thenReturn(false);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
@@ -434,8 +474,8 @@ class EstudianteServiceTest {
     void crear_DebeLanzar400_CuandoEstudianteEsMenorDeEdad() {
         EstudianteRequestDTO dto = buildDtoValido();
         dto.setFechaNacimiento(LocalDate.now().minusYears(17));
-        when(estudianteRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(estudianteRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
@@ -478,7 +518,7 @@ class EstudianteServiceTest {
         dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
-        when(estudianteRepository.existsByEmailAndIdUsuarioNot("otro.estudiante@utec.edu.uy", 1)).thenReturn(true);
+        when(usuarioRepository.existsByEmailIgnoreCaseAndIdUsuarioNot("otro.estudiante@utec.edu.uy", 1)).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
