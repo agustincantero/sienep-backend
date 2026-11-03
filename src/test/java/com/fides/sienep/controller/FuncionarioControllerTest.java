@@ -1,5 +1,7 @@
 package com.fides.sienep.controller;
 
+import org.springframework.core.io.ByteArrayResource;
+import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.dto.FuncionarioRequestDTO;
 import com.fides.sienep.dto.FuncionarioResponseDTO;
 import com.fides.sienep.dto.FuncionarioUpdateDTO;
@@ -19,6 +21,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.allOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -155,5 +160,17 @@ class FuncionarioControllerTest extends AbstractControllerTest {
     void desactivar_Responde204() throws Exception {
         mockMvc.perform(delete("/funcionarios/{id}", 2))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("Ver foto - Un nombre con tildes viaja codificado en UTF-8")
+    void verFoto_NombreConTildes_ViajaCodificado() throws Exception {
+        when(funcionarioService.obtenerFoto(1)).thenReturn(new ArchivoDescargaDTO(
+                new ByteArrayResource("contenido".getBytes()), MediaType.IMAGE_PNG, "Foto de Martín.png"));
+
+        mockMvc.perform(get("/funcionarios/{id}/foto", 1))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        allOf(startsWith("inline;"), containsString("filename*=UTF-8''Foto%20de%20Mart%C3%ADn.png"))));
     }
 }

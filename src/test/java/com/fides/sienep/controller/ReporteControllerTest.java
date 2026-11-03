@@ -14,6 +14,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.allOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,7 +77,8 @@ class ReporteControllerTest extends AbstractControllerTest {
         mockMvc.perform(get("/reportes/pdf"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "application/pdf"))
-                .andExpect(header().exists("Content-Disposition"));
+                .andExpect(header().string("Content-Disposition",
+                        allOf(startsWith("attachment;"), containsString("filename*=UTF-8''reporte_sienep_"))));
     }
 
     @Test
