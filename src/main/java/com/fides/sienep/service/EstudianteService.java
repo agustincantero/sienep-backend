@@ -176,7 +176,8 @@ public class EstudianteService {
         }
 
         aplicarCambios(estudiante, dto);
-        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
+        // EDITAR_ESTUDIANTE no implica VER_BLOQUE_CONFIDENCIAL: la respuesta no puede traer lo que obtenerPorId() ocultaría.
+        return ocultarBloqueConfidencialSinPermiso(estudianteMapper.toDto(estudianteRepository.save(estudiante)));
     }
 
     // Devuelve MiPerfilEstudianteDTO (no EstudianteResponseDTO): la ficha completa incluye el bloque
@@ -393,10 +394,14 @@ public class EstudianteService {
         estudiante.setDepartamento(dto.getDepartamento());
         estudiante.setCalle(dto.getCalle());
         estudiante.setNroPuerta(dto.getNroPuerta());
-        estudiante.setInformacionSalud(dto.getInformacionSalud());
-        estudiante.setSistemaSalud(dto.getSistemaSalud());
         estudiante.setFechaNacimiento(dto.getFechaNacimiento());
-        estudiante.setMotivoDerivacion(dto.getMotivoDerivacion());
+        // Quien no tiene VER_BLOQUE_CONFIDENCIAL recibe estos campos en null (ver obtenerPorId) y el
+        // formulario los devuelve vacíos: aplicarlos borraría los datos reales sin que nadie lo note.
+        if (tienePermiso("VER_BLOQUE_CONFIDENCIAL")) {
+            estudiante.setInformacionSalud(dto.getInformacionSalud());
+            estudiante.setSistemaSalud(dto.getSistemaSalud());
+            estudiante.setMotivoDerivacion(dto.getMotivoDerivacion());
+        }
         asignarTelefonos(estudiante, dto.getTelefonos());
         asignarGrupos(estudiante, dto.getIdGrupos());
     }
