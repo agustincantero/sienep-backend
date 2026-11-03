@@ -190,7 +190,9 @@ public class FuncionarioService {
 
         if (funcionario.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra inactivo");
-        }else if (id.toString().equals(getIdUsuarioAutenticado())) {
+        }
+
+        if (id.toString().equals(getIdUsuarioAutenticado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No puede desactivar su propia cuenta.");
         }
         funcionario.setEstado(EstadoLogico.INACTIVO);
