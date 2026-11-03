@@ -33,7 +33,7 @@ import java.util.Map;
  * Interceptor global de excepciones para toda la API.
  * Se encarga de capturar excepciones lanzadas por los controladores o servicios
  * y transformarlas en respuestas JSON estandarizadas y limpias para el Frontend.
- * <p>
+ *
  * Captura:
  * - MethodArgumentNotValidException: Errores de validación de DTOs (ej: @NotBlank)
  * - HttpMessageNotReadableException: JSON mal formado o valores inválidos (ej: Enums)
@@ -90,7 +90,7 @@ public class GlobalExceptionHandler {
 
     // 2. Ataja errores de Jackson (JSON mal armado o Enums inválidos)
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable() {
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler {
     // 3B. Ataja archivos que superan spring.servlet.multipart.max-file-size / max-request-size
     // (se dispara al parsear el multipart, antes de llegar al Service)
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceeded() {
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
@@ -131,7 +131,7 @@ public class GlobalExceptionHandler {
 
     // 4. Ataja errores de autorización (Spring Security)
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
-    public ResponseEntity<Map<String, Object>> handleAccessDeniedException() {
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(RuntimeException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.FORBIDDEN.value());
@@ -171,8 +171,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 
-    // Si lo que se violó es una UNIQUE de usuarios, el mensaje nombra el campo para que el
-    // front lo marque (busca "documento" / "email" en el texto).
+    // Si lo que se violó es una UNIQUE de usuarios, el mensaje nombra el campo para que el front lo marque (busca "documento" / "email" en el texto).
     private static String mensajeDeConflicto(DataIntegrityViolationException ex) {
         String detalle = String.valueOf(ex.getMostSpecificCause().getMessage()).toLowerCase();
         if (detalle.contains("uk_documento_pais")) {
@@ -188,7 +187,7 @@ public class GlobalExceptionHandler {
     // @PathVariable/@RequestParam vacío que rompe el patrón de la ruta) — sin
     // este handler caía en el genérico de abajo y devolvía 500 en vez de 404.
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNoResourceFound() {
+    public ResponseEntity<Map<String, Object>> handleNoResourceFound(NoResourceFoundException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.NOT_FOUND.value());
@@ -230,7 +229,7 @@ public class GlobalExceptionHandler {
     // JSON, o pegarle a un endpoint multipart sin el Content-Type multipart) —
     // sin este handler caía en el genérico de abajo y devolvía 500 en vez de 415.
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<Map<String, Object>> handleHttpMediaTypeNotSupported() {
+    public ResponseEntity<Map<String, Object>> handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.UNSUPPORTED_MEDIA_TYPE.value());
@@ -270,7 +269,7 @@ public class GlobalExceptionHandler {
     // 13. Ataja un ?page= tan grande que el offset calculado desborda Integer —
     // sin este handler caía en el genérico de abajo y devolvía 500 en vez de 400.
     @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidDataAccessApiUsage() {
+    public ResponseEntity<Map<String, Object>> handleInvalidDataAccessApiUsage(InvalidDataAccessApiUsageException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
@@ -284,7 +283,7 @@ public class GlobalExceptionHandler {
     // que Tomcat rechaza) — sin este handler caía en el genérico de abajo y
     // devolvía 500 en vez de 400.
     @ExceptionHandler(MultipartException.class)
-    public ResponseEntity<Map<String, Object>> handleMultipartException() {
+    public ResponseEntity<Map<String, Object>> handleMultipartException(MultipartException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());

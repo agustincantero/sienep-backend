@@ -134,6 +134,14 @@ class FuncionarioServiceTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
+    // El subject del JWT es el idUsuario, y es lo que el servicio compara con el id a desactivar
+    private void mockAuthComoUsuario(String idUsuario) {
+        Authentication auth = mock(Authentication.class);
+        doReturn(new ArrayList<GrantedAuthority>()).when(auth).getAuthorities();
+        when(auth.getName()).thenReturn(idUsuario);
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
     // =========================================================
     // CREAR
     // =========================================================
@@ -288,6 +296,23 @@ class FuncionarioServiceTest {
     }
 
     @Test
+    @DisplayName("Crear funcionario - Rol inactivo → 422")
+    void crear_LanzaUnprocessable_RolInactivo() {
+        rolMock.setEstado(EstadoLogico.INACTIVO);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
+        when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.crear(requestDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("no está activo"));
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Crear funcionario - Rol no encontrado → 404")
     void crear_LanzaExcepcion_RolNoEncontrado() {
         // ARG para saltear validación de CI — este test prueba solo la búsqueda del rol
@@ -422,6 +447,50 @@ class FuncionarioServiceTest {
     }
 
     @Test
+    @DisplayName("Editar funcionario - Cambiar a un rol inactivo → 422")
+    void editar_LanzaUnprocessable_CuandoCambiaAUnRolInactivo() {
+        Rol rolInactivo = new Rol("Docente");
+        rolInactivo.setIdRol(2);
+        rolInactivo.setEstado(EstadoLogico.INACTIVO);
+
+        FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
+        updateDTO.setNombre("Carlos");
+        updateDTO.setApellido("Pérez");
+        updateDTO.setEmail("carlos.perez@utec.edu.uy");
+        updateDTO.setIdRol(2);
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(rolRepository.findById(2)).thenReturn(Optional.of(rolInactivo));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.editar(1, updateDTO));
+
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar funcionario - Si su rol se desactivó y no lo cambia, puede seguir editándose")
+    void editar_Exito_CuandoSuRolSeDesactivoYNoLoCambia() {
+        mockAuthConPermisos();
+        rolMock.setEstado(EstadoLogico.INACTIVO);
+
+        FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
+        updateDTO.setNombre("Carlos");
+        updateDTO.setApellido("González");
+        updateDTO.setEmail("carlos.perez@utec.edu.uy");
+        updateDTO.setIdRol(1);
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
+        when(funcionarioMapper.toDto(any(Funcionario.class))).thenReturn(responseDTO);
+
+        assertNotNull(funcionarioService.editar(1, updateDTO));
+        verify(funcionarioRepository).save(funcionarioMock);
+    }
+
+    @Test
     @DisplayName("Editar funcionario - Rechaza asignar un rol con permisos que el actor no tiene (403)")
     void editar_LanzaForbidden_CuandoRolDestinoTienePermisoQueElActorNoTiene() {
         Rol rolAdmin = new Rol("ADMINISTRADOR");
@@ -552,6 +621,33 @@ class FuncionarioServiceTest {
         assertEquals(EstadoLogico.ACTIVO, funcionarioMock.getEstado());
         verify(funcionarioRepository).save(funcionarioMock);
         verify(funcionarioRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("Desactivar - No puede desactivar su propia cuenta (409)")
+    void desactivar_LanzaConflict_CuandoEsLaPropiaCuenta() {
+        mockAuthComoUsuario("1");
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> funcionarioService.desactivar(1));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertEquals(EstadoLogico.PENDIENTE_DE_ACTIVACION, funcionarioMock.getEstado());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Desactivar - Otro funcionario autenticado sí puede desactivarlo")
+    void desactivar_Exito_CuandoLoHaceOtroFuncionario() {
+        mockAuthComoUsuario("99");
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionarioMock);
+
+        funcionarioService.desactivar(1);
+
+        assertEquals(EstadoLogico.INACTIVO, funcionarioMock.getEstado());
+        verify(funcionarioRepository).save(funcionarioMock);
     }
 
     @Test

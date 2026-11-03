@@ -1,5 +1,6 @@
 package com.fides.sienep.dto;
 
+import com.fides.sienep.utils.ReglasDeTexto;
 import com.fides.sienep.model.PaisDocumento;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -33,13 +34,13 @@ public class EstudianteRequestDTO {
 
     @NotBlank
     @Size(max = 30)
-    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
+    @Pattern(regexp = ReglasDeTexto.NOMBRE_PERSONA_REGEX, message = ReglasDeTexto.NOMBRE_PERSONA_MSG)
     @Schema(description = "Nombre del estudiante", example = "María")
     private String nombre;
 
     @NotBlank
     @Size(max = 30)
-    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
+    @Pattern(regexp = ReglasDeTexto.NOMBRE_PERSONA_REGEX, message = ReglasDeTexto.NOMBRE_PERSONA_MSG)
     @Schema(description = "Apellido del estudiante", example = "González")
     private String apellido;
 

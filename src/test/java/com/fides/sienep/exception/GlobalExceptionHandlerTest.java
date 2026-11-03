@@ -3,16 +3,21 @@ package com.fides.sienep.exception;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.http.HttpMethod;
 
 import java.util.Map;
 
@@ -148,7 +153,9 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("NoResourceFoundException - Responde 404 en vez de 500")
     void handleNoResourceFound_Responde404() {
-        ResponseEntity<Map<String, Object>> response = handler.handleNoResourceFound();
+        NoResourceFoundException ex = new NoResourceFoundException(HttpMethod.GET, "/api/ruta-inexistente", "api/ruta-inexistente");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleNoResourceFound(ex);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals(HttpStatus.NOT_FOUND.value(), response.getBody().get("status"));
@@ -179,7 +186,9 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("HttpMediaTypeNotSupportedException - Responde 415 en vez de 500")
     void handleHttpMediaTypeNotSupported_Responde415() {
-        ResponseEntity<Map<String, Object>> response = handler.handleHttpMediaTypeNotSupported();
+        HttpMediaTypeNotSupportedException ex = new HttpMediaTypeNotSupportedException("Content-Type no soportado");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleHttpMediaTypeNotSupported(ex);
 
         assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE, response.getStatusCode());
         assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), response.getBody().get("status"));
@@ -211,7 +220,9 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("InvalidDataAccessApiUsageException - Responde 400 en vez de 500 (ej. ?page= tan grande que desborda el offset)")
     void handleInvalidDataAccessApiUsage_Responde400() {
-        ResponseEntity<Map<String, Object>> response = handler.handleInvalidDataAccessApiUsage();
+        InvalidDataAccessApiUsageException ex = new InvalidDataAccessApiUsageException("Page offset exceeds Integer.MAX_VALUE");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleInvalidDataAccessApiUsage(ex);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.getBody().get("status"));
@@ -220,7 +231,9 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("MultipartException - Responde 400 en vez de 500 (ej. nombre de archivo con byte nulo)")
     void handleMultipartException_Responde400() {
-        ResponseEntity<Map<String, Object>> response = handler.handleMultipartException();
+        MultipartException ex = new MultipartException("Failed to parse multipart servlet request");
+
+        ResponseEntity<Map<String, Object>> response = handler.handleMultipartException(ex);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.getBody().get("status"));

@@ -1,5 +1,6 @@
 package com.fides.sienep.dto;
 
+import com.fides.sienep.utils.ReglasDeTexto;
 import com.fides.sienep.model.PaisDocumento;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -15,13 +16,13 @@ public class FuncionarioRequestDTO {
 
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 50, message = "El nombre no puede tener más de 50 caracteres")
-    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
+    @Pattern(regexp = ReglasDeTexto.NOMBRE_PERSONA_REGEX, message = ReglasDeTexto.NOMBRE_PERSONA_MSG)
     @Schema(description = "Nombre del funcionario", example = "Carlos")
     private String nombre;
 
     @NotBlank(message = "El apellido es obligatorio")
     @Size(max = 50, message = "El apellido no puede tener más de 50 caracteres")
-    @Pattern(regexp = "^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 ]+$", message = "Solo se permiten letras, números y espacios")
+    @Pattern(regexp = ReglasDeTexto.NOMBRE_PERSONA_REGEX, message = ReglasDeTexto.NOMBRE_PERSONA_MSG)
     @Schema(description = "Apellido del funcionario", example = "Pérez")
     private String apellido;
 
