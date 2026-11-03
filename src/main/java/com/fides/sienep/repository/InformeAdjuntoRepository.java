@@ -19,7 +19,7 @@ public interface InformeAdjuntoRepository extends JpaRepository<InformeAdjunto, 
     Page<InformeAdjunto> findByEstudianteIdUsuarioAndEstadoIn(
             Integer idUsuario, Collection<EstadoLogico> estados, Pageable pageable);
 
-    boolean existsByEstudianteIdUsuarioAndNombre(Integer idUsuario, String nombre);
+    boolean existsByEstudianteIdUsuarioAndNombreAndEstadoNot(Integer idUsuario, String nombre, EstadoLogico estado);
 
     Optional<InformeAdjunto> findByIdInformeAndEstado(Integer idInforme, EstadoLogico estado);
 
