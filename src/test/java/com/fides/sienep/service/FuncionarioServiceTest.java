@@ -13,6 +13,7 @@ import com.fides.sienep.model.Permiso;
 import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
+import com.fides.sienep.repository.UsuarioRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,6 +56,9 @@ class FuncionarioServiceTest {
 
     @Mock
     private FuncionarioRepository funcionarioRepository;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
 
     @Mock
     private RolRepository rolRepository;
@@ -139,8 +143,8 @@ class FuncionarioServiceTest {
     void crear_Exito() {
         mockAuthConPermisos(); // rolMock no tiene permisos asignados, cualquier actor pasa
 
-        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
         when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
@@ -161,8 +165,8 @@ class FuncionarioServiceTest {
     void crear_Exito_AunqueFalleEmail() {
         mockAuthConPermisos();
 
-        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolMock));
         when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
         when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
@@ -189,8 +193,8 @@ class FuncionarioServiceTest {
         // El actor solo tiene CREAR_FUNCIONARIO, no DESACTIVAR_ROL — no puede asignar rolAdmin
         mockAuthConPermisos("CREAR_FUNCIONARIO");
 
-        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(rolRepository.findById(1)).thenReturn(Optional.of(rolAdmin));
 
         ResponseStatusException ex = assertThrows(
@@ -204,7 +208,7 @@ class FuncionarioServiceTest {
     @Test
     @DisplayName("Crear funcionario - Documento duplicado → 409")
     void crear_LanzaExcepcion_DocumentoDuplicado() {
-        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(true);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
@@ -215,16 +219,54 @@ class FuncionarioServiceTest {
     }
 
     @Test
-    @DisplayName("Crear funcionario - Email duplicado → 409")
-    void crear_LanzaExcepcion_EmailDuplicado() {
-        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(true);
+    @DisplayName("Crear funcionario - Documento y país de un estudiante → 409 que nombra el documento")
+    void crear_LanzaExcepcion_DocumentoDeEstudiante() {
+        // Caso del bug: el chequeo era solo contra funcionarios, así que el choque con un
+        // estudiante llegaba a la base y volvía como 409 genérico, que el front mostraba
+        // como error de email. Ahora el chequeo es contra usuarios, con documento + país.
+        requestDTO.setDocumento("41234604");
+        requestDTO.setPaisDocumento(PaisDocumento.URY);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento("41234604", PaisDocumento.URY)).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> funcionarioService.crear(requestDTO));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        // El front elige bajo qué campo mostrar el error buscando "documento" en el mensaje.
+        assertTrue(ex.getReason().toLowerCase().contains("documento"));
+        assertFalse(ex.getReason().toLowerCase().contains("email"));
+        verify(usuarioRepository, never()).existsByEmailIgnoreCase(anyString());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear funcionario - Email duplicado → 409")
+    void crear_LanzaExcepcion_EmailDuplicado() {
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.crear(requestDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Crear funcionario - Email existente con otras mayúsculas → 409 que nombra el email")
+    void crear_LanzaExcepcion_EmailDuplicadoConOtrasMayusculas() {
+        requestDTO.setEmail("Carlos.Perez@UTEC.edu.uy");
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase("Carlos.Perez@UTEC.edu.uy")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.crear(requestDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().toLowerCase().contains("email"));
         verify(funcionarioRepository, never()).save(any());
     }
 
@@ -234,8 +276,8 @@ class FuncionarioServiceTest {
         // Cambiamos a URY con dígito verificador incorrecto
         requestDTO.setPaisDocumento(PaisDocumento.URY);
         requestDTO.setDocumento("47520642");
-        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
@@ -249,8 +291,8 @@ class FuncionarioServiceTest {
     @DisplayName("Crear funcionario - Rol no encontrado → 404")
     void crear_LanzaExcepcion_RolNoEncontrado() {
         // ARG para saltear validación de CI — este test prueba solo la búsqueda del rol
-        when(funcionarioRepository.existsByDocumento(anyString())).thenReturn(false);
-        when(funcionarioRepository.existsByEmail(anyString())).thenReturn(false);
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(rolRepository.findById(1)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(
@@ -337,7 +379,7 @@ class FuncionarioServiceTest {
         FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
         updateDTO.setNombre("Carlos");
         updateDTO.setApellido("González");
-        // Mismo email que el mock → el service no llega a verificar duplicado
+        // Mismo email que el mock → el chequeo excluye al propio funcionario (IdUsuarioNot)
         updateDTO.setEmail("carlos.perez@utec.edu.uy");
         updateDTO.setIdRol(1);
 
@@ -453,6 +495,27 @@ class FuncionarioServiceTest {
                 () -> funcionarioService.editar(99, updateDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar funcionario - Email de otro usuario (ej. un estudiante) → 409")
+    void editar_LanzaExcepcion_EmailDeOtroUsuario() {
+        FuncionarioUpdateDTO updateDTO = new FuncionarioUpdateDTO();
+        updateDTO.setNombre("Carlos");
+        updateDTO.setApellido("Pérez");
+        updateDTO.setEmail("ana.garcia@utec.edu.uy");
+        updateDTO.setIdRol(1);
+
+        when(funcionarioRepository.findById(1)).thenReturn(Optional.of(funcionarioMock));
+        when(usuarioRepository.existsByEmailIgnoreCaseAndIdUsuarioNot("ana.garcia@utec.edu.uy", 1)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> funcionarioService.editar(1, updateDTO));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertTrue(ex.getReason().toLowerCase().contains("email"));
         verify(funcionarioRepository, never()).save(any());
     }
 

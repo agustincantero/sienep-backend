@@ -3,6 +3,7 @@ package com.fides.sienep.service;
 import com.fides.sienep.mapper.FuncionarioMapper;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
+import com.fides.sienep.repository.UsuarioRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +35,7 @@ class FuncionarioFotoSecurityTest {
         @Bean
         FuncionarioService funcionarioService() {
             return new FuncionarioService(
-                    mock(FuncionarioRepository.class), mock(RolRepository.class), mock(PasswordEncoder.class),
+                    mock(FuncionarioRepository.class), mock(UsuarioRepository.class), mock(RolRepository.class), mock(PasswordEncoder.class),
                     mock(FuncionarioMapper.class), mock(EmailService.class), mock(PasswordGeneratorService.class),
                     mock(FileStorageService.class));
         }
