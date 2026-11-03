@@ -779,6 +779,34 @@ class EstudianteServiceTest {
     }
 
     @Test
+    @DisplayName("Editar - Un grupo repetido en idGrupos se asigna una sola vez")
+    void editar_GrupoRepetido_SeAsignaUnaSolaVez() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
+        Carrera carrera = new Carrera();
+        carrera.setEstado(EstadoLogico.ACTIVO);
+        Grupo grupo = new Grupo();
+        grupo.setIdGrupo(3);
+        grupo.setEstado(EstadoLogico.ACTIVO);
+        grupo.setCarrera(carrera);
+
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("ana.garcia@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+        dto.setIdGrupos(List.of(3, 3));
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(grupoRepository.findById(3)).thenReturn(Optional.of(grupo));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.editar(1, dto);
+
+        assertEquals(List.of(grupo), estudianteExistente.getGrupos());
+    }
+
+    @Test
     @DisplayName("Editar - No encontrado → 404")
     void editar_LanzaExcepcion_NoEncontrado() {
         EstudianteUpdateDTO dto = new EstudianteUpdateDTO();

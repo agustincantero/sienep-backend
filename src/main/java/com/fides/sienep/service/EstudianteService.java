@@ -454,7 +454,8 @@ public class EstudianteService {
     private void asignarGrupos(Estudiante estudiante, List<Integer> idGrupos) {
         if (idGrupos == null) return;
         List<Grupo> grupos = new ArrayList<>();
-        for (Integer idGrupo : idGrupos) {
+        // distinct: un id repetido insertaría dos veces la misma fila y la PK lo rechazaría con un 409 genérico.
+        for (Integer idGrupo : idGrupos.stream().distinct().toList()) {
             Grupo grupo = grupoRepository.findById(idGrupo)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado: " + idGrupo));
             
