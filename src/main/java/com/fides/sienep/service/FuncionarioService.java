@@ -24,6 +24,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -181,6 +183,8 @@ public class FuncionarioService {
 
         if (funcionario.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra inactivo");
+        }else if (id.equals(getIdUsuarioAutenticado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No puede desactivar su propia cuenta.");
         }
         funcionario.setEstado(EstadoLogico.INACTIVO);
         funcionarioRepository.save(funcionario);
@@ -300,5 +304,9 @@ public class FuncionarioService {
         funcionario.setBloqueado(false);
         funcionarioRepository.save(funcionario);
         log.info("[AUDIT] Funcionario id={} cambió su contraseña", id);
+    }
+    private Integer getIdUsuarioAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return Integer.parseInt(auth.getName());
     }
 }
