@@ -75,6 +75,11 @@ public class FuncionarioService {
 
         Rol rol = rolRepository.findById(dto.getIdRol())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado: " + dto.getIdRol()));
+        if (rol.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El rol con id " + dto.getIdRol() + " no está activo");
+        }
         ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
 
         String contraseniaPlana = passwordGeneratorService.generar();
@@ -260,6 +265,15 @@ public class FuncionarioService {
     private void aplicarCambios(Funcionario funcionario, FuncionarioUpdateDTO dto) {
         Rol rol = rolRepository.findById(dto.getIdRol())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado: " + dto.getIdRol()));
+        // Solo si cambia el rol: editar nombre/email de alguien cuyo rol se desactivó
+        // después no debe fallar por reenviar el mismo idRol.
+        boolean cambiaRol = funcionario.getRol() == null
+                || !dto.getIdRol().equals(funcionario.getRol().getIdRol());
+        if (cambiaRol && rol.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El rol con id " + dto.getIdRol() + " no está activo");
+        }
 
         // Sin esto, un actor con EDITAR_FUNCIONARIO pero permisos limitados podía
         // editar (incluido reasignarle el rol) a un funcionario con más privilegios
