@@ -344,6 +344,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Crear - Éxito")
     void crear_Exito() {
+        mockAuthConPermisos("2", "CREAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         EstudianteRequestDTO dto = buildDtoValido();
         when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
         when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
@@ -364,6 +365,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Crear - Éxito aunque falle el envío del email (RF05 no debe ser bloqueante)")
     void crear_Exito_AunqueFalleEmail() {
+        mockAuthConPermisos("2", "CREAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         EstudianteRequestDTO dto = buildDtoValido();
         when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
         when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
@@ -380,6 +382,49 @@ class EstudianteServiceTest {
         assertNotNull(resultado);
         assertNotNull(resultado.getAdvertencia());
         verify(estudianteRepository).save(any(Estudiante.class));
+    }
+
+    @Test
+    @DisplayName("Crear - Con VER_BLOQUE_CONFIDENCIAL guarda los datos de salud y derivación")
+    void crear_ConVerBloqueConfidencial_GuardaBloqueConfidencial() {
+        Estudiante guardado = crearConBloqueConfidencial("CREAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
+
+        assertEquals("Dato de salud", guardado.getInformacionSalud());
+        assertEquals("ASSE", guardado.getSistemaSalud());
+        assertEquals("Motivo", guardado.getMotivoDerivacion());
+    }
+
+    @Test
+    @DisplayName("Crear - Sin VER_BLOQUE_CONFIDENCIAL ignora los datos de salud y derivación")
+    void crear_SinVerBloqueConfidencial_IgnoraBloqueConfidencial() {
+        Estudiante guardado = crearConBloqueConfidencial("CREAR_ESTUDIANTE");
+
+        assertNull(guardado.getInformacionSalud());
+        assertNull(guardado.getSistemaSalud());
+        assertNull(guardado.getMotivoDerivacion());
+        assertEquals("Ana", guardado.getNombre());
+    }
+
+    private Estudiante crearConBloqueConfidencial(String... permisos) {
+        mockAuthConPermisos("2", permisos);
+        EstudianteRequestDTO dto = buildDtoValido();
+        dto.setNombre("Ana");
+        dto.setInformacionSalud("Dato de salud");
+        dto.setSistemaSalud("ASSE");
+        dto.setMotivoDerivacion("Motivo");
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
+        when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+        when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(new Rol("ESTUDIANTE")));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.crear(dto);
+
+        ArgumentCaptor<Estudiante> captor = ArgumentCaptor.forClass(Estudiante.class);
+        verify(estudianteRepository).save(captor.capture());
+        return captor.getValue();
     }
 
     @Test

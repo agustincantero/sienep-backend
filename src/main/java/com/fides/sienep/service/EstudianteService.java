@@ -91,13 +91,18 @@ public class EstudianteService {
 
         String contraseniaPlana = passwordGeneratorService.generar();
 
+        // Mismo criterio que aplicarCambios(): sin VER_BLOQUE_CONFIDENCIAL no se escribe un bloque que no se puede ver.
+        boolean puedeEscribirBloque = tienePermiso("VER_BLOQUE_CONFIDENCIAL");
         Estudiante estudiante = new Estudiante(
                 dto.getNombre(), dto.getApellido(), dto.getDocumento(),
                 dto.getPaisDocumento(), passwordEncoder.encode(contraseniaPlana),
                 dto.getEmail(), dto.getCiudad(), dto.getDepartamento(),
-                dto.getCalle(), dto.getNroPuerta(), dto.getInformacionSalud(),
-                dto.getSistemaSalud(), dto.getFechaNacimiento(),
-                dto.getMotivoDerivacion(), null, null, null
+                dto.getCalle(), dto.getNroPuerta(),
+                puedeEscribirBloque ? dto.getInformacionSalud() : null,
+                puedeEscribirBloque ? dto.getSistemaSalud() : null,
+                dto.getFechaNacimiento(),
+                puedeEscribirBloque ? dto.getMotivoDerivacion() : null,
+                null, null, null
         );
 
         asignarTelefonos(estudiante, dto.getTelefonos());
