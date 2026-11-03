@@ -19,6 +19,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.allOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -100,7 +103,20 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
 
         mockMvc.perform(get("/informes-adjuntos/{id}/descargar", 1))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=\"informe.pdf\""));
+                .andExpect(header().string("Content-Disposition", allOf(startsWith("attachment;"), containsString("filename*=UTF-8''informe.pdf"))));
+    }
+
+    @Test
+    @DisplayName("Descargar - Un nombre con tildes viaja codificado en UTF-8")
+    void descargar_NombreConTildes_ViajaCodificado() throws Exception {
+        ArchivoDescargaDTO archivo = new ArchivoDescargaDTO(
+                new ByteArrayResource("contenido".getBytes()), MediaType.APPLICATION_PDF, "Informe médico.pdf");
+        when(informeService.descargar(1)).thenReturn(archivo);
+
+        mockMvc.perform(get("/informes-adjuntos/{id}/descargar", 1))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        containsString("filename*=UTF-8''Informe%20m%C3%A9dico.pdf")));
     }
 
     @Test
@@ -133,7 +149,7 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
 
         mockMvc.perform(get("/informes-adjuntos/{id}/descargar", 1).param("inline", "true"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "inline; filename=\"informe.pdf\""))
+                .andExpect(header().string("Content-Disposition", allOf(startsWith("inline;"), containsString("filename*=UTF-8''informe.pdf"))))
                 .andExpect(header().string("Content-Type", MediaType.APPLICATION_PDF_VALUE))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"));
     }
@@ -146,7 +162,7 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
         when(informeService.descargar(1)).thenReturn(archivo);
 
         mockMvc.perform(get("/informes-adjuntos/{id}/descargar", 1).param("inline", "false"))
-                .andExpect(header().string("Content-Disposition", "attachment; filename=\"foto.png\""));
+                .andExpect(header().string("Content-Disposition", allOf(startsWith("attachment;"), containsString("filename*=UTF-8''foto.png"))));
     }
 
     @Test
@@ -158,6 +174,6 @@ class InformeAdjuntoControllerTest extends AbstractControllerTest {
 
         mockMvc.perform(get("/informes-adjuntos/mios/{id}/descargar", 1).param("inline", "true"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "inline; filename=\"informe.jpg\""));
+                .andExpect(header().string("Content-Disposition", allOf(startsWith("inline;"), containsString("filename*=UTF-8''informe.jpg"))));
     }
 }

@@ -15,11 +15,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/informes-adjuntos")
@@ -94,7 +97,9 @@ public class InformeAdjuntoController {
         return ResponseEntity.ok()
                 .contentType(archivo.getContentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        (inline ? "inline" : "attachment") + "; filename=\"" + archivo.getNombreDescarga() + "\"")
+                        ContentDisposition.builder(inline ? "inline" : "attachment")
+                                .filename(archivo.getNombreDescarga(), StandardCharsets.UTF_8)
+                                .build().toString())
                 .header("X-Content-Type-Options", "nosniff")
                 .body(archivo.getRecurso());
     }

@@ -689,9 +689,12 @@ CREATE TABLE proyecto.estu_informesadjs (
     ),
     CONSTRAINT fk_informe_estudiante FOREIGN KEY (id_usuario)
         REFERENCES proyecto.estudiantes(id_usuario)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
-    CONSTRAINT uk_informe_nombre UNIQUE (id_usuario, nom_archivo)
+        ON UPDATE CASCADE ON DELETE RESTRICT
 );
+
+-- Índice parcial y no UNIQUE de tabla: un informe con baja lógica sigue en la tabla y no debe bloquear su nombre.
+CREATE UNIQUE INDEX uk_informe_nombre_no_eliminado ON proyecto.estu_informesadjs (id_usuario, nom_archivo)
+    WHERE estado <> 'ELIMINADO';
 
 CREATE TRIGGER trg_actualizar_informes
     BEFORE UPDATE ON proyecto.estu_informesadjs

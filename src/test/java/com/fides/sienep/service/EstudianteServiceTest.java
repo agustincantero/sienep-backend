@@ -344,6 +344,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Crear - Éxito")
     void crear_Exito() {
+        mockAuthConPermisos("2", "CREAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         EstudianteRequestDTO dto = buildDtoValido();
         when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
         when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
@@ -364,6 +365,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Crear - Éxito aunque falle el envío del email (RF05 no debe ser bloqueante)")
     void crear_Exito_AunqueFalleEmail() {
+        mockAuthConPermisos("2", "CREAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         EstudianteRequestDTO dto = buildDtoValido();
         when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
         when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
@@ -380,6 +382,49 @@ class EstudianteServiceTest {
         assertNotNull(resultado);
         assertNotNull(resultado.getAdvertencia());
         verify(estudianteRepository).save(any(Estudiante.class));
+    }
+
+    @Test
+    @DisplayName("Crear - Con VER_BLOQUE_CONFIDENCIAL guarda los datos de salud y derivación")
+    void crear_ConVerBloqueConfidencial_GuardaBloqueConfidencial() {
+        Estudiante guardado = crearConBloqueConfidencial("CREAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
+
+        assertEquals("Dato de salud", guardado.getInformacionSalud());
+        assertEquals("ASSE", guardado.getSistemaSalud());
+        assertEquals("Motivo", guardado.getMotivoDerivacion());
+    }
+
+    @Test
+    @DisplayName("Crear - Sin VER_BLOQUE_CONFIDENCIAL ignora los datos de salud y derivación")
+    void crear_SinVerBloqueConfidencial_IgnoraBloqueConfidencial() {
+        Estudiante guardado = crearConBloqueConfidencial("CREAR_ESTUDIANTE");
+
+        assertNull(guardado.getInformacionSalud());
+        assertNull(guardado.getSistemaSalud());
+        assertNull(guardado.getMotivoDerivacion());
+        assertEquals("Ana", guardado.getNombre());
+    }
+
+    private Estudiante crearConBloqueConfidencial(String... permisos) {
+        mockAuthConPermisos("2", permisos);
+        EstudianteRequestDTO dto = buildDtoValido();
+        dto.setNombre("Ana");
+        dto.setInformacionSalud("Dato de salud");
+        dto.setSistemaSalud("ASSE");
+        dto.setMotivoDerivacion("Motivo");
+        when(usuarioRepository.existsByDocumentoAndPaisDocumento(anyString(), any())).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
+        when(passwordGeneratorService.generar()).thenReturn("RandomPass123!");
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+        when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(new Rol("ESTUDIANTE")));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.crear(dto);
+
+        ArgumentCaptor<Estudiante> captor = ArgumentCaptor.forClass(Estudiante.class);
+        verify(estudianteRepository).save(captor.capture());
+        return captor.getValue();
     }
 
     @Test
@@ -492,6 +537,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Editar - Éxito")
     void editar_Exito() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
         dto.setNombre("Ana");
         dto.setApellido("González");
@@ -531,6 +577,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Editar - Da de baja lógica los teléfonos que ya no vienen en la lista")
     void editar_DaDeBajaTelefonosRemovidos() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         Telefono telefonoViejo = new Telefono(estudianteExistente, "099111111");
         telefonoViejo.setEstado(EstadoLogico.ACTIVO);
         estudianteExistente.setTelefonos(new ArrayList<>(List.of(telefonoViejo)));
@@ -561,6 +608,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Editar - Reactiva un teléfono previamente eliminado que vuelve a la lista")
     void editar_ReactivaTelefonoEliminado() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         Telefono telefonoEliminado = new Telefono(estudianteExistente, "099111111");
         telefonoEliminado.setEstado(EstadoLogico.ELIMINADO);
         estudianteExistente.setTelefonos(new ArrayList<>(List.of(telefonoEliminado)));
@@ -585,6 +633,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Editar - Rechaza asignar un grupo que no está ACTIVO")
     void editar_LanzaExcepcion_GrupoNoActivo() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         Grupo grupoInactivo = new Grupo();
         grupoInactivo.setIdGrupo(1);
         grupoInactivo.setEstado(EstadoLogico.INACTIVO);
@@ -609,6 +658,7 @@ class EstudianteServiceTest {
     @Test
     @DisplayName("Editar - Rechaza asignar un grupo activo de una carrera inactiva")
     void editar_LanzaExcepcion_CarreraDelGrupoNoActiva() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
         Carrera carreraInactiva = new Carrera();
         carreraInactiva.setEstado(EstadoLogico.INACTIVO);
 
@@ -632,6 +682,128 @@ class EstudianteServiceTest {
 
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, ex.getStatusCode());
         verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Editar - Con VER_BLOQUE_CONFIDENCIAL guarda los datos de salud y derivación")
+    void editar_ConVerBloqueConfidencial_GuardaBloqueConfidencial() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
+        estudianteExistente.setInformacionSalud("Dato anterior");
+        estudianteExistente.setSistemaSalud("ASSE");
+        estudianteExistente.setMotivoDerivacion("Motivo anterior");
+
+        EstudianteUpdateDTO dto = buildUpdateDtoConBloqueConfidencial("Dato nuevo", "CASMU", "Motivo nuevo");
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.editar(1, dto);
+
+        assertEquals("Dato nuevo", estudianteExistente.getInformacionSalud());
+        assertEquals("CASMU", estudianteExistente.getSistemaSalud());
+        assertEquals("Motivo nuevo", estudianteExistente.getMotivoDerivacion());
+    }
+
+    @Test
+    @DisplayName("Editar - Sin VER_BLOQUE_CONFIDENCIAL conserva el bloque confidencial aunque llegue vacío")
+    void editar_SinVerBloqueConfidencial_ConservaBloqueConfidencial() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE");
+        estudianteExistente.setInformacionSalud("Diagnóstico reservado");
+        estudianteExistente.setSistemaSalud("ASSE");
+        estudianteExistente.setMotivoDerivacion("Derivación por departamento académico");
+
+        EstudianteUpdateDTO dto = buildUpdateDtoConBloqueConfidencial(null, null, null);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.editar(1, dto);
+
+        assertEquals("Diagnóstico reservado", estudianteExistente.getInformacionSalud());
+        assertEquals("ASSE", estudianteExistente.getSistemaSalud());
+        assertEquals("Derivación por departamento académico", estudianteExistente.getMotivoDerivacion());
+        assertEquals("González", estudianteExistente.getApellido());
+    }
+
+    @Test
+    @DisplayName("Editar - Sin VER_BLOQUE_CONFIDENCIAL ignora valores nuevos del bloque confidencial")
+    void editar_SinVerBloqueConfidencial_IgnoraValoresNuevos() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE");
+        estudianteExistente.setInformacionSalud("Diagnóstico reservado");
+        estudianteExistente.setSistemaSalud("ASSE");
+        estudianteExistente.setMotivoDerivacion("Derivación por departamento académico");
+
+        EstudianteUpdateDTO dto = buildUpdateDtoConBloqueConfidencial("Dato inventado", "CASMU", "Motivo inventado");
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.editar(1, dto);
+
+        assertEquals("Diagnóstico reservado", estudianteExistente.getInformacionSalud());
+        assertEquals("ASSE", estudianteExistente.getSistemaSalud());
+        assertEquals("Derivación por departamento académico", estudianteExistente.getMotivoDerivacion());
+    }
+
+    @Test
+    @DisplayName("Editar - Sin VER_BLOQUE_CONFIDENCIAL la respuesta no expone el bloque confidencial")
+    void editar_SinVerBloqueConfidencial_OcultaBloqueEnLaRespuesta() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE");
+
+        EstudianteUpdateDTO dto = buildUpdateDtoConBloqueConfidencial(null, null, null);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        EstudianteResponseDTO resultado = estudianteService.editar(1, dto);
+
+        assertNull(resultado.getInformacionSalud());
+        assertNull(resultado.getSistemaSalud());
+        assertNull(resultado.getMotivoDerivacion());
+    }
+
+    private EstudianteUpdateDTO buildUpdateDtoConBloqueConfidencial(String informacionSalud, String sistemaSalud, String motivo) {
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("ana.garcia@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+        dto.setInformacionSalud(informacionSalud);
+        dto.setSistemaSalud(sistemaSalud);
+        dto.setMotivoDerivacion(motivo);
+        return dto;
+    }
+
+    @Test
+    @DisplayName("Editar - Un grupo repetido en idGrupos se asigna una sola vez")
+    void editar_GrupoRepetido_SeAsignaUnaSolaVez() {
+        mockAuthConPermisos("2", "EDITAR_ESTUDIANTE", "VER_BLOQUE_CONFIDENCIAL");
+        Carrera carrera = new Carrera();
+        carrera.setEstado(EstadoLogico.ACTIVO);
+        Grupo grupo = new Grupo();
+        grupo.setIdGrupo(3);
+        grupo.setEstado(EstadoLogico.ACTIVO);
+        grupo.setCarrera(carrera);
+
+        EstudianteUpdateDTO dto = new EstudianteUpdateDTO();
+        dto.setNombre("Ana");
+        dto.setApellido("González");
+        dto.setEmail("ana.garcia@utec.edu.uy");
+        dto.setFechaNacimiento(LocalDate.of(2000, 3, 15));
+        dto.setIdGrupos(List.of(3, 3));
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteExistente));
+        when(grupoRepository.findById(3)).thenReturn(Optional.of(grupo));
+        when(estudianteRepository.save(any(Estudiante.class))).thenReturn(estudianteExistente);
+        when(estudianteMapper.toDto(any(Estudiante.class))).thenReturn(responseDTO);
+
+        estudianteService.editar(1, dto);
+
+        assertEquals(List.of(grupo), estudianteExistente.getGrupos());
     }
 
     @Test

@@ -72,7 +72,9 @@ public class InformeAdjuntoService {
                     "No se puede adjuntar un informe a un estudiante inactivo.");
         }
 
-        if (informeRepository.existsByEstudianteIdUsuarioAndNombre(dto.getIdUsuario(), dto.getNombre())) {
+        // Los informes eliminados no reservan el nombre (mismo criterio que uk_informe_nombre_no_eliminado).
+        if (informeRepository.existsByEstudianteIdUsuarioAndNombreAndEstadoNot(
+                dto.getIdUsuario(), dto.getNombre(), EstadoLogico.ELIMINADO)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Ya existe un informe con ese nombre para este estudiante");
         }

@@ -105,7 +105,7 @@ class InformeAdjuntoServiceTest {
         InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
-        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombreAndEstadoNot(1, "informe_2024", EstadoLogico.ELIMINADO)).thenReturn(false);
         when(fileStorageService.guardar(eq(archivo), eq("informes/1"), anyList(), anyLong()))
                 .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
         when(informeRepository.save(any(InformeAdjunto.class))).thenReturn(informeMock);
@@ -180,7 +180,7 @@ class InformeAdjuntoServiceTest {
         estudianteMock.setEstado(EstadoLogico.PENDIENTE_DE_ACTIVACION);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
-        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombreAndEstadoNot(1, "informe_2024", EstadoLogico.ELIMINADO)).thenReturn(false);
         when(fileStorageService.guardar(eq(archivo), eq("informes/1"), anyList(), anyLong()))
                 .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
         when(informeRepository.save(any(InformeAdjunto.class))).thenReturn(informeMock);
@@ -198,7 +198,7 @@ class InformeAdjuntoServiceTest {
         InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
-        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(true);
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombreAndEstadoNot(1, "informe_2024", EstadoLogico.ELIMINADO)).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> informeService.adjuntar(dto));
@@ -209,6 +209,26 @@ class InformeAdjuntoServiceTest {
     }
 
     @Test
+    @DisplayName("Adjuntar informe - El nombre de un informe eliminado se puede reutilizar")
+    void adjuntar_Exito_NombreDeInformeEliminado() {
+        MultipartFile archivo = new MockMultipartFile(
+                "archivo", "informe.pdf", "application/pdf", "contenido".getBytes());
+        InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
+
+        when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
+        // El chequeo excluye ELIMINADO: es lo que deja pasar un nombre que solo usa un informe dado de baja.
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombreAndEstadoNot(1, "informe_2024", EstadoLogico.ELIMINADO))
+                .thenReturn(false);
+        when(fileStorageService.guardar(eq(archivo), eq("informes/1"), anyList(), anyLong()))
+                .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
+        when(informeRepository.save(any(InformeAdjunto.class))).thenReturn(informeMock);
+        when(informeMapper.toDto(any(InformeAdjunto.class))).thenReturn(responseDTO);
+
+        assertNotNull(informeService.adjuntar(dto));
+        verify(informeRepository).save(any(InformeAdjunto.class));
+    }
+
+    @Test
     @DisplayName("Adjuntar informe - Propaga el error de FileStorageService y no persiste nada")
     void adjuntar_PropagaExcepcionDeFileStorageService() {
         MultipartFile archivo = new MockMultipartFile(
@@ -216,7 +236,7 @@ class InformeAdjuntoServiceTest {
         InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
-        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombreAndEstadoNot(1, "informe_2024", EstadoLogico.ELIMINADO)).thenReturn(false);
         when(fileStorageService.guardar(eq(archivo), eq("informes/1"), anyList(), anyLong()))
                 .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "La extensión del archivo no está permitida"));
 
@@ -235,7 +255,7 @@ class InformeAdjuntoServiceTest {
         InformeAdjuntoRequestDTO dto = buildDto(1, "informe_2024", archivo);
 
         when(estudianteRepository.findById(1)).thenReturn(Optional.of(estudianteMock));
-        when(informeRepository.existsByEstudianteIdUsuarioAndNombre(1, "informe_2024")).thenReturn(false);
+        when(informeRepository.existsByEstudianteIdUsuarioAndNombreAndEstadoNot(1, "informe_2024", EstadoLogico.ELIMINADO)).thenReturn(false);
         when(fileStorageService.guardar(eq(archivo), eq("informes/1"), anyList(), anyLong()))
                 .thenReturn("3f2504e0-4f89-4f9c-a9b0-a1b2c3d4e5f6.pdf");
         when(informeRepository.save(any(InformeAdjunto.class)))

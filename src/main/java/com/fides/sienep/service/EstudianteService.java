@@ -91,13 +91,18 @@ public class EstudianteService {
 
         String contraseniaPlana = passwordGeneratorService.generar();
 
+        // Mismo criterio que aplicarCambios(): sin VER_BLOQUE_CONFIDENCIAL no se escribe un bloque que no se puede ver.
+        boolean puedeEscribirBloque = tienePermiso("VER_BLOQUE_CONFIDENCIAL");
         Estudiante estudiante = new Estudiante(
                 dto.getNombre(), dto.getApellido(), dto.getDocumento(),
                 dto.getPaisDocumento(), passwordEncoder.encode(contraseniaPlana),
                 dto.getEmail(), dto.getCiudad(), dto.getDepartamento(),
-                dto.getCalle(), dto.getNroPuerta(), dto.getInformacionSalud(),
-                dto.getSistemaSalud(), dto.getFechaNacimiento(),
-                dto.getMotivoDerivacion(), null, null, null
+                dto.getCalle(), dto.getNroPuerta(),
+                puedeEscribirBloque ? dto.getInformacionSalud() : null,
+                puedeEscribirBloque ? dto.getSistemaSalud() : null,
+                dto.getFechaNacimiento(),
+                puedeEscribirBloque ? dto.getMotivoDerivacion() : null,
+                null, null, null
         );
 
         asignarTelefonos(estudiante, dto.getTelefonos());
@@ -176,7 +181,8 @@ public class EstudianteService {
         }
 
         aplicarCambios(estudiante, dto);
-        return estudianteMapper.toDto(estudianteRepository.save(estudiante));
+        // EDITAR_ESTUDIANTE no implica VER_BLOQUE_CONFIDENCIAL: la respuesta no puede traer lo que obtenerPorId() ocultaría.
+        return ocultarBloqueConfidencialSinPermiso(estudianteMapper.toDto(estudianteRepository.save(estudiante)));
     }
 
     // Devuelve MiPerfilEstudianteDTO (no EstudianteResponseDTO): la ficha completa incluye el bloque
@@ -393,10 +399,14 @@ public class EstudianteService {
         estudiante.setDepartamento(dto.getDepartamento());
         estudiante.setCalle(dto.getCalle());
         estudiante.setNroPuerta(dto.getNroPuerta());
-        estudiante.setInformacionSalud(dto.getInformacionSalud());
-        estudiante.setSistemaSalud(dto.getSistemaSalud());
         estudiante.setFechaNacimiento(dto.getFechaNacimiento());
-        estudiante.setMotivoDerivacion(dto.getMotivoDerivacion());
+        // Quien no tiene VER_BLOQUE_CONFIDENCIAL recibe estos campos en null (ver obtenerPorId) y el
+        // formulario los devuelve vacíos: aplicarlos borraría los datos reales sin que nadie lo note.
+        if (tienePermiso("VER_BLOQUE_CONFIDENCIAL")) {
+            estudiante.setInformacionSalud(dto.getInformacionSalud());
+            estudiante.setSistemaSalud(dto.getSistemaSalud());
+            estudiante.setMotivoDerivacion(dto.getMotivoDerivacion());
+        }
         asignarTelefonos(estudiante, dto.getTelefonos());
         asignarGrupos(estudiante, dto.getIdGrupos());
     }
@@ -444,7 +454,8 @@ public class EstudianteService {
     private void asignarGrupos(Estudiante estudiante, List<Integer> idGrupos) {
         if (idGrupos == null) return;
         List<Grupo> grupos = new ArrayList<>();
-        for (Integer idGrupo : idGrupos) {
+        // distinct: un id repetido insertaría dos veces la misma fila y la PK lo rechazaría con un 409 genérico.
+        for (Integer idGrupo : idGrupos.stream().distinct().toList()) {
             Grupo grupo = grupoRepository.findById(idGrupo)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado: " + idGrupo));
             

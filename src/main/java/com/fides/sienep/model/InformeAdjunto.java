@@ -29,16 +29,9 @@ import java.time.LocalDateTime;
  *   Los campos 'final' rompen el ciclo de vida de Hibernate (proxies, lazy loading).
  */
 @Entity
-@Table(
-        name = "estu_informesadjs",
-        schema = "proyecto",
-        // Refleja la constraint de unicidad del schema: un estudiante no puede tener
-        // dos archivos con el mismo nombre.
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_informe_nombre",
-                columnNames = {"id_usuario", "nom_archivo"}
-        )
-)
+// Un estudiante no puede tener dos informes no eliminados con el mismo nombre: lo garantiza el índice
+// parcial uk_informe_nombre_no_eliminado del schema (JPA no puede expresar un índice parcial).
+@Table(name = "estu_informesadjs", schema = "proyecto")
 @Getter
 @Setter
 @NoArgsConstructor
