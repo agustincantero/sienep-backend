@@ -21,6 +21,7 @@ public class RecordatorioResponseDTO {
     private TipoRecordatorio tipo;
     private LocalDateTime fechaHora;
     private int codInstancia;
+    private String idNegInstancia;
     private String tituloInstancia;
     private int idCategoria;
     private String nombreCategoria;

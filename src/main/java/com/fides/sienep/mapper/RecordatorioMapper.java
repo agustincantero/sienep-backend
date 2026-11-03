@@ -11,6 +11,7 @@ import java.util.List;
 public interface RecordatorioMapper {
 
     @Mapping(target = "codInstancia", source = "instancia.codInstancia")
+    @Mapping(target = "idNegInstancia", source = "instancia.idNegInstancia")
     @Mapping(target = "tituloInstancia", source = "instancia.titulo")
     @Mapping(target = "idCategoria", source = "categoria.idCategoria")
     @Mapping(target = "nombreCategoria", source = "categoria.nomCategoria")
