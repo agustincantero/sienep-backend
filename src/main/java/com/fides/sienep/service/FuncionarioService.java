@@ -12,6 +12,7 @@ import com.fides.sienep.model.PaisDocumento;
 import com.fides.sienep.model.Rol;
 import com.fides.sienep.repository.FuncionarioRepository;
 import com.fides.sienep.repository.RolRepository;
+import com.fides.sienep.repository.UsuarioRepository;
 import com.fides.sienep.utils.ValidadorDeCedulasUy;
 import com.fides.sienep.utils.ValidadorDePermisosDeRol;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +35,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 
 @Service
@@ -39,6 +43,7 @@ import java.util.List;
 public class FuncionarioService {
 
     private final FuncionarioRepository funcionarioRepository;
+    private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
     private final FuncionarioMapper funcionarioMapper;
@@ -61,11 +66,11 @@ public class FuncionarioService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "paisDocumento es obligatorio");
         }
 
-        if (funcionarioRepository.existsByDocumento(dto.getDocumento())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un funcionario con ese documento.");
+        if (usuarioRepository.existsByDocumentoAndPaisDocumento(dto.getDocumento(), dto.getPaisDocumento())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya hay un usuario registrado con ese documento.");
         }
 
-        if (funcionarioRepository.existsByEmail(dto.getEmail())) {
+        if (usuarioRepository.existsByEmailIgnoreCase(dto.getEmail())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
         }
 
@@ -73,6 +78,11 @@ public class FuncionarioService {
 
         Rol rol = rolRepository.findById(dto.getIdRol())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado: " + dto.getIdRol()));
+        if (rol.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El rol con id " + dto.getIdRol() + " no está activo");
+        }
         ValidadorDePermisosDeRol.validarActorPuedeAsignarRol(rol);
 
         String contraseniaPlana = passwordGeneratorService.generar();
@@ -131,8 +141,7 @@ public class FuncionarioService {
 
         Funcionario funcionario = buscarOFallar(id);
 
-        if (!funcionario.getEmail().equalsIgnoreCase(dto.getEmail())
-                && funcionarioRepository.existsByEmail(dto.getEmail())) {
+        if (usuarioRepository.existsByEmailIgnoreCaseAndIdUsuarioNot(dto.getEmail(), id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
         }
 
@@ -181,6 +190,8 @@ public class FuncionarioService {
 
         if (funcionario.getEstado() == EstadoLogico.INACTIVO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El funcionario ya se encuentra inactivo");
+        }else if (id.toString().equals(getIdUsuarioAutenticado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No puede desactivar su propia cuenta.");
         }
         funcionario.setEstado(EstadoLogico.INACTIVO);
         funcionarioRepository.save(funcionario);
@@ -256,6 +267,15 @@ public class FuncionarioService {
     private void aplicarCambios(Funcionario funcionario, FuncionarioUpdateDTO dto) {
         Rol rol = rolRepository.findById(dto.getIdRol())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rol no encontrado: " + dto.getIdRol()));
+        // Solo si cambia el rol: editar nombre/email de alguien cuyo rol se desactivó
+        // después no debe fallar por reenviar el mismo idRol.
+        boolean cambiaRol = funcionario.getRol() == null
+                || !dto.getIdRol().equals(funcionario.getRol().getIdRol());
+        if (cambiaRol && rol.getEstado() != EstadoLogico.ACTIVO) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "El rol con id " + dto.getIdRol() + " no está activo");
+        }
 
         // Sin esto, un actor con EDITAR_FUNCIONARIO pero permisos limitados podía
         // editar (incluido reasignarle el rol) a un funcionario con más privilegios
@@ -300,5 +320,11 @@ public class FuncionarioService {
         funcionario.setBloqueado(false);
         funcionarioRepository.save(funcionario);
         log.info("[AUDIT] Funcionario id={} cambió su contraseña", id);
+    }
+    private String getIdUsuarioAutenticado() {
+        Authentication auth = Objects.requireNonNull(
+                SecurityContextHolder.getContext().getAuthentication(),
+                "No hay usuario autenticado");
+        return auth.getName();
     }
 }

@@ -18,6 +18,7 @@ import com.fides.sienep.repository.GrupoRepository;
 import com.fides.sienep.repository.InstanciaComunRepository;
 import com.fides.sienep.repository.RecordatorioRepository;
 import com.fides.sienep.repository.RolRepository;
+import com.fides.sienep.repository.UsuarioRepository;
 import com.fides.sienep.dto.ArchivoDescargaDTO;
 import com.fides.sienep.utils.ValidadorDeCedulasUy;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +55,7 @@ public class EstudianteService {
 
     private final FuncionarioRepository funcionarioRepository;
     private final EstudianteRepository estudianteRepository;
+    private final UsuarioRepository usuarioRepository;
     private final GrupoRepository grupoRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
@@ -72,11 +74,11 @@ public class EstudianteService {
     @Transactional
     public EstudianteResponseDTO crear(EstudianteRequestDTO dto) {
 
-        if (estudianteRepository.existsByDocumento(dto.getDocumento())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un estudiante con ese documento.");
+        if (usuarioRepository.existsByDocumentoAndPaisDocumento(dto.getDocumento(), dto.getPaisDocumento())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya hay un usuario registrado con ese documento.");
         }
 
-        if (estudianteRepository.existsByEmail(dto.getEmail())) {
+        if (usuarioRepository.existsByEmailIgnoreCase(dto.getEmail())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
         }
 
@@ -169,7 +171,7 @@ public class EstudianteService {
     public EstudianteResponseDTO editar(Integer id, EstudianteUpdateDTO dto) {
         Estudiante estudiante = buscarOFallar(id);
 
-        if (estudianteRepository.existsByEmailAndIdUsuarioNot(dto.getEmail(), id)) {
+        if (usuarioRepository.existsByEmailIgnoreCaseAndIdUsuarioNot(dto.getEmail(), id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese email.");
         }
 
