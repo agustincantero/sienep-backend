@@ -43,7 +43,7 @@ La API expone los servicios correspondientes a los 7 módulos centrales del sist
 3. **Gestión de Instancias:** Registro, categorización, visualización e integración con Google Calendar (RF13), con la opción de crear un recordatorio inicial en la misma llamada. La clonación (RF17) se resuelve con los endpoints estándar de lectura y creación: el Frontend trae los datos de la instancia original con `GET /instancias/{id}`, precarga un formulario editable (fecha, canal, categoría, etc.) y crea la nueva instancia con `POST /instancias`. No existe un endpoint dedicado a "clonar" porque no tendría sentido una copia idéntica sin edición previa por parte del usuario.
 4. **Gestión de Recordatorios:** Creación (únicos y recurrentes), notificaciones, vinculación a instancias e integración con Google Calendar.
 5. **Gestión de Incidencias:** Registro detallado y visualización del historial de incidencias.
-6. **Reportes:** Generación y exportación en PDF de los 7 indicadores del Data Warehouse (instancias e incidencias por mes, instancias por categoría y canal, incidencias por lugar, día y franja horaria, e involucrados por incidencia), leídos de las vistas del DW (`sienep_dw`) con un usuario de solo lectura. El período es por mes completo (`desde`/`hasta`, por defecto todo lo cargado) y el reporte indica hasta qué fecha llegan los datos (`datosAl`). Son globales a propósito, sin filtro por estudiante, grupo ni carrera. Si el DW no está configurado (`DW_URL`, `DW_USER`, `DW_PASSWORD`) o no responde, el reporte responde 503. Incluye un endpoint (`POST /reportes/validar`, requiere login y el permiso `VER_REPORTES`) para verificar si un PDF exportado es auténtico, comparando su hash SHA-256 contra el que el sistema guardó al generarlo.
+6. **Reportes:** Generación y exportación en PDF de los 7 indicadores del Data Warehouse (instancias e incidencias por mes, instancias por categoría y canal, incidencias por tipo de espacio, día y franja horaria, e involucrados por incidencia), leídos de las vistas del DW (`sienep_dw`) con un usuario de solo lectura. El período es por mes completo (`desde`/`hasta`, por defecto todo lo cargado) y el reporte indica hasta qué fecha llegan los datos (`datosAl`). Son globales a propósito, sin filtro por estudiante, grupo ni carrera. Si el DW no está configurado (`DW_URL`, `DW_USER`, `DW_PASSWORD`) o no responde, el reporte responde 503. Incluye un endpoint (`POST /reportes/validar`, requiere login y el permiso `VER_REPORTES`) para verificar si un PDF exportado es auténtico, comparando su hash SHA-256 contra el que el sistema guardó al generarlo.
 7. **Administración y Configuración:** Gestión completa de Roles y Permisos (preexistentes y personalizados), y mantenimiento de las categorías de Instancias y Recordatorios.
 
 ## Arquitectura general
@@ -174,6 +174,8 @@ A continuación se muestra cómo configurar las variables para una sesión de te
 
 **Paso 1: Configurar variables**
 
+> **Obligatorias.** `JWT_SECRET` (32 caracteres o más) y `DATA_ENCRYPTION_KEY` (32 bytes en Base64, se genera con `openssl rand -base64 32`). Cada ambiente tiene las suyas, y si se pierde la de cifrado, los datos confidenciales ya guardados quedan ilegibles.
+
 > **Nota:** además de las variables obligatorias definidas abajo, existen otras opcionales (si no se definen, usan su valor por defecto; la lista completa está en `.env.example`):
 > - `FRONTEND_URL`: URL base del frontend, usada para armar el link de "olvidé mi contraseña" (default `http://localhost:3000`).
 > - `STORAGE_PATH`: carpeta base donde se guardan los archivos subidos — informes adjuntos y fotos de perfil (default `uploads`).
@@ -181,16 +183,18 @@ A continuación se muestra cómo configurar las variables para una sesión de te
 > - `SWAGGER_ENABLED`: expone Swagger UI (default `true`; ponerla en `false` en producción).
 > - `SEED_DEMO_USERS`: si vale `true` siembra funcionarios demo con contraseñas hardcodeadas (default `false`; usar solo en desarrollo local).
 > - `GOOGLE_OAUTH_CLIENT_ID`: Client ID para `POST /auth/google` (obligatoria en producción).
+> - `DW_URL`, `DW_USER`, `DW_PASSWORD`: conexión de solo lectura a `sienep_dw` para los reportes; si falta alguna, responden `503`.
 > - `AD_LDAP_URL`, `AD_DOMAIN`, `AD_ROOT_DN`: conexión al Active Directory para `POST /auth/ad`; si falta alguna, ese endpoint responde `503`.
 >
 > **Sobre Google Calendar:** con `GOOGLE_CALENDAR_ENABLED=false` (el default si no la definís) la sync queda en modo simulado, no hace falta cargar credenciales reales. Si la ponés en `true`, además necesitás `GOOGLE_CALENDAR_CREDENTIALS` con el JSON completo de la service account — no entra cómodo en una sola línea de terminal, ver `.env.example` o cargarla en un archivo `.env` (ya está en `.gitignore`).
 
 *Windows - Opción 1: PowerShell*
 ```powershell
-$env:JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
+$env:JWT_SECRET="<cadena-aleatoria-de-32-caracteres-o-mas>"
 $env:DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 $env:DB_USER="sienep"
 $env:DB_PASSWORD="sienep"
+$env:DATA_ENCRYPTION_KEY="<clave-base64-de-32-bytes>"
 $env:BREVO_API_KEY="tu_api_key_de_brevo"
 $env:GOOGLE_CALENDAR_ENABLED="false"
 $env:GOOGLE_CALENDAR_CREDENTIALS="<json-completo-de-la-service-account-en-una-sola-linea>"
@@ -203,10 +207,11 @@ $env:CORS_ALLOWED_ORIGINS="http://localhost:3000,https://sienep.app"
 
 *Windows - Opción 2: Símbolo del sistema (CMD)*
 ```cmd
-set JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura
+set JWT_SECRET=<cadena-aleatoria-de-32-caracteres-o-mas>
 set DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto
 set DB_USER=sienep
 set DB_PASSWORD=sienep
+set DATA_ENCRYPTION_KEY=<clave-base64-de-32-bytes>
 set BREVO_API_KEY=tu_api_key_de_brevo
 set GOOGLE_CALENDAR_ENABLED=false
 set GOOGLE_CALENDAR_CREDENTIALS=<json-completo-de-la-service-account-en-una-sola-linea>
@@ -219,10 +224,11 @@ set CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
 
 *macOS & Linux (bash/zsh)*
 ```bash
-export JWT_SECRET="SienepGrupo01DZA2026_ClaveSecretaMuySegura"
+export JWT_SECRET="<cadena-aleatoria-de-32-caracteres-o-mas>"
 export DB_URL="jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto"
 export DB_USER="sienep"
 export DB_PASSWORD="sienep"
+export DATA_ENCRYPTION_KEY="<clave-base64-de-32-bytes>"
 export BREVO_API_KEY="tu_api_key_de_brevo"
 export GOOGLE_CALENDAR_ENABLED="false"
 export GOOGLE_CALENDAR_CREDENTIALS="<json-completo-de-la-service-account-en-una-sola-linea>"
@@ -248,7 +254,7 @@ Una vez configuradas las variables en tu terminal, ejecutá el proyecto usando M
 4. Hacé clic en **Modify options** y luego seleccioná **Environment variables**.
 5. En el campo de **Environment variables**, agregá lo siguiente:
 ```text
-   JWT_SECRET=SienepGrupo01DZA2026_ClaveSecretaMuySegura;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;BREVO_API_KEY=tu_api_key_de_brevo;GOOGLE_CALENDAR_ENABLED=false;GOOGLE_CALENDAR_CREDENTIALS=<json-completo-de-la-service-account-en-una-sola-linea>;GOOGLE_CALENDAR_CALENDAR_ID=tu-calendario-id;GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT=cuenta@tu-workspace.com;FRONTEND_URL=http://localhost:3000;STORAGE_PATH=uploads;CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
+   JWT_SECRET=<cadena-aleatoria-de-32-caracteres-o-mas>;DB_URL=jdbc:postgresql://localhost:5432/sienep?currentSchema=proyecto;DB_USER=sienep;DB_PASSWORD=sienep;DATA_ENCRYPTION_KEY=<clave-base64-de-32-bytes>;BREVO_API_KEY=tu_api_key_de_brevo;GOOGLE_CALENDAR_ENABLED=false;GOOGLE_CALENDAR_CREDENTIALS=<json-completo-de-la-service-account-en-una-sola-linea>;GOOGLE_CALENDAR_CALENDAR_ID=tu-calendario-id;GOOGLE_CALENDAR_IMPERSONATE_ACCOUNT=cuenta@tu-workspace.com;FRONTEND_URL=http://localhost:3000;STORAGE_PATH=uploads;CORS_ALLOWED_ORIGINS=http://localhost:3000,https://sienep.app
 ```
 *(También podés usar el ícono de carpeta al lado del campo para cargarlas en forma de tabla).*
 
